@@ -5,10 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Laravel\Scout\Searchable;
 
 class Tag extends Model
 {
-    use HasFactory;
+    use HasFactory , Searchable;
+
     protected $table = 'tags';
     protected $fillable = [
         'name',
@@ -17,7 +19,14 @@ class Tag extends Model
         'updated_at',
     ];
 
-    public function posts():BelongsToMany
+    public function toSearchableArray()
+    {
+        return [
+            'name' => $this->name,
+        ];
+    }
+
+    public function posts(): BelongsToMany
     {
         return $this->belongsToMany(Post::class, 'post_tags', 'tag_id', 'post_id')
             ->withTimestamps();

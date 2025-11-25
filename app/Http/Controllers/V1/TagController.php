@@ -14,7 +14,7 @@ class TagController
     {
         $tags = Tag::withCount('posts')
             ->orderBy('posts_count', 'desc')
-            ->take(5)
+            ->take(10)
             ->get();
 
         return response()->json([

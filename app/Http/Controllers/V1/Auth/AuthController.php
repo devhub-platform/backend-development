@@ -60,14 +60,6 @@ class AuthController extends Controller
 
             return response()->json(['message' => 'User registration failed'], 500);
         }
-
-//        if ($request->hasFile('avatar')) {
-//            $request->validated();
-//            $avatarName = $user->id . '_' . $user->username . '.' . $request->file('avatar')?->getClientOriginalExtension();
-//            $avatarPath = $request->file('avatar')->storeAs('avatars', $avatarName, 'public');
-//            //            $user = Storage::url($avatarPath);
-//            $user->update(['avatar' => $avatarPath]);
-//        }
         $token = JWTAuth::fromUser($user);
 //        Mail::to($user->email)->send(new WelcomeEmailMail($user));
         return response()->json([

@@ -11,6 +11,7 @@ use App\Models\Post;
 use App\Models\Tag;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Log;
 
 class PostController extends Controller
@@ -19,7 +20,7 @@ class PostController extends Controller
 
     public function index()
     {
-        $this->authorize('viewAny', Post::class);
+//        $this->authorize('viewAny', Post::class);
         $posts = Post::with(['user', 'tags'])->get();
         return response()->json([
             'data' => PostResource::collection($posts)
@@ -155,7 +156,7 @@ class PostController extends Controller
         return response()->json(['message' => "Post $post->title permanently deleted successfully"]);
     }
 
-    public function restore(int $id): \Illuminate\Http\JsonResponse
+    public function restore(int $id): JsonResource
     {
         $post = Post::onlyTrashed()->findOrFail($id);
 

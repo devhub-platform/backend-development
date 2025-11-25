@@ -9,6 +9,7 @@ use App\Http\Controllers\V1\PostController;
 use App\Http\Controllers\V1\ProfileController;
 use App\Http\Controllers\V1\ReactionController;
 use App\Http\Controllers\V1\SavedPostController;
+use App\Http\Controllers\V1\SearchController;
 use App\Http\Controllers\V1\TagController;
 use App\Http\Controllers\V1\UserRelationshipController;
 use Illuminate\Support\Facades\Route;
@@ -54,6 +55,12 @@ Route::prefix('v1')->group(function () {
             Route::get('posts/{post}/comments', 'postComments');
         });
         Route::apiResource('posts', PostController::class);
+
+        Route::controller(SearchController::class)->group(function () {
+            Route::get('search/posts', 'searchPosts');
+            Route::get('search/users', 'searchUsersByUsername');
+            Route::get('search/tags', 'searchTagsName');
+        });
 
         Route::controller(CommentController::class)->group(function () {
             Route::get('posts/{post}/comments', 'postComments');
@@ -116,3 +123,5 @@ Route::prefix('v1')->group(function () {
         });
     });
 });
+
+//Route::get('user/posts', [PostController::class, 'userPosts']);

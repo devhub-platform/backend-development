@@ -5,6 +5,7 @@ namespace App\Http\Controllers\V1;
 use App\Models\Post;
 use App\Notifications\ReactNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
 
 class ReactionController
@@ -27,32 +28,26 @@ class ReactionController
         ]);
     }
 
-    public function removeReaction($postId)
+    public function removeReaction(Post $post)
     {
-        $post = Post::findOrFail($postId);
-        $user = auth()->user();
-
+        $user = Auth::user(); // return the authenticated user
         $user->removeReactions($post);
         return response()->json([
             'message' => 'Reaction removed successfully'
         ]);
     }
 
-    public function getReactors($postId)
+    public function getReactors(Post $post)
     {
-        $post = Post::findOrFail($postId);
-
         return response()->json([
-            'post_id' => $postId,
-            '$reactors' => $post->getReactors(),
+            'post_id' => $post->title,
+            'reactors' => $post->getReactors(),
         ]);
     }
 
-    public function myReaction($postId)
+    public function myReaction(Post $post)
     {
-        $post = Post::findOrFail($postId);
         $user = auth()->user();
-
         $reaction = $user->myReaction($post);
 
         return response()->json([
