@@ -13,6 +13,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class PostController extends Controller
 {
@@ -20,7 +21,7 @@ class PostController extends Controller
 
     public function index()
     {
-//        $this->authorize('viewAny', Post::class);
+        $this->authorize('viewAny', Post::class);
         $posts = Post::with(['user', 'tags'])->get();
         return response()->json([
             'data' => PostResource::collection($posts)
@@ -60,20 +61,26 @@ class PostController extends Controller
 
         $validated = $request->validated();
         $validated['user_id'] = auth()->id();
+        $validated['slug'] = str($validated['title'])->slug();
 
         if ($request->hasFile('image_url')) {
             $image = $request->file('image_url');
             $extension = $image->getClientOriginalExtension();
             $filename = str($validated['title'])->slug() . '-' . time() . '.' . $extension;
-            $path = $image->storeAs('posts', $filename, 'public');
+
+            $path = $image->storeAs('posts', $filename, 's3');
+
             $validated['image_url'] = $path;
         }
 
         $post = Post::create($validated);
 
-        return response()->json(['message' => "Post $post->title created successfully",
-            'post' => new PostResource($post)], 201);
+        return response()->json([
+            'message' => "Post $post->title created successfully",
+            'post' => new PostResource($post)
+        ], 201);
     }
+
 
     public function show(Post $post)
     {
@@ -193,4 +200,5 @@ class PostController extends Controller
             $post->load('tags')
         ]);
     }
+
 }

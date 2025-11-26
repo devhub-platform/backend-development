@@ -118,10 +118,13 @@ Route::prefix('v1')->group(function () {
             Route::get('notifications/all', 'showAllNotifications');
             Route::delete('notifications/clear', 'clearAllNotifications');
             Route::post('notifications/{notification}/mark-as-read', 'makeAsRead');
-
             Route::get('notifications/reacts', 'showNewReactNotify');
         });
     });
 });
 
-//Route::get('user/posts', [PostController::class, 'userPosts']);
+Route::fallback(function (){
+    return response()->json([
+        'message' => 'Resource not found. Please check the URL or API endpoint you are trying to access.'
+    ], 404);
+});

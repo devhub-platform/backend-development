@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Models\Post;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 /** @mixin Post */
 class PostResource extends JsonResource
@@ -18,8 +19,7 @@ class PostResource extends JsonResource
             'author_id' => $this->user_id,
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
-            'image_url' => $this->image_url ? asset('storage/' . $this->image_url) : null,
-//            'comments' => CommentResource::collection($this->whenLoaded('comments')),
+            'image_url' => $this->image_url
         ];
     }
 }

@@ -8,6 +8,7 @@ use App\Http\Resources\CommentResource;
 use App\Http\Resources\PostResource;
 use App\Http\Resources\UserResource;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -25,6 +26,28 @@ class ProfileController
         ]);
     }
 
+    public function uploadAvatar(Request $request)
+    {
+        $request->validate([
+            'avatar_url' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+        ]);
+
+        $image = $request->file('avatar_url');
+        $extension = $image->getClientOriginalExtension();
+        $slug = str(auth()->user()->name ?? auth()->user()->username)->slug();
+        $filename = $slug . '-' . time() . '.' . $extension;
+        $path = $image->storeAs('avatars', $filename, 's3');
+
+        $user = auth()->user();
+        $user->avatar_url = $path;
+        $user->save();
+
+        return response()->json([
+            'message' => 'Avatar image uploaded successfully',
+            'data' => new UserResource($user),
+        ]);
+    }
+
     public function update(ProfileRequest $request)
     {
         $validated = $request->validated();
@@ -34,7 +57,7 @@ class ProfileController
             $extension = $image->getClientOriginalExtension();
             $slug = isset($validated['name']) ? str($validated['name'])->slug() : str(auth()->user()->name ?? auth()->user()->username)->slug();
             $filename = $slug . '-' . time() . '.' . $extension;
-            $path = $image->storeAs('avatars', $filename, 'public');
+            $path = $image->storeAs('avatars', $filename, 's3');
             $validated['avatar_url'] = $path;
         }
 

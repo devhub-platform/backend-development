@@ -12,7 +12,7 @@ class PostStoreRequest extends FormRequest
             'title' => 'required|string|max:255',
             'content' => 'required|string',
             'image_url' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'slug' => 'required|string|unique:posts,slug',
+            'slug' => 'sometimes|string|unique:posts,slug',
             'created_at' => 'nullable|date',
             'updated_at' => 'nullable|date',
         ];
