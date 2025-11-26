@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\V1;
 
-use App\Http\Requests\CodeEditorRequest;
+use App\Http\Requests\CodeEditorRequests\CodeEditorRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 

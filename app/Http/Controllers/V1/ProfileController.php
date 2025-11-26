@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers\V1;
 
-use App\Http\Requests\ProfileRequest;
-use App\Http\Requests\UpdatePasswordRequest;
+use App\Http\Requests\ProfileRequests\ProfileRequest;
+use App\Http\Requests\ProfileRequests\UpdatePasswordRequest;
 use App\Http\Resources\CommentResource;
 use App\Http\Resources\PostResource;
 use App\Http\Resources\UserResource;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Tymon\JWTAuth\Exceptions\JWTException;
