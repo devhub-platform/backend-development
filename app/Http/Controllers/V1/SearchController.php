@@ -51,7 +51,7 @@ class SearchController
 
         $tagName = request()->input('tag');
         $results = $tag->search($tagName)->get();
-        $results->load(['posts']);
+        $results->load('posts');
         if ($results->isEmpty()) {
             return response()->json(['message' => 'No Tags found matching the search criteria.'], 404);
         }

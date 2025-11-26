@@ -3,6 +3,7 @@
 use App\Http\Controllers\V1\Auth\AuthController;
 use App\Http\Controllers\V1\Auth\ForgetPasswordController;
 use App\Http\Controllers\V1\Auth\SocialiteMediaController;
+use App\Http\Controllers\V1\CodeEditorController;
 use App\Http\Controllers\V1\CommentController;
 use App\Http\Controllers\V1\FollowersController;
 use App\Http\Controllers\V1\PostController;
@@ -36,7 +37,6 @@ Route::prefix('v1')->group(function () {
             Route::post('password/forgot', 'forgetPassword');
             Route::post('password/verify-otp', 'verifyOtp');
             Route::post('password/reset', 'resetPassword');
-
         });
     });
 
@@ -120,10 +120,17 @@ Route::prefix('v1')->group(function () {
             Route::post('notifications/{notification}/mark-as-read', 'makeAsRead');
             Route::get('notifications/reacts', 'showNewReactNotify');
         });
+
+        Route::controller(CodeEditorController::class)->group(function () {
+            Route::get('get-runtimes', 'getRuntimes');
+            Route::post('execute-code', 'executeCode');
+            Route::get('get-packages', 'getPackages');
+            Route::post('install-packages', 'installPackages');
+        });
     });
 });
 
-Route::fallback(function (){
+Route::fallback(function () {
     return response()->json([
         'message' => 'Resource not found. Please check the URL or API endpoint you are trying to access.'
     ], 404);

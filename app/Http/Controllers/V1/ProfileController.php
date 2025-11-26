@@ -20,7 +20,7 @@ class ProfileController
 
     public function show()
     {
-        $user = auth()->user();
+        $user = Auth::user();
         return response()->json([
             'data' => new UserResource($user),
         ]);
