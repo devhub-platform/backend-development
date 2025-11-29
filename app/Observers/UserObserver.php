@@ -8,7 +8,6 @@ class UserObserver
 {
     public function creating(User $user): void
     {
-        $user->email_verified_at = $user->email_verified_at ?? now();
         $user->role = $user->role ?? 'user';
     }
 

@@ -7,8 +7,11 @@ use App\Http\Requests\AuthRequests\LoginRequest;
 use App\Http\Requests\AuthRequests\RegisteredRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\UserResource;
+use App\Mail\OTPMail;
+use App\Mail\VerifyOtpMail;
 use App\Mail\WelcomeEmailMail;
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -61,7 +64,8 @@ class AuthController extends Controller
             return response()->json(['message' => 'User registration failed'], 500);
         }
         $token = JWTAuth::fromUser($user);
-//        Mail::to($user->email)->send(new WelcomeEmailMail($user));
+        Mail::to($user->email)->send(new WelcomeEmailMail($user));
+//        Mail::to($user->email)->send(new VerifyOtpMail($user->otp));
         return response()->json([
             'message' => 'User registered successfully',
             'user' => new UserResource($user),

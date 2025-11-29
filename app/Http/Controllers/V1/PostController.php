@@ -12,6 +12,7 @@ use App\Models\Tag;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -22,10 +23,13 @@ class PostController extends Controller
     public function index()
     {
         $this->authorize('viewAny', Post::class);
-        $posts = Post::with(['user', 'tags'])->get();
-        return response()->json([
-            'data' => PostResource::collection($posts)
-        ]);
+
+        $posts = Post::query()
+            ->with(['user', 'tags'])
+            ->where('status', '!=', 'draft')
+            ->get();
+
+        return PostResource::collection($posts);
     }
 
     public function postComments(Post $post)
@@ -198,6 +202,15 @@ class PostController extends Controller
         return response()->json([
             'message' => "Tag {$tag->name} detached from Post {$post->title} successfully",
             $post->load('tags')
+        ]);
+    }
+
+    public function drafts(Post $post)
+    {
+        $user = Auth::user();
+        $drafts = $post->where('user_id', $user->id)->where('status', 'draft')->get();
+        return response()->json([
+            'data' => PostResource::collection($drafts)
         ]);
     }
 

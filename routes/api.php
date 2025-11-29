@@ -15,7 +15,7 @@ use App\Http\Controllers\V1\TagController;
 use App\Http\Controllers\V1\UserRelationshipController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\V1\NotificationController;
-
+use App\Http\Controllers\V1\Auth\VerifyEmailController;
 Route::prefix('v1')->group(function () {
 
     Route::controller(SocialiteMediaController::class)->group(function () {
@@ -33,6 +33,13 @@ Route::prefix('v1')->group(function () {
             Route::post('me', 'user');
         });
 
+        Route::controller(VerifyEmailController::class)->group(function () {
+            Route::post('email/verify-otp', 'verifyEmailOtp');
+            Route::post('email/resend-otp', 'resendEmail');
+            Route::post('email/reset-otp', 'resetEmailVerification');
+            Route::get('email/is-verified', 'isVerified');
+        });
+
         Route::controller(ForgetPasswordController::class)->group(function () {
             Route::post('password/forgot', 'forgetPassword');
             Route::post('password/verify-otp', 'verifyOtp');
@@ -40,7 +47,7 @@ Route::prefix('v1')->group(function () {
         });
     });
 
-    Route::middleware(['auth:api', 'throttle:15,1'])->group(function () {
+    Route::middleware(['auth:api', 'throttle:15,1' , 'verified'])->group(function () {
         Route::controller(PostController::class)->group(function () {
             Route::get('user/posts', 'userPosts');
             Route::get('search/posts', 'search');
@@ -53,6 +60,7 @@ Route::prefix('v1')->group(function () {
             Route::delete('posts/{post}/tags/{tag}', 'detachTag');
             Route::get('posts/{post}/tags-list', 'postsTagsList');
             Route::get('posts/{post}/comments', 'postComments');
+            Route::get('posts/drafts', 'drafts');
         });
         Route::apiResource('posts', PostController::class);
 
@@ -67,6 +75,7 @@ Route::prefix('v1')->group(function () {
             Route::get('users/{user}/comments', 'getByUser');
             Route::get('posts/{post}/comments', 'getByPost');
             Route::post('comments/{parentComment}/reply', 'reply');
+            Route::post('posts/{post}/comments', 'store');
         });
         Route::apiResource('comments', CommentController::class);
 
@@ -87,6 +96,7 @@ Route::prefix('v1')->group(function () {
             Route::get('profile/user/tags', 'userTags');
             Route::post('profile/upload/avatar', 'uploadAvatar');
             Route::post('profile/update-password', 'updatePassword');
+            Route::get('profile/activity', 'activity');
         });
 
         Route::controller(FollowersController::class)->group(function () {

@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Http\Requests\CommentsRequests;
+namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreCommentRequest extends FormRequest
+class ResendEmailRequest extends FormRequest
 {
     public function rules(): array
     {
         return [
-            'content' => ['required', 'string', 'max:1500'],
+            'email' => 'required|email|exists:users,email',
         ];
     }
 

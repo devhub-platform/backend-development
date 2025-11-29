@@ -12,7 +12,7 @@ class RegisteredRequest extends FormRequest
         return [
             'name' => ['required'],
             'username' => ['required'],
-            'password' => ['required', 'string', Password::defaults()],
+            'password' => ['required', 'string', Password::defaults(),'confirmed'],
             'avatar_url' => ['nullable'],
             'bio' => ['nullable'],
             'email' => ['required', 'email', 'max:254'],

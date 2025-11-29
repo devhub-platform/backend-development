@@ -141,4 +141,22 @@ class ProfileController
                 'message' => $e->getMessage()], 500);
         }
     }
+
+    public function activity()
+    {
+        $user = auth()->user();
+        $posts = $user->posts()->select('id', 'title', 'created_at')->get()->map(function ($p) {
+            $p->type = 'post';
+            return $p;
+        });
+        $comments = $user->comments()->select('id', 'content', 'created_at')->get()->map(function ($c) {
+            $c->type = 'comment';
+            return $c;
+        });
+        $activity = $posts->concat($comments)->sortByDesc('created_at')->values();
+
+        return response()->json([
+            'data' => $activity,
+        ]);
+    }
 }

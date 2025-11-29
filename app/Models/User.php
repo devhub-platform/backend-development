@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Observers\UserObserver;
 use Binafy\LaravelReaction\Traits\Reactor;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,10 +15,10 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[ObservedBy([UserObserver::class])]
-class User extends Authenticatable implements JWTSubject
+class User extends Authenticatable implements JWTSubject, MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, softDeletes, Reactor , Searchable;
+    use HasFactory, Notifiable, softDeletes, Reactor, Searchable;
 
     public function getJWTIdentifier()
     {
@@ -55,7 +56,8 @@ class User extends Authenticatable implements JWTSubject
         'created_at',
         'updated_at',
         'provider_id',
-        'otp'
+        'otp',
+        'two_factor_expires_at',
     ];
 
     /**
@@ -91,15 +93,6 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Comment::class);
     }
 
-//    public function followers(): HasMany
-//    {
-//        return $this->hasMany(UserRelationship::class , 'followee_id');
-//    }
-//
-//    public function followees(): HasMany
-//    {
-//        return $this->hasMany(UserRelationship::class , 'follower_id');
-//    }
 
     public function following()
     {
@@ -115,6 +108,14 @@ class User extends Authenticatable implements JWTSubject
         return $this->belongsToMany(User::class, 'followers', 'following_id', 'follower_id')
             ->withTimestamps();
     }
+
+//    public function generateTwoFactorCode()
+//    {
+//        $this->timestamps = false;
+//        $this->otp = rand(1000, 9999);
+//        $this->two_factor_expires_at = now()->addMinutes(10);
+//        $this->save();
+//    }
 
     public function savedPosts()
     {

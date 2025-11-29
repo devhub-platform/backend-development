@@ -14,6 +14,7 @@ class PostUpdateRequest extends FormRequest
             'content' => ['sometimes', 'required', 'string'],
             'slug' => ['sometimes', 'required', 'string', 'unique:posts,slug,' . $this->route('post')],
             'image_url' => ['sometimes', 'required', 'string'],
+            'status' => ['sometimes', 'required', 'in:draft,published'],
         ];
     }
 

@@ -24,11 +24,12 @@ class CommentController
         ]);
     }
 
-    public function store(StoreCommentRequest $request)
+    public function store(StoreCommentRequest $request , Post $post)
     {
         $this->authorize('create', Comment::class);
         $validated = $request->validated();
         $validated['user_id'] = auth()->id();
+        $validated['post_id'] = $post->id;
 
         $post = Post::with('user')->findOrFail($validated['post_id']);
         $comment = Comment::create($validated);

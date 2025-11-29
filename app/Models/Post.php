@@ -27,6 +27,7 @@ class Post extends Model implements HasReaction
         'content',
         'created_at',
         'updated_at',
+        'status',
     ];
 
 

@@ -15,6 +15,7 @@ class PostStoreRequest extends FormRequest
             'slug' => 'sometimes|string|unique:posts,slug',
             'created_at' => 'nullable|date',
             'updated_at' => 'nullable|date',
+            'status' => 'required|in:draft,published',
         ];
     }
 
