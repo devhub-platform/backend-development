@@ -21,6 +21,8 @@ Route::prefix('v1')->group(function () {
     Route::controller(SocialiteMediaController::class)->group(function () {
         Route::get('auth/google/login', 'login');
         Route::get('auth/google/callback', 'callback');
+        Route::get('auth/github/login', 'loginGithub');
+        Route::get('auth/github/callback', 'callbackGithub');
     });
 
     Route::controller(AuthController::class)->group(function () {
@@ -69,6 +71,7 @@ Route::prefix('v1')->group(function () {
             Route::get('search/users', 'searchUsersByUsername');
             Route::get('search/tags', 'searchTagsName');
             Route::get('search/histories', 'searchHistories');
+            Route::get('search/clear', 'clearSearch');
         });
 
         Route::controller(CommentController::class)->group(function () {

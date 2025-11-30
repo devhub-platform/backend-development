@@ -22,10 +22,38 @@ class SocialiteMediaController
         ]);
     }
 
+    public function loginGithub(): JsonResponse
+    {
+        $redirectUrl = Socialite::driver('github')
+            ->stateless() // Use stateless to avoid session issues in API
+            ->redirect() // Get the redirect response
+            ->getTargetUrl(); // Extract the target URL
+
+        return response()->json([
+            'url' => $redirectUrl
+        ]);
+    }
+
     public function callback(): JsonResponse
     {
         $googleUser = Socialite::driver('google')->stateless()->user();
 
+        return $this->extracted($googleUser);
+    }
+
+    public function callbackGithub(): JsonResponse
+    {
+        $githubUser = Socialite::driver('github')->stateless()->user();
+
+        return $this->extracted($githubUser);
+    }
+
+    /**
+     * @param $googleUser
+     * @return JsonResponse
+     */
+    public function extracted($googleUser): JsonResponse
+    {
         $username = $googleUser->getNickname()
             ?? explode('@', $googleUser->getEmail())[0]
             . '_' . substr($googleUser->getId(), 0, 5);

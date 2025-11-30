@@ -84,7 +84,10 @@ class SearchController
         $results = $user->search($username)->get();
         if ($results->isNotEmpty()) {
             $results->load('posts');
-            $this->storeHistory($username);
+            SearchHistory::create([
+                'user_id' => auth()->id(),
+                'query' => $username,
+            ]);
         }
         if ($results->isEmpty()) {
             Log::error('No users found matching the search criteria: ' . $username);
@@ -105,8 +108,10 @@ class SearchController
         $results = $tag->search($tagName)->get();
         if ($results->isNotEmpty()) {
             $results->load('posts');
-            $this->storeHistory($tagName);
-
+            SearchHistory::create([
+                'user_id' => auth()->id(),
+                'query' => $tagName,
+            ]);
         }
         if ($results->isEmpty()) {
             return response()->json(['message' => 'No Tags found matching the search criteria.'], 404);
@@ -158,7 +163,7 @@ class SearchController
         ]);
     }
 
-    public function clearSearch()
+    public function clearSearch(SearchHistory $history)
     {
         $user = auth()->user();
         SearchHistory::where('user_id', $user->id)->delete();
