@@ -37,7 +37,7 @@ class PostController extends Controller
         $this->authorize('viewAny', Post::class);
         $posts = $post->load('comments');
         return response()->json([
-            'data' => $posts
+            'data' => PostResource::collection($posts)
         ]);
     }
 
@@ -46,18 +46,10 @@ class PostController extends Controller
         $this->authorize('viewAny', Post::class);
         $posts = Post::with('tags')->get();
         return response()->json([
-            'data' => $posts
+            'data' => PostResource::collection($posts)
         ]);
     }
 
-    public function postTags(Post $post)
-    {
-        $this->authorize('viewAny', Post::class);
-        $posts = $post->load('tags');
-        return response()->json([
-            'data' => $posts
-        ]);
-    }
 
     public function store(PostStoreRequest $request)
     {
@@ -92,7 +84,7 @@ class PostController extends Controller
         visits($post)->increment();
         $views = visits($post)->count();
         return response()->json([
-            'data' => new PostResource($post),
+            'data' => new PostResource($post->load('tags')),
             'views' => $views
         ]);
     }

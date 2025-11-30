@@ -68,6 +68,7 @@ Route::prefix('v1')->group(function () {
             Route::get('search/posts', 'searchPosts');
             Route::get('search/users', 'searchUsersByUsername');
             Route::get('search/tags', 'searchTagsName');
+            Route::get('search/histories', 'searchHistories');
         });
 
         Route::controller(CommentController::class)->group(function () {

@@ -6,6 +6,7 @@ use App\Models\Post;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /** @mixin Post */
 class PostResource extends JsonResource
@@ -15,12 +16,14 @@ class PostResource extends JsonResource
         return [
             'ID' => $this->id,
             'Tile' => $this->title,
-            'Content' => $this->content,
-            'Author_id' => $this->user_id,
+            'Content' => Str::limit($this->content, 200, '...'),
+            'Author' => $this->user->name,
             'Created_at' => $this->created_at->format('Y-m-d H:i:s'),
             'Updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
             'Image_url' => $this->image_url,
             'Status' => $this->status,
+            'Tags' => TagResource::collection($this->whenLoaded('tags')),
+            'Comments' => CommentResource::collection($this->whenLoaded('comments')),
         ];
     }
 }

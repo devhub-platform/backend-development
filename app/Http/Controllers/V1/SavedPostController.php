@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\V1;
 
+use App\Http\Resources\SavedPostsResource;
 use App\Models\Post;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class SavedPostController
 {
@@ -20,7 +22,7 @@ class SavedPostController
             return response()->json(['message' => 'No saved posts found'], 404);
         }
 
-        return response()->json(['data' => $posts]);
+        return response()->json(['Reading List' => SavedPostsResource::collection($posts)]);
     }
 
     public function store(Post $post): JsonResponse
@@ -29,7 +31,12 @@ class SavedPostController
 
         $user->savedPosts()->syncWithoutDetaching($post->id);
 
-        return response()->json(['message' => 'Post saved for later', 'post' => $post], 201);
+        return response()->json([
+            'message' => 'Post saved for later',
+            'post' => $post->title,
+            'created by' => $user->name,
+            'tags' => $post->tags->pluck('name')
+        ], 201);
     }
 
     public function destroy(Post $post): JsonResponse
@@ -37,7 +44,7 @@ class SavedPostController
         $user = auth()->user();
 
         $user->savedPosts()->detach($post->id);
-
+        Log::notice('Post with ID ' . $post->id . ' removed from saved list by user ' . $user->name);
         return response()->json(['message' => 'Post removed from saved list']);
     }
 }
