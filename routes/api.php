@@ -95,6 +95,7 @@ Route::prefix('v1')->group(function () {
             Route::get('profile/user/comments', 'userComments');
             Route::get('profile/user/tags', 'userTags');
             Route::post('profile/upload/avatar', 'uploadAvatar');
+            Route::post('profile/upload/cover-image', 'uploadCoverImage');
             Route::post('profile/update-password', 'updatePassword');
             Route::get('profile/activity', 'activity');
         });

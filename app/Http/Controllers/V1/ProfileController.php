@@ -11,6 +11,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Tymon\JWTAuth\Exceptions\JWTException;
 
 class ProfileController
@@ -47,6 +48,28 @@ class ProfileController
         ]);
     }
 
+    public function uploadCoverImage(Request $request)
+    {
+        $request->validate([
+            'cover_image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+        ]);
+
+        $image = $request->file('cover_image');
+        $extension = $image->getClientOriginalExtension();
+        $slug = str(auth()->user()->username)->slug();
+        $filename = 'cover-' . $slug . '-' . time() . '.' . $extension;
+        $path = $image->storeAs('covers', $filename, 's3');
+
+        $user = auth()->user();
+        $user->cover_image = $path;
+        $user->save();
+
+        return response()->json([
+            'message' => 'Cover image uploaded successfully',
+            'data' => new UserResource($user),
+        ]);
+    }
+
     public function update(ProfileRequest $request)
     {
         $validated = $request->validated();
@@ -74,7 +97,7 @@ class ProfileController
     {
         $user = auth()->user();
         $user->delete();
-
+        Log::notice('User deleted: ' . $user->email);
         return response()->json([
             'message' => 'Profile deleted successfully',
         ]);
@@ -94,7 +117,6 @@ class ProfileController
     {
         $user = auth()->user();
         $posts = $user->posts;
-
         return response()->json([
             'data' => PostResource::collection($posts),
         ]);
@@ -159,4 +181,5 @@ class ProfileController
             'data' => $activity,
         ]);
     }
+
 }

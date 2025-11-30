@@ -58,6 +58,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'provider_id',
         'otp',
         'two_factor_expires_at',
+        'cover_image'
     ];
 
     /**

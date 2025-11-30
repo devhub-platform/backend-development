@@ -65,7 +65,6 @@ class AuthController extends Controller
         }
         $token = JWTAuth::fromUser($user);
         Mail::to($user->email)->send(new WelcomeEmailMail($user));
-//        Mail::to($user->email)->send(new VerifyOtpMail($user->otp));
         return response()->json([
             'message' => 'User registered successfully',
             'user' => new UserResource($user),

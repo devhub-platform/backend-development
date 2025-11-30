@@ -12,17 +12,17 @@ class UserResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'name' => $this->name,
-            'username' => $this->username,
-            'role' => $this->role ?? 'user',
-            'image_url' => $this->avatar_url ? asset('storage/' . $this->avatar_url) : null,
-            'bio' => $this->bio,
-            'email' => $this->email,
-            'email_verified_at' => $this->email_verified_at->format('Y-m-d H:i:s'),
-            'password' => $this->password,
-            'Join At' => $this->created_at->format('Y-m-d H:i:s'),
-            'Last Update' => $this->updated_at->format('Y-m-d H:i:s'),
+            'ID' => $this->id,
+            'Name' => $this->name,
+            'Username' => $this->username,
+            'Role' => $this->role ?? 'user',
+            'Avatar Image' => $this->avatar_url ? asset('storage/' . $this->avatar_url) : null,
+            'Cover Image' => $this->cover_image ? asset('storage/' . $this->cover_url) : null,
+            'Bio' => $this->bio,
+            'Email' => $this->email,
+            'Email verified at' => $this->email_verified_at ? $this->email_verified_at->format('Y-m-d H:i:s') : null,
+            'Join At' => $this->created_at ? $this->created_at->format('Y-m-d H:i:s') : null,
+            'Last Update' => $this->updated_at ? $this->updated_at->format('Y-m-d H:i:s') : null,
         ];
     }
 }
