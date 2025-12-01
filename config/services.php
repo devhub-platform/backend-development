@@ -47,4 +47,17 @@ return [
         'redirect' => env('GITHUB_REDIRECT_URL'),
     ],
 
+    'medium' => [
+        'client_id' => env('MEDIUM_CLIENT_ID'),
+        'client_secret' => env('MEDIUM_CLIENT_SECRET'),
+        'redirect' => env('MEDIUM_REDIRECT_URI')
+    ],
+
+    'microsoft' => [
+        'client_id' => env('MICROSOFT_CLIENT_ID'),
+        'client_secret' => env('MICROSOFT_CLIENT_SECRET'),
+        'redirect' => env('MICROSOFT_REDIRECT_URI'),
+        'proxy' => env('PROXY')
+    ],
+
 ];

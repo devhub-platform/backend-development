@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Laravel\Socialite\Facades\Socialite;
@@ -34,6 +35,18 @@ class SocialiteMediaController
         ]);
     }
 
+    public function loginMicrosoft(): JsonResponse
+    {
+        $redirectUrl = Socialite::driver('microsoft')
+            ->stateless() // Use stateless to avoid session issues in API
+            ->redirect() // Get the redirect response
+            ->getTargetUrl(); // Extract the target URL
+
+        return response()->json([
+            'url' => $redirectUrl
+        ]);
+    }
+
     public function callback(): JsonResponse
     {
         $googleUser = Socialite::driver('google')->stateless()->user();
@@ -47,29 +60,35 @@ class SocialiteMediaController
 
         return $this->extracted($githubUser);
     }
+    public function callbackMicrosoft(): JsonResponse
+    {
+        $githubUser = Socialite::driver('github')->stateless()->user();
+
+        return $this->extracted($githubUser);
+    }
 
     /**
-     * @param $googleUser
+     * @param $mediaUser
      * @return JsonResponse
      */
-    public function extracted($googleUser): JsonResponse
+    public function extracted($mediaUser): JsonResponse
     {
-        $username = $googleUser->getNickname()
-            ?? explode('@', $googleUser->getEmail())[0]
-            . '_' . substr($googleUser->getId(), 0, 5);
+        $username = $mediaUser->getNickname()
+            ?? explode('@', $mediaUser->getEmail())[0]
+            . '_' . substr($mediaUser->getId(), 0, 5);
 
-        $user = User::updateOrCreate(
+        $user = User::firstOrCreate(
             [
-                'provider_id' => $googleUser->getId(),
+                'provider_id' => $mediaUser->getId(),
             ],
             [
-                'name' => $googleUser->getName(),
-                'email' => $googleUser->getEmail(),
+                'name' => $mediaUser->getName(),
+                'email' => $mediaUser->getEmail(),
                 'username' => $username,
                 'password' => bcrypt(str()->random(16)),
-                'avatar_url' => $googleUser->getAvatar(),
+                'avatar_url' => $mediaUser->getAvatar(),
                 'email_verified_at' => now(),
-                'bio' => $googleUser->getNickname() ?? '',
+                'bio' => $mediaUser->getNickname() ?? '',
             ]
         );
 
@@ -77,7 +96,7 @@ class SocialiteMediaController
 
         return response()->json([
             'message' => 'Login successful',
-            'user' => $user,
+            'user' => new UserResource($user),
             'token' => $token
         ]);
     }

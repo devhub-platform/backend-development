@@ -17,6 +17,8 @@
         "laravel/telescope": "*",
         "laravel/tinker": "^2.10.1",
         "league/flysystem-aws-s3-v3": "^3.0",
+        "socialiteproviders/medium": "^4.1",
+        "socialiteproviders/microsoft": "^4.7",
         "tymon/jwt-auth": "^2.2"
     },
     "require-dev": {

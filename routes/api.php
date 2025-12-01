@@ -16,6 +16,7 @@ use App\Http\Controllers\V1\UserRelationshipController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\V1\NotificationController;
 use App\Http\Controllers\V1\Auth\VerifyEmailController;
+
 Route::prefix('v1')->group(function () {
 
     Route::controller(SocialiteMediaController::class)->group(function () {
@@ -23,6 +24,8 @@ Route::prefix('v1')->group(function () {
         Route::get('auth/google/callback', 'callback');
         Route::get('auth/github/login', 'loginGithub');
         Route::get('auth/github/callback', 'callbackGithub');
+        Route::get('auth/microsoft/login', 'loginMicrosoft');
+        Route::get('auth/microsoft/callback', 'callbackMicrosoft');
     });
 
     Route::controller(AuthController::class)->group(function () {
@@ -49,7 +52,7 @@ Route::prefix('v1')->group(function () {
         });
     });
 
-    Route::middleware(['auth:api', 'throttle:15,1' , 'verified'])->group(function () {
+    Route::middleware(['auth:api', 'throttle:15,1', 'verified', 'guest'])->group(function () {
         Route::controller(PostController::class)->group(function () {
             Route::get('user/posts', 'userPosts');
             Route::get('search/posts', 'search');
