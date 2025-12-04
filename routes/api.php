@@ -17,8 +17,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\V1\NotificationController;
 use App\Http\Controllers\V1\Auth\VerifyEmailController;
 
-Route::prefix('v1')->group(function () {
-
+Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
     Route::controller(SocialiteMediaController::class)->group(function () {
         Route::get('auth/google/login', 'login');
         Route::get('auth/google/callback', 'callback');
@@ -28,11 +27,12 @@ Route::prefix('v1')->group(function () {
         Route::get('auth/microsoft/callback', 'callbackMicrosoft');
     });
 
-    Route::controller(AuthController::class)->group(function () {
+    Route::controller(AuthController::class)->middleware('guest')->group(function () {
+
         Route::post('login', 'login');
         Route::post('register', 'register');
 
-        Route::middleware(['auth:api', 'throttle:15,1'])->group(function () {
+        Route::middleware('auth:api')->group(function () {
             Route::post('logout', 'logout');
             Route::post('refresh', 'refreshToken');
             Route::post('me', 'user');
@@ -52,7 +52,7 @@ Route::prefix('v1')->group(function () {
         });
     });
 
-    Route::middleware(['auth:api', 'throttle:15,1', 'verified', 'guest'])->group(function () {
+    Route::middleware(['auth:api', 'verified'])->group(function () {
         Route::controller(PostController::class)->group(function () {
             Route::get('user/posts', 'userPosts');
             Route::get('search/posts', 'search');
@@ -73,8 +73,9 @@ Route::prefix('v1')->group(function () {
             Route::get('search/posts', 'searchPosts');
             Route::get('search/users', 'searchUsersByUsername');
             Route::get('search/tags', 'searchTagsName');
+            Route::get('search/general', 'globalSearch');
             Route::get('search/histories', 'searchHistories');
-            Route::get('search/clear', 'clearSearch');
+            Route::delete('search/clear', 'clearSearch');
         });
 
         Route::controller(CommentController::class)->group(function () {
@@ -95,7 +96,7 @@ Route::prefix('v1')->group(function () {
 
         Route::controller(ProfileController::class)->group(function () {
             Route::get('profile', 'show');
-            Route::put('profile', 'update');
+            Route::patch('profile', 'update');
             Route::delete('profile', 'delete');
             Route::delete('profile/force', 'forceDelete');
             Route::get('profile/user/posts', 'userPosts');

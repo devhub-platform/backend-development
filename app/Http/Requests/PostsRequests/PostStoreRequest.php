@@ -16,6 +16,7 @@ class PostStoreRequest extends FormRequest
             'created_at' => 'nullable|date',
             'updated_at' => 'nullable|date',
             'status' => 'nullable|in:draft,published',
+            'read_time' => 'nullable|integer|min:1|max:59',
         ];
     }
 

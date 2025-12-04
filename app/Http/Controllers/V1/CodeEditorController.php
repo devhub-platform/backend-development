@@ -5,6 +5,7 @@ namespace App\Http\Controllers\V1;
 use App\Http\Requests\CodeEditorRequests\CodeEditorRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class CodeEditorController
 {
@@ -121,6 +122,7 @@ class CodeEditorController
             ], $response->status());
 
         } catch (\Exception $e) {
+            Log::error('Error executing code: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Error executing code',

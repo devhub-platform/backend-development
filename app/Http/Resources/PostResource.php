@@ -20,8 +20,9 @@ class PostResource extends JsonResource
             'Author' => $this->user->name,
             'Created_at' => $this->created_at->format('Y-m-d H:i:s'),
             'Updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
-            'Image_url' => $this->image_url,
+            'Image url' => $this->image_url,
             'Status' => $this->status,
+            'Read time' => $this->read_time . ' min read',
             'Tags' => TagResource::collection($this->whenLoaded('tags')),
             'Comments' => CommentResource::collection($this->whenLoaded('comments')),
         ];

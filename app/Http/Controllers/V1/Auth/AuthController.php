@@ -16,6 +16,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Http\JsonResponse;
@@ -55,7 +56,7 @@ class AuthController extends Controller
     public function register(RegisteredRequest $request): ?JsonResponse
     {
         $data = $request->validated();
-
+        $data['username'] = Str::before($data['email'], '@');
         $user = User::create($data);
 
         if (!$user) {

@@ -1,4 +1,4 @@
-name: Laravel
+name: Test-DevHub
 
 on:
   push:

@@ -70,7 +70,10 @@ class SearchController
             return response()->json(['message' => 'No posts found'], 404);
         }
 
-        return SearchPostResource::collection($results);
+        return response()->json([
+            'message' => 'Posts found matching the search criteria: ' . $query,
+            'posts' => SearchPostResource::collection($results),
+        ], 200);
     }
 
 

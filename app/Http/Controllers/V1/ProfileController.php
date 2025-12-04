@@ -74,22 +74,13 @@ class ProfileController
     {
         $validated = $request->validated();
 
-        if ($request->hasFile('avatar_url')) {
-            $image = $request->file('avatar_url');
-            $extension = $image->getClientOriginalExtension();
-            $slug = isset($validated['name']) ? str($validated['name'])->slug() : str(auth()->user()->name ?? auth()->user()->username)->slug();
-            $filename = $slug . '-' . time() . '.' . $extension;
-            $path = $image->storeAs('avatars', $filename, 's3');
-            $validated['avatar_url'] = $path;
-        }
-
         $user = auth()->user();
         $user->update($validated);
-        $user->refresh(); // Refresh the user instance to get the latest data
+        $user->refresh();
 
         return response()->json([
             'message' => 'Profile updated successfully',
-            'data' => new UserResource($user),
+            'data' => new UserResource($user->fresh()),
         ]);
     }
 

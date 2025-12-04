@@ -14,6 +14,7 @@ class ProfileRequest extends FormRequest
             'bio' => 'sometimes|nullable|string',
             'email' => 'sometimes|email|max:255|unique:users,email,' . auth()->id(),
             'avatar_url' => 'sometimes|max:2048|image|mimes:jpeg,png,jpg,gif,svg',
+            'cover_image' => 'sometimes|max:2048|image|mimes:jpeg,png,jpg,gif,svg',
         ];
     }
 
