@@ -9,7 +9,7 @@ use Laravel\Scout\Searchable;
 
 class Tag extends Model
 {
-    use HasFactory , Searchable;
+    use HasFactory, Searchable;
 
     protected $table = 'tags';
     protected $fillable = [
@@ -29,6 +29,12 @@ class Tag extends Model
     public function posts(): BelongsToMany
     {
         return $this->belongsToMany(Post::class, 'post_tags', 'tag_id', 'post_id')
+            ->withTimestamps();
+    }
+
+    public function followers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'tag_user', 'tag_id', 'user_id')
             ->withTimestamps();
     }
 }

@@ -7,6 +7,7 @@ use Binafy\LaravelReaction\Traits\Reactor;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -117,11 +118,37 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
 //        $this->two_factor_expires_at = now()->addMinutes(10);
 //        $this->save();
 //    }
+    public function followedTags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class, 'tag_user', 'user_id', 'tag_id')
+            ->withTimestamps();
+    }
 
     public function savedPosts()
     {
         return $this->belongsToMany(Post::class, 'saved_posts')
             ->withTimestamps()
             ->using(\Illuminate\Database\Eloquent\Relations\Pivot::class);
+    }
+
+    public function unfollowTag(int $tagId)
+    {
+        $this->followedTags()->detach($tagId);
+        return true;
+    }
+
+    public function followTag(int $tagId)
+    {
+        if ($this->followedTags()->where('tag_id', $tagId)->exists()) {
+            return true;
+        }
+        $this->followedTags()->attach($tagId);
+        return true;
+    }
+
+// check if following
+    public function isFollowingTag(int $tagId)
+    {
+        return $this->followedTags()->where('tag_id', $tagId)->exists();
     }
 }

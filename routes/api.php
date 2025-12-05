@@ -16,6 +16,7 @@ use App\Http\Controllers\V1\UserRelationshipController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\V1\NotificationController;
 use App\Http\Controllers\V1\Auth\VerifyEmailController;
+use App\Http\Controllers\V1\TagFollowController;
 
 Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
     Route::controller(SocialiteMediaController::class)->group(function () {
@@ -145,6 +146,12 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('execute-code', 'executeCode');
             Route::get('get-packages', 'getPackages');
             Route::post('install-packages', 'installPackages');
+        });
+
+        Route::controller(TagFollowController::class)->group(function () {
+            Route::post('tags/{tag}/follow', 'follow');
+            Route::delete('tags/{tag}/unfollow', 'unfollow');
+            Route::get('tags/{tag}/followers', 'listFollowing');
         });
     });
 });
