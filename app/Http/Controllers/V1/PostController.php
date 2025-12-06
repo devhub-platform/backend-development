@@ -9,6 +9,7 @@ use App\Http\Resources\PostResource;
 use App\Http\Resources\SearchPostResource;
 use App\Models\Post;
 use App\Models\Tag;
+use App\Services\GeminiImageService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -75,6 +76,16 @@ class PostController extends Controller
             'message' => "Post $post->title created successfully",
             'post' => new PostResource($post)
         ], 201);
+    }
+
+    public function generateCoverImage(GeminiImageService $geminiImage, Request $request)
+    {
+        $prompt = $request->input('prompt');
+        $imageUrl = $geminiImage->generateImage($prompt);
+
+        return response()->json([
+            'cover_image' => $imageUrl
+        ]);
     }
 
 
@@ -200,9 +211,19 @@ class PostController extends Controller
     public function drafts(Post $post)
     {
         $user = Auth::user();
-        $drafts = $post->where('user_id', $user->id)->where('status', 'draft')->get();
+        $drafts = $post->where('user_id', $user->id)
+            ->where('status', 'draft')->get();
         return response()->json([
             'data' => PostResource::collection($drafts)
+        ]);
+    }
+
+    public function archivesTrashed(Post $post)
+    {
+        $this->authorize('view-any', $post);
+        $archivedPosts = $post->onlyTrashed()->get();
+        return response()->json([
+            'archives' => PostResource::collection($archivedPosts)
         ]);
     }
 

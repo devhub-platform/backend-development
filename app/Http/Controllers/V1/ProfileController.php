@@ -7,11 +7,13 @@ use App\Http\Requests\ProfileRequests\UpdatePasswordRequest;
 use App\Http\Resources\CommentResource;
 use App\Http\Resources\PostResource;
 use App\Http\Resources\UserResource;
+use App\Mail\PasswordUpdatedSuccessfullyMail;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Tymon\JWTAuth\Exceptions\JWTException;
 
 class ProfileController
@@ -147,6 +149,8 @@ class ProfileController
             $user->update([
                 'password' => Hash::make($request->new_password),
             ]);
+
+            Mail::to($user->email)->send(new PasswordUpdatedSuccessfullyMail($user));
 
             return response()->json(['message' => "Hi $name Your password updated successfully"]);
         } catch (JWTException $e) {

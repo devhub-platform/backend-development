@@ -7,6 +7,7 @@ use App\Models\Tag;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class TagFollowController extends Controller
 {
@@ -43,8 +44,13 @@ class TagFollowController extends Controller
         $user = Auth::user();
 
         $tags = $user->followedTags()
-            ->select('tags.id as id', 'tags.name', 'tags.slug')
-            ->get();
+            ->select('tags.id as id', 'tags.name')
+            ->pluck('tags.id', 'tags.name');
+
+        if ($tags->isEmpty()) {
+            Log::error('User ' . $user->name . ' has no followed tags');
+            return response()->json(['message' => 'No followed tags found'], 404);
+        }
 
         return response()->json(['tags' => $tags], 200);
     }

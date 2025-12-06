@@ -24,4 +24,15 @@ class RegisteredRequest extends FormRequest
     {
         return true;
     }
+
+    public function messages(): array
+    {
+        return [
+            'name.required' => 'The name field is required.',
+            'email.required' => 'The email field is required.',
+            'email.email' => 'The email must be a valid email address.',
+            'password.required' => 'The password field is required.',
+            'password.confirmed' => 'The password confirmation does not match.',
+        ];
+    }
 }

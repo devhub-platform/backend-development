@@ -54,4 +54,9 @@ class PostPolicy
     {
         return true;
     }
+
+    public function archive(User $user, Post $post)
+    {
+        return $user->id == $post->user_id;
+    }
 }

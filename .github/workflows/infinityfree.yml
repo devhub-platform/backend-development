@@ -1,0 +1,24 @@
+name: Deploy to InfinityFree
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+    uses: actions/checkout@v4
+
+      - name: Set up FTP credentials
+    uses: w9jds/ftp-action@v1.1.0
+    with:
+      ftp-server: ftp.your-infinityfree-domain.com
+      ftp-username: your-username
+      ftp-password: ${{ secrets.INFINITYFREE_FTP_PASSWORD }}
+      local-dir: ./
+      remote-dir: /htdocs/
+      git-ftp-args: --insecure

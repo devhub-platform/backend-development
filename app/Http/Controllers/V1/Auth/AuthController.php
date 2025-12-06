@@ -90,7 +90,7 @@ class AuthController extends Controller
 
             return response()->json([
                 'error' => 'Failed to logout, token invalid or expired',
-                'message' => $e->getMessage(),
+                'message' => $e->getMessage (),
                 'at line' => $e->getLine(),
             ], 500);
         }

@@ -67,6 +67,9 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('posts/{post}/tags-list', 'postsTagsList');
             Route::get('posts/{post}/comments', 'postComments');
             Route::get('posts/drafts', 'drafts');
+            Route::get('posts/archives', 'archivesTrashed');
+//            Route::delete('posts/hard-delete', 'hardDelete');
+            Route::get('posts/generate/cover-image','generateCoverImage');
         });
         Route::apiResource('posts', PostController::class);
 

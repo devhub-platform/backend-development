@@ -21,6 +21,7 @@ class PostResource extends JsonResource
             'Created_at' => $this->created_at->format('Y-m-d H:i:s'),
             'Updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
             'Image url' => $this->image_url,
+            'Cover image' => $this->image_url ? Storage::url($this->image_url) : null,
             'Status' => $this->status,
             'Read time' => $this->read_time . ' min read',
             'Tags' => TagResource::collection($this->whenLoaded('tags')),
