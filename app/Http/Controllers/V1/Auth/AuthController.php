@@ -8,7 +8,6 @@ use App\Http\Requests\AuthRequests\RegisteredRequest;
 use App\Http\Resources\UserResource;
 use App\Mail\WelcomeEmailMail;
 use App\Models\User;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -55,7 +54,7 @@ class AuthController extends Controller
         $data = $request->validated();
         $username = $data['username']
             ?? Str::before($data['email'], '@')
-            . '_' . Str::random(5);
+            . '_' . strval(rand(9999, 99999));
         $data['username'] = $username;
         $user = User::create($data);
 
@@ -87,7 +86,7 @@ class AuthController extends Controller
             }
 
             JWTAuth::invalidate($token);
-            Log::info('User logged out: ' . $user->name);
+            Log::notice('User logged out: ' . $user->name);
 
             return response()->json(['message' => "User {$user->name} successfully logged out."], 200);
         } catch (JWTException $e) {

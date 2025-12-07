@@ -14,12 +14,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Tymon\JWTAuth\Exceptions\JWTException;
 
 class ProfileController
 {
     use AuthorizesRequests;
-
     public function show()
     {
         $user = Auth::user();
@@ -36,11 +36,11 @@ class ProfileController
 
         $image = $request->file('avatar_url');
         $extension = $image->getClientOriginalExtension();
-        $slug = str(auth()->user()->name ?? auth()->user()->username)->slug();
+        $slug = Str::slug(Auth::user()->username);
         $filename = $slug . '-' . time() . '.' . $extension;
         $path = $image->storeAs('avatars', $filename, 's3');
 
-        $user = auth()->user();
+        $user = Auth::user();
         $user->avatar_url = $path;
         $user->save();
 
@@ -58,11 +58,11 @@ class ProfileController
 
         $image = $request->file('cover_image');
         $extension = $image->getClientOriginalExtension();
-        $slug = str(auth()->user()->username)->slug();
+        $slug = Str::slug(Auth::user()->username);
         $filename = 'cover-' . $slug . '-' . time() . '.' . $extension;
         $path = $image->storeAs('covers', $filename, 's3');
 
-        $user = auth()->user();
+        $user = Auth::user();
         $user->cover_image = $path;
         $user->save();
 
@@ -77,6 +77,11 @@ class ProfileController
         $validated = $request->validated();
 
         $user = auth()->user();
+        if(!$user) {
+            return response()->json([
+                'message' => 'User not found',
+            ], 404);
+        }
         $user->update($validated);
         $user->refresh();
 
@@ -137,7 +142,7 @@ class ProfileController
 
     public function updatePassword(UpdatePasswordRequest $request)
     {
-        $request->validated();
+        $validated = $request->validated();
         try {
             $this->authorize('update', Auth::user());
             $user = Auth::user();
@@ -146,16 +151,17 @@ class ProfileController
                 return response()->json(['message' => 'Current password is incorrect'], 400);
             }
 
-            $user->update([
-                'password' => Hash::make($request->new_password),
-            ]);
+            $user->password = Hash::make($validated['new_password']);
+            $user->save();
 
             Mail::to($user->email)->send(new PasswordUpdatedSuccessfullyMail($user));
 
             return response()->json(['message' => "Hi $name Your password updated successfully"]);
         } catch (JWTException $e) {
-            return response()->json(['error' => 'Failed to update password',
-                'message' => $e->getMessage()], 500);
+            return response()->json([
+                'error' => 'Failed to update password',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 
@@ -176,5 +182,4 @@ class ProfileController
             'data' => $activity,
         ]);
     }
-
 }

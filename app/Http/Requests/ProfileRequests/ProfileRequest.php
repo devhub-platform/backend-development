@@ -15,6 +15,11 @@ class ProfileRequest extends FormRequest
             'email' => 'sometimes|email|max:255|unique:users,email,' . auth()->id(),
             'avatar_url' => 'sometimes|max:2048|image|mimes:jpeg,png,jpg,gif,svg',
             'cover_image' => 'sometimes|max:2048|image|mimes:jpeg,png,jpg,gif,svg',
+            'education' => 'sometimes|nullable|string|max:500',
+            'work_at' => 'sometimes|nullable|string|max:500',
+            'skills' => 'sometimes|nullable|array|max:1000',
+            'location' => 'sometimes|nullable|string|max:255',
+            'website_url' => 'sometimes|nullable|url|max:255',
         ];
     }
 
