@@ -5,12 +5,11 @@ namespace App\Http\Controllers\V1\Auth;
 use App\Http\Controllers\JsonResponse;
 use App\Http\Controllers\RandomException;
 use App\Http\Controllers\Request;
-use App\Http\Requests\ResendEmailRequest;
-use App\Http\Requests\VerifyEmailRequest;
+use App\Http\Requests\EmailVerificationReqests\ResendEmailRequest;
+use App\Http\Requests\EmailVerificationReqests\VerifyEmailRequest;
 use App\Mail\VerifiedSuccessfullyMail;
 use App\Mail\VerifyOtpMail;
 use App\Models\User;
-use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
