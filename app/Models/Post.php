@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Observers\PostObserver;
 use Binafy\LaravelReaction\Contracts\HasReaction;
 use Binafy\LaravelReaction\Traits\Reactable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -13,6 +15,7 @@ use Laravel\Sanctum\HasApiTokens;
 use Laravel\Scout\Searchable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+#[ObservedBy([PostObserver::class])]
 class Post extends Model implements HasReaction
 {
     use HasApiTokens, HasFactory, AuthorizesRequests, Searchable, SoftDeletes, Reactable;
