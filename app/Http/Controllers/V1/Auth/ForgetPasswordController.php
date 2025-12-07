@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Log;
 
 class ForgetPasswordController
 {
@@ -29,7 +30,7 @@ class ForgetPasswordController
         $subject = 'OTP for Password Reset';
 
         Mail::to($user->email)->send(new MailOTP($otp));
-
+        Log::notice('OTP sent to email: ' . $user->email);
         return response()->json(['message' => 'OTP sent to your email'], 200);
     }
 

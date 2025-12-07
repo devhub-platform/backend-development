@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
@@ -17,7 +18,7 @@ class SocialiteMediaController
             ->stateless() // Use stateless to avoid session issues in API
             ->redirect() // Get the redirect response
             ->getTargetUrl(); // Extract the target URL
-
+        Log::info('Generated Google OAuth redirect URL: ' . $redirectUrl);
         return response()->json([
             'url' => $redirectUrl
         ]);
@@ -29,7 +30,7 @@ class SocialiteMediaController
             ->stateless()
             ->redirect()
             ->getTargetUrl();
-
+        Log::info('Generated GitHub OAuth redirect URL: ' . $redirectUrl);
         return response()->json([
             'url' => $redirectUrl
         ]);

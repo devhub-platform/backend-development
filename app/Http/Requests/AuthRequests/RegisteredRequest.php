@@ -28,11 +28,13 @@ class RegisteredRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'The name field is required.',
-            'email.required' => 'The email field is required.',
-            'email.email' => 'The email must be a valid email address.',
-            'password.required' => 'The password field is required.',
-            'password.confirmed' => 'The password confirmation does not match.',
+            'name.required' => 'Name is required',
+            'email.required' => 'Email is required',
+            'email.email' => 'Email must be a valid email address',
+            'email.max' => 'Email must not exceed 254 characters',
+            'password.required' => 'Password is required',
+            'password.confirmed' => 'Password confirmation does not match',
+            'email.unique' => 'Email is already Taken',
         ];
     }
 }
