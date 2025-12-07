@@ -5,10 +5,7 @@ namespace App\Http\Controllers\V1\Auth;
 use App\Http\Controllers\V1\Controller;
 use App\Http\Requests\AuthRequests\LoginRequest;
 use App\Http\Requests\AuthRequests\RegisteredRequest;
-use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\UserResource;
-use App\Mail\OTPMail;
-use App\Mail\VerifyOtpMail;
 use App\Mail\WelcomeEmailMail;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
@@ -56,15 +53,9 @@ class AuthController extends Controller
     public function register(RegisteredRequest $request): ?JsonResponse
     {
         $data = $request->validated();
-        $username = isset($data['email']) ? Str::before($data['email'], '@') : null;
-        $username = $username ?? ($data['name'] ?? ('user_' . time()));
-
-        $base = $username;
-        $counter = 1;
-
-        while (User::where('username', $username)->exists()) {
-            $username = $base . '_' . $counter++;
-        }
+        $username = $data['username']
+            ?? Str::before($data['email'], '@')
+            . '_' . Str::random(5);
         $data['username'] = $username;
         $user = User::create($data);
 
@@ -86,20 +77,25 @@ class AuthController extends Controller
     {
         try {
             $token = JWTAuth::getToken();
-            $user = Auth::user()->name;
-            if (!$token || !$user) {
+            if (!$token) {
+                return response()->json(['error' => 'Token not provided'], 401);
+            }
+
+            $user = Auth::user();
+            if (!$user) {
                 return response()->json(['error' => 'User not authenticated'], 401);
             }
-            JWTAuth::invalidate($token);
-            Log::info('User logged out: ' . $user);
 
-            return response()->json(['message' => "User $user successfully logged out."], 200);
+            JWTAuth::invalidate($token);
+            Log::info('User logged out: ' . $user->name);
+
+            return response()->json(['message' => "User {$user->name} successfully logged out."], 200);
         } catch (JWTException $e) {
             Log::error($e->getMessage());
 
             return response()->json([
                 'error' => 'Failed to logout, token invalid or expired',
-                'message' => $e->getMessage (),
+                'message' => $e->getMessage(),
                 'at line' => $e->getLine(),
             ], 500);
         }
@@ -152,8 +148,10 @@ class AuthController extends Controller
         } catch (JWTException $e) {
             Log::error('Token refresh failed: ' . $e->getMessage());
 
-            return response()->json(['error' => 'Failed to refresh token',
-                'message' => $e->getMessage(), 401], 500);
+            return response()->json([
+                'error' => 'Failed to refresh token',
+                'message' => $e->getMessage(),
+            ], 401);
         }
     }
 }

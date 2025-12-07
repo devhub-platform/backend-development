@@ -26,21 +26,9 @@ class SocialiteMediaController
     public function loginGithub(): JsonResponse
     {
         $redirectUrl = Socialite::driver('github')
-            ->stateless() // Use stateless to avoid session issues in API
-            ->redirect() // Get the redirect response
-            ->getTargetUrl(); // Extract the target URL
-
-        return response()->json([
-            'url' => $redirectUrl
-        ]);
-    }
-
-    public function loginMicrosoft(): JsonResponse
-    {
-        $redirectUrl = Socialite::driver('microsoft')
-            ->stateless() // Use stateless to avoid session issues in API
-            ->redirect() // Get the redirect response
-            ->getTargetUrl(); // Extract the target URL
+            ->stateless()
+            ->redirect()
+            ->getTargetUrl();
 
         return response()->json([
             'url' => $redirectUrl
@@ -77,25 +65,25 @@ class SocialiteMediaController
             ?? explode('@', $mediaUser->getEmail())[0]
             . '_' . substr($mediaUser->getId(), 0, 5);
 
-        $user = User::firstOrCreate(
+        $user = User::UpdateOrCreate(
             [
-                'provider_id' => $mediaUser->getId(),
+                'email' => $mediaUser->getEmail(),
             ],
             [
                 'name' => $mediaUser->getName(),
-                'email' => $mediaUser->getEmail(),
                 'username' => $username,
+                'role' => 'user',
+                'provider_id' => $mediaUser->getId(),
                 'password' => bcrypt(str()->random(16)),
                 'avatar_url' => $mediaUser->getAvatar(),
                 'email_verified_at' => now(),
-                'bio' => $mediaUser->getNickname() ?? '',
             ]
         );
 
         $token = JWTAuth::fromUser($user);
 
         return response()->json([
-            'message' => 'Login successful',
+            'message' => 'Login successful using social media',
             'user' => new UserResource($user),
             'token' => $token
         ]);

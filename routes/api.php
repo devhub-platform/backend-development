@@ -22,13 +22,9 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
     Route::controller(SocialiteMediaController::class)->group(function () {
         Route::get('auth/google/login', 'login');
         Route::get('auth/google/callback', 'callback');
-        Route::get('auth/github/login', 'loginGithub');
-        Route::get('auth/github/callback', 'callbackGithub');
-        Route::get('auth/microsoft/login', 'loginMicrosoft');
-        Route::get('auth/microsoft/callback', 'callbackMicrosoft');
     });
 
-    Route::controller(AuthController::class)->middleware('guest')->group(function () {
+    Route::controller(AuthController::class)->middleware(['throttle:15,1'])->group(function () {
 
         Route::post('login', 'login');
         Route::post('register', 'register');
@@ -36,7 +32,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::middleware('auth:api')->group(function () {
             Route::post('logout', 'logout');
             Route::post('refresh', 'refreshToken');
-            Route::post('me', 'user');
+            Route::get('me', 'user');
         });
 
         Route::controller(VerifyEmailController::class)->group(function () {
@@ -53,7 +49,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         });
     });
 
-    Route::middleware(['auth:api', 'verified'])->group(function () {
+    Route::middleware(['auth:api', 'verified', 'throttle:15,1'])->group(function () {
         Route::controller(PostController::class)->group(function () {
             Route::get('user/posts', 'userPosts');
             Route::get('search/posts', 'search');
@@ -68,8 +64,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('posts/{post}/comments', 'postComments');
             Route::get('posts/drafts', 'drafts');
             Route::get('posts/archives', 'archivesTrashed');
-//            Route::delete('posts/hard-delete', 'hardDelete');
-            Route::get('posts/generate/cover-image','generateCoverImage');
+            Route::get('posts/generate/cover-image', 'generateCoverImage');
         });
         Route::apiResource('posts', PostController::class);
 
@@ -127,6 +122,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('posts/{post}/reactors', 'getReactors');
             Route::get('posts/{post}/my-reaction', 'myReaction');
             Route::get('posts/{post}/reactions-count', 'reactionCounts');
+            Route::get('posts/user-total-reacted', 'getTotalReactionsOnPosts');
         });
 
         Route::controller(SavedPostController::class)->group(function () {

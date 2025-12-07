@@ -16,7 +16,11 @@ class UserResource extends JsonResource
             'Name' => $this->name,
             'Username' => $this->username,
             'Role' => $this->role ?? 'user',
-            'Avatar Image' => $this->avatar_url ? asset('storage/' . $this->avatar_url) : null,
+            'Avatar Image' => $this->avatar_url
+                ? (filter_var($this->avatar_url, FILTER_VALIDATE_URL)
+                    ? $this->avatar_url
+                    : asset('storage/' . $this->avatar_url))
+                : null,
             'Cover Image' => $this->cover_image ? asset('storage/' . $this->cover_url) : null,
             'Bio' => $this->bio,
             'Provider ID' => $this->provider_id,

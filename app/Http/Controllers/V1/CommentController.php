@@ -24,7 +24,7 @@ class CommentController
         ]);
     }
 
-    public function store(StoreCommentRequest $request , Post $post)
+    public function store(StoreCommentRequest $request, Post $post)
     {
         $this->authorize('create', Comment::class);
         $validated = $request->validated();

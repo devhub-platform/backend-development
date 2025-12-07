@@ -19,9 +19,9 @@ class ReactionController
         $post = Post::findOrFail($postId);
         $user = auth()->user();
 
-        $user->reaction($request->type,$post );
+        $user->reaction($request->type, $post);
         $reactType = $request->type;
-        Notification::send($post->user, new ReactNotification($post , $reactType));
+        Notification::send($post->user, new ReactNotification($post, $reactType));
         return response()->json([
             'message' => 'Reaction added successfully',
             'reaction' => $request->type,
@@ -58,10 +58,28 @@ class ReactionController
     public function reactionCounts(Post $post)
     {
         $reactionCounts = $post->getReactionsWithCount();
-
         return response()->json([
-            'post_id' => $post->title,
+            'post title' => $post->title,
             'all_reaction_counts' => $reactionCounts,
         ]);
     }
+
+    public function getTotalReactionsOnPosts()
+    {
+        $user = auth()->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $totalReactions = (int)$user->posts()->withCount('reactions')->get()->sum('reactions_count');
+        if (!is_numeric($totalReactions) || $totalReactions < 0) {
+            $totalReactions = 0;
+        }
+
+        return response()->json([
+            'user_id' => $user->id,
+            'total_reactions_on_posts' => $totalReactions,
+        ]);
+    }
+
 }
