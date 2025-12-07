@@ -65,6 +65,8 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('posts/drafts', 'drafts');
             Route::get('posts/archives', 'archivesTrashed');
             Route::get('posts/generate/cover-image', 'generateCoverImage');
+            Route::post('posts/upload/cover-image', 'uploadPostCover');
+            Route::post('posts/upload/image', 'uploadPostImage');
         });
         Route::apiResource('posts', PostController::class);
 

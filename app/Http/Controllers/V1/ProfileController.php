@@ -14,12 +14,14 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tymon\JWTAuth\Exceptions\JWTException;
 
 class ProfileController
 {
     use AuthorizesRequests;
+
     public function show()
     {
         $user = Auth::user();
@@ -38,7 +40,7 @@ class ProfileController
         $extension = $image->getClientOriginalExtension();
         $slug = Str::slug(Auth::user()->username);
         $filename = $slug . '-' . time() . '.' . $extension;
-        $path = $image->storeAs('avatars', $filename, 's3');
+        $path = $image->storeAs('avatars-images', $filename, 's3');
 
         $user = Auth::user();
         $user->avatar_url = $path;
@@ -58,11 +60,11 @@ class ProfileController
 
         $image = $request->file('cover_image');
         $extension = $image->getClientOriginalExtension();
-        $slug = Str::slug(Auth::user()->username);
+        $slug = str(auth()->user()->username)->slug();
         $filename = 'cover-' . $slug . '-' . time() . '.' . $extension;
-        $path = $image->storeAs('covers', $filename, 's3');
+        $path = $image->storeAs('covers-profiles', $filename, 's3');
 
-        $user = Auth::user();
+        $user = auth()->user();
         $user->cover_image = $path;
         $user->save();
 
@@ -77,7 +79,7 @@ class ProfileController
         $validated = $request->validated();
 
         $user = auth()->user();
-        if(!$user) {
+        if (!$user) {
             return response()->json([
                 'message' => 'User not found',
             ], 404);
@@ -95,7 +97,7 @@ class ProfileController
     {
         $user = auth()->user();
         $user->delete();
-        Log::notice('User deleted: ' . $user->email);
+        Log::notice('User deleted-Soft Delete: ' . $user->email);
         return response()->json([
             'message' => 'Profile deleted successfully',
         ]);
@@ -105,6 +107,12 @@ class ProfileController
     {
         $user = auth()->user();
         $user->forceDelete();
+        Log::notice('User permanently deleted: ' . $user->email);
+
+        if ($user->avatar_url)
+            Storage::disk('s3')->delete($user->avatar_url);
+        if ($user->cover_image)
+            Storage::disk('s3')->delete($user->cover_image);
 
         return response()->json([
             'message' => 'Profile permanently deleted successfully',

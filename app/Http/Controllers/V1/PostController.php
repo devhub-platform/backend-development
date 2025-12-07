@@ -7,6 +7,7 @@ use App\Http\Requests\PostsRequests\PostUpdateRequest;
 use App\Http\Resources\PostCollection;
 use App\Http\Resources\PostResource;
 use App\Http\Resources\SearchPostResource;
+use App\Http\Resources\UserResource;
 use App\Models\Post;
 use App\Models\Tag;
 use App\Services\GeminiImageService;
@@ -16,6 +17,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class PostController extends Controller
 {
@@ -58,15 +60,23 @@ class PostController extends Controller
 
         $validated = $request->validated();
         $validated['user_id'] = auth()->id();
-        $validated['slug'] = str($validated['title'])->slug();
+        $validated['slug'] = Str::slug($validated['title']);
+
+        if ($request->hasFile('cover_image')) {
+            $image = $request->file('cover_image');
+            $extension = $image->getClientOriginalExtension();
+            $slug = Str::slug(Auth::user()->username);
+            $filename = $slug . '-' . time() . '.' . $extension;
+            $path = $image->storeAs('posts-covers', $filename, 's3');
+            $validated['cover_image'] = $path;
+        }
 
         if ($request->hasFile('image_url')) {
             $image = $request->file('image_url');
             $extension = $image->getClientOriginalExtension();
-            $filename = str($validated['title'])->slug() . '-' . time() . '.' . $extension;
-
-            $path = $image->storeAs('posts', $filename, 's3');
-
+            $slug = Str::slug(Auth::user()->username);
+            $filename = $slug . '-' . time() . '.' . $extension;
+            $path = $image->storeAs('posts-images', $filename, 's3');
             $validated['image_url'] = $path;
         }
 
@@ -77,6 +87,55 @@ class PostController extends Controller
             'post' => new PostResource($post)
         ], 201);
     }
+
+//    public function uploadPostImage(Request $request, Post $post)
+//    {
+//        $this->authorize('update', $post);
+//
+//        $request->validate([
+//            'image_url' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+//        ]);
+//
+//        $image = $request->file('image_url');
+//        if (!$image) {
+//            return response()->json(['message' => 'No image uploaded'], 422);
+//        }
+//
+//        $extension = $image->getClientOriginalExtension();
+//        $slug = Str::slug($post->title ?? Auth::user()->username);
+//        $filename = $slug . '-' . time() . '.' . $extension;
+//        $path = $image->storeAs('posts-images', $filename, 's3');
+//
+//        $post->image_url = $path;
+//        $post->save();
+//
+//        return response()->json([
+//            'message' => 'Post image uploaded successfully',
+//            'data' => new PostResource($post->fresh()),
+//        ]);
+//    }
+//
+//    public function uploadPostCover(Request $request)
+//    {
+//        $request->validate([
+//            'cover_image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+//        ]);
+//
+//        $image = $request->file('cover_image');
+//        $extension = $image->getClientOriginalExtension();
+//        $slug = Str::slug(Auth::user()->username);
+//        $filename = $slug . '-' . time() . '.' . $extension;
+//        $path = $image->storeAs('posts-covers', $filename, 's3');
+//
+//        $user = Auth::user();
+//        $user->image_url = $path;
+//        $user->save();
+//
+//        return response()->json([
+//            'message' => 'Avatar image uploaded successfully',
+//            'data' => new PostResource($user),
+//        ]);
+//    }
 
     public function generateCoverImage(GeminiImageService $geminiImage, Request $request)
     {
@@ -115,6 +174,14 @@ class PostController extends Controller
         $this->authorize('delete', $post);
 
         $post->delete();
+        if ($post->image_url) {
+            Storage::disk('s3')->delete($post->image_url);
+        }
+
+        if ($post->cover_image) {
+            Storage::disk('s3')->delete($post->cover_image);
+        }
+
         return response()->json(['message' => "Post $post->title deleted successfully"]);
     }
 
