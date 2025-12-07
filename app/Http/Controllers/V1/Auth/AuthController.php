@@ -56,7 +56,16 @@ class AuthController extends Controller
     public function register(RegisteredRequest $request): ?JsonResponse
     {
         $data = $request->validated();
-        $data['username'] = Str::before($data['email'], '@');
+        $username = isset($data['email']) ? Str::before($data['email'], '@') : null;
+        $username = $username ?? ($data['name'] ?? ('user_' . time()));
+
+        $base = $username;
+        $counter = 1;
+
+        while (User::where('username', $username)->exists()) {
+            $username = $base . '_' . $counter++;
+        }
+        $data['username'] = $username;
         $user = User::create($data);
 
         if (!$user) {
