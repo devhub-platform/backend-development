@@ -35,7 +35,7 @@ class CodeEditorController
 
     public function getPackages()
     {
-        try {
+        try { 
             $response = Http::get($this->pistonBaseUrl . '/packages');
 
             return response()->json([
