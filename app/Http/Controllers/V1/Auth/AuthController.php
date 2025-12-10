@@ -21,33 +21,28 @@ class AuthController extends Controller
 {
     use AuthorizesRequests;
 
-    public function login(LoginRequest $request): ?JsonResponse
+    public function login(LoginRequest $request): JsonResponse
     {
         $credentials = $request->only('email', 'password');
+        $remember = $request->input('remember_me') ?? false;
 
-        try {
-            if (!$token = JWTAuth::attempt($credentials)) {
-                Log::error('Login attempt failed for email: ' . $request->email);
-
-                return response()->json(['error' => 'Invalid credentials'], 401);
-            }
-
-            $user = Auth::user();
-
-            $token = JWTAuth::fromUser($user);
-            Log::info('Login success for email: ' . $request->email);
-
-            return response()->json([
-                'user' => new UserResource($user),
-                'token' => $token,
-            ]);
-        } catch (JWTException $e) {
-            Log::error($e->getMessage());
-
-            return response()->json(['error' => 'Could not create token',
-                'message' => $e->getMessage()], 500);
+        if ($remember) {
+            JWTAuth::factory()->setTTL(60 * 24 * 30); // 30 days
+        } else {
+            JWTAuth::factory()->setTTL(60);
         }
+
+        if (!$token = JWTAuth::attempt($credentials)) {
+            return response()->json(['error' => 'Invalid credentials'], 401);
+        }
+
+        return response()->json([
+            'user' => new UserResource(Auth::user()),
+            'token' => $token,
+            'remember_me' => $remember,
+        ]);
     }
+
 
     public function register(RegisteredRequest $request): ?JsonResponse
     {
