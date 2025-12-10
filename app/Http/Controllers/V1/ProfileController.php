@@ -44,7 +44,7 @@ class ProfileController
         $path = $image->storeAs('avatars-images', $filename, 's3');
 
         $user = Auth::user();
-        $user->avatar_url = $path;
+        $user->avatar_url = Storage::url($path);
         $user->save();
 
         return response()->json([
@@ -66,7 +66,7 @@ class ProfileController
         $path = $image->storeAs('covers-profiles', $filename, 's3');
 
         $user = auth()->user();
-        $user->cover_image = $path;
+        $user->cover_image = Storage::url($path);
         $user->save();
 
         return response()->json([

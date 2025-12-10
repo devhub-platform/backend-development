@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Scout\Searchable;
@@ -150,6 +151,11 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         }
         $this->followedTags()->attach($tagId);
         return true;
+    }
+
+    public function status(): HasOne
+    {
+        return $this->hasOne(UserStatus::class);
     }
 
 // check if following
