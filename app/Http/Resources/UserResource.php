@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 /** @mixin User */
 class UserResource extends JsonResource
@@ -16,12 +17,8 @@ class UserResource extends JsonResource
             'Name' => $this->name,
             'Username' => $this->username,
             'Role' => $this->role ?? 'user',
-            'Avatar Image' => $this->avatar_url
-                ? (filter_var($this->avatar_url, FILTER_VALIDATE_URL)
-                    ? $this->avatar_url
-                    : asset('storage/' . $this->avatar_url))
-                : null,
-            'Cover Image' => $this->cover_image ? asset('storage/' . $this->cover_url) : null,
+            'Avatar Image' => $this->avatar_url ?? null,
+            'Cover Image' => $this->cover_image ?? null,
             'Bio' => $this->bio,
             'Provider ID' => $this->provider_id,
             'Email' => $this->email,

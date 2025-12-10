@@ -68,7 +68,7 @@ class PostController extends Controller
             $slug = Str::slug(Auth::user()->username);
             $filename = $slug . '-' . time() . '.' . $extension;
             $path = $image->storeAs('posts-covers', $filename, 's3');
-            $validated['cover_image'] = $path;
+            $validated['cover_image'] = strval(Storage::url($path));
         }
 
         if ($request->hasFile('image_url')) {
@@ -77,7 +77,7 @@ class PostController extends Controller
             $slug = Str::slug(Auth::user()->username);
             $filename = $slug . '-' . time() . '.' . $extension;
             $path = $image->storeAs('posts-images', $filename, 's3');
-            $validated['image_url'] = $path;
+            $validated['image_url'] = strval(Storage::url($path));
         }
 
         $post = Post::create($validated);

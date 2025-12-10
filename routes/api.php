@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\V1\NotificationController;
 use App\Http\Controllers\V1\Auth\VerifyEmailController;
 use App\Http\Controllers\V1\TagFollowController;
-
+use App\Http\Controllers\V1\UserStatusesController;
 Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
     Route::controller(SocialiteMediaController::class)->group(function () {
         Route::get('auth/google/login', 'login');
@@ -153,6 +153,12 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('tags/{tag}/follow', 'follow');
             Route::delete('tags/{tag}/unfollow', 'unfollow');
             Route::get('tags/{tag}/followers', 'listFollowing');
+        });
+
+        Route::controller(UserStatusesController::class)->group(function () {
+            Route::get('user/statuses', 'getStatuses');
+            Route::post('user/statuses', 'store');
+            Route::delete('user/statuses', 'delete');
         });
     });
 });
