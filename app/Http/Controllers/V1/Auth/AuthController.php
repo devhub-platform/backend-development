@@ -29,7 +29,7 @@ class AuthController extends Controller
         if ($remember) {
             JWTAuth::factory()->setTTL(60 * 24 * 30); // 30 days
         } else {
-            JWTAuth::factory()->setTTL(60);
+            JWTAuth::factory()->setTTL(60); // 1 hour
         }
 
         if (!$token = JWTAuth::attempt($credentials)) {
@@ -59,7 +59,9 @@ class AuthController extends Controller
             return response()->json(['message' => 'User registration failed'], 500);
         }
         $token = JWTAuth::fromUser($user);
+
         Mail::to($user->email)->send(new WelcomeEmailMail($user));
+
         return response()->json([
             'message' => 'User registered successfully',
             'user' => new UserResource($user),
