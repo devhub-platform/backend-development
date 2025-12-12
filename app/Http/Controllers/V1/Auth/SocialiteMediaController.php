@@ -18,6 +18,7 @@ class SocialiteMediaController
             ->stateless() // Use stateless to avoid session issues in API
             ->redirect() // Get the redirect response
             ->getTargetUrl(); // Extract the target URL
+
         Log::info('Generated Google OAuth redirect URL: ' . $redirectUrl);
         return response()->json([
             'url' => $redirectUrl
@@ -30,6 +31,7 @@ class SocialiteMediaController
             ->stateless()
             ->redirect()
             ->getTargetUrl();
+
         Log::info('Generated GitHub OAuth redirect URL: ' . $redirectUrl);
         return response()->json([
             'url' => $redirectUrl
@@ -49,12 +51,6 @@ class SocialiteMediaController
 
         return $this->extracted($githubUser);
     }
-    public function callbackMicrosoft(): JsonResponse
-    {
-        $githubUser = Socialite::driver('github')->stateless()->user();
-
-        return $this->extracted($githubUser);
-    }
 
     /**
      * @param $mediaUser
@@ -62,9 +58,8 @@ class SocialiteMediaController
      */
     public function extracted($mediaUser): JsonResponse
     {
-        $username = $mediaUser->getNickname()
-            ?? explode('@', $mediaUser->getEmail())[0]
-            . '_' . substr($mediaUser->getId(), 0, 5);
+        $username = str()->before($mediaUser->getEmail(), '@')
+            . '_' . strval(rand(9999, 99999));
 
         $user = User::UpdateOrCreate(
             [
@@ -74,6 +69,7 @@ class SocialiteMediaController
                 'name' => $mediaUser->getName(),
                 'username' => $username,
                 'role' => 'user',
+                'bio' => $mediaUser->getNickname() ?? 'Bio not set yet.',
                 'provider_id' => $mediaUser->getId(),
                 'password' => bcrypt(str()->random(16)),
                 'avatar_url' => $mediaUser->getAvatar(),
