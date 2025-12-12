@@ -29,7 +29,7 @@ class AuthController extends Controller
         if ($remember) {
             JWTAuth::factory()->setTTL(60 * 24 * 30); // 30 days
         } else {
-            JWTAuth::factory()->setTTL(60); // 1 hour
+            JWTAuth::factory()->setTTL(60 * 24); // 1 day
         }
 
         if (!$token = JWTAuth::attempt($credentials)) {

@@ -18,13 +18,17 @@ use App\Http\Controllers\V1\NotificationController;
 use App\Http\Controllers\V1\Auth\VerifyEmailController;
 use App\Http\Controllers\V1\TagFollowController;
 use App\Http\Controllers\V1\UserStatusesController;
+
 Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
     Route::controller(SocialiteMediaController::class)->group(function () {
         Route::get('auth/google/login', 'login');
         Route::get('auth/google/callback', 'callback');
+
+        Route::get('auth/github/login', 'loginGithub');
+        Route::get('auth/github/callback', 'callbackGithub');
     });
 
-    Route::controller(AuthController::class)->middleware(['throttle:15,1'])->group(function () {
+    Route::controller(AuthController::class)->group(function () {
 
         Route::post('login', 'login');
         Route::post('register', 'register');

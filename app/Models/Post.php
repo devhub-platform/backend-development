@@ -32,7 +32,8 @@ class Post extends Model implements HasReaction
         'updated_at',
         'status',
         'read_time',
-        'cover_image'
+        'cover_image',
+        'deleted_at'
     ];
 
 

@@ -169,20 +169,18 @@ class PostController extends Controller
         ]);
     }
 
-    public function destroy(Post $post)
+    public function destroy(int $id)
     {
+        $post = Post::find($id);
         $this->authorize('delete', $post);
 
+        if (!$post->exists()) {
+            Log::error("Post {$id} not found for deletion");
+            return response()->json(['message' => 'Post not found.'], 404);
+        }
         $post->delete();
-        if ($post->image_url) {
-            Storage::disk('s3')->delete($post->image_url);
-        }
 
-        if ($post->cover_image) {
-            Storage::disk('s3')->delete($post->cover_image);
-        }
-
-        return response()->json(['message' => "Post $post->title deleted successfully"]);
+        return response()->json(['message' => "Post $post->title archived successfully"]);
     }
 
     public function userPosts(Request $request)
@@ -237,20 +235,22 @@ class PostController extends Controller
         return response()->json(['message' => "Post $post->title permanently deleted successfully"]);
     }
 
-    public function restore(int $id): JsonResource
+    public function restore(int $id)
     {
-        $post = Post::onlyTrashed()->findOrFail($id);
+        $post = Post::onlyTrashed()->find($id);
 
         if (!$post) {
             Log::error("Post $id not found");
             return response()->json(['message' => 'course not found or not trashed.'], 404);
         }
-        $this->authorize('restore', $post);
-
+//        $this->authorize('restore', $post);
+        if(auth()->id() !== $post->user_id){
+            return response()->json(['message' => 'Unauthorized to restore this post.'], 403);
+        }
         $post->restore();
 
         return response()->json([
-            'message' => 'Post restored successfully',
+            'message' => 'Post restored successfully (Unarchived)',
             'data' => new PostResource($post),
         ], 200);
     }

@@ -37,12 +37,12 @@ class PostPolicy
 
     public function restore(User $user, Post $post)
     {
-        return $post->user_id == $user->id;
+        return $user->id === $post->user_id;
     }
 
     public function forceDelete(User $user, Post $post)
     {
-        return $post->user_id == $user->id;
+        return $post->user_id === $user->id;
     }
 
     public function userPosts(User $user)
