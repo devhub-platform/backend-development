@@ -43,7 +43,8 @@ class UserStatusesController
 
     public function getStatuses()
     {
-        $statuses = UserStatus::with('user')->get();
+        $user = Auth::user();
+        $statuses = $user->status()->get();
 
         return response()->json([
             'status' => UserStatusesResource::collection($statuses),
