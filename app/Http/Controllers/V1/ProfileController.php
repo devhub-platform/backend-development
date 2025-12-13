@@ -191,4 +191,19 @@ class ProfileController
             'data' => $activity,
         ]);
     }
+
+    public function details()
+    {
+        $user = auth()->user();
+        return response()->json([
+            'number of posts published' => $user->posts()->where('status', '=', 'published')->count(),
+            'number of posts drafts' => $user->posts()->where('status', '=', 'draft')->count(),
+            'number of comments made' => $user->comments()->count(),
+            'pronouns' => $user->pronouns,
+            'joined at' => $user->created_at->format('Y-m-d H:i:s'),
+            'number of followers' => $user->followers()->count(),
+            'number of users followed' => $user->following()->count(),
+            'tags followed' => $user->followedTags()->count(),
+        ]);
+    }
 }

@@ -19,6 +19,7 @@ class UserResource extends JsonResource
             'Role' => $this->role ?? 'user',
             'Avatar Image' => $this->avatar_url ?? null,
             'Cover Image' => $this->cover_image ?? null,
+            'Pronouns' => $this->pronouns ?? 'Not specified',
             'Bio' => $this->bio,
             'Provider ID' => $this->provider_id,
             'Email' => $this->email,
