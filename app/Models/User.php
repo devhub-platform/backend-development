@@ -67,6 +67,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'deleted_at',
         'location',
         'website_url',
+        'pronouns'
     ];
 
     /**
