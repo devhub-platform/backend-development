@@ -10,7 +10,7 @@ class VerifyEmailRequest extends FormRequest
     {
         return [
             'email' => 'required|email|exists:users,email',
-            'otp' => 'required|digits:4',
+            'otp' => 'required|digits:6',
         ];
     }
 
