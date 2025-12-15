@@ -41,8 +41,8 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
         Route::controller(VerifyEmailController::class)->group(function () {
             Route::post('email/verify-otp', 'verifyEmailOtp');
-            Route::post('email/resend-otp', 'resendEmail');
-            Route::post('email/reset-otp', 'resetEmailVerification');
+            Route::post('email/send-otp', 'sendEmailOTP');
+//            Route::post('email/reset-otp', 'resetEmailVerification');
             Route::get('email/is-verified', 'isVerified');
         });
 
@@ -101,7 +101,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
         Route::controller(ProfileController::class)->group(function () {
             Route::get('profile', 'show');
-            Route::patch('profile', 'update');
+            Route::put('profile', 'update');
             Route::delete('profile', 'delete');
             Route::delete('profile/force', 'forceDelete');
             Route::get('profile/user/posts', 'userPosts');
@@ -111,7 +111,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('profile/upload/cover-image', 'uploadCoverImage');
             Route::post('profile/update-password', 'updatePassword');
             Route::get('profile/activity', 'activity');
-            Route::get('profile/details','details');
+            Route::get('profile/details', 'details');
         });
 
         Route::controller(FollowersController::class)->group(function () {
