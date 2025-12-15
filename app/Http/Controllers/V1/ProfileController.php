@@ -22,7 +22,6 @@ use Tymon\JWTAuth\Exceptions\JWTException;
 class ProfileController
 {
     use AuthorizesRequests;
-
     public function show()
     {
         $user = Auth::user();
@@ -199,6 +198,7 @@ class ProfileController
             'number of posts published' => $user->posts()->where('status', '=', 'published')->count(),
             'number of posts drafts' => $user->posts()->where('status', '=', 'draft')->count(),
             'number of comments made' => $user->comments()->count(),
+            'number of archives (posts)' => $user->posts()->onlyTrashed()->count(),
             'pronouns' => $user->pronouns,
             'joined at' => $user->created_at->format('Y-m-d H:i:s'),
             'number of followers' => $user->followers()->count(),
