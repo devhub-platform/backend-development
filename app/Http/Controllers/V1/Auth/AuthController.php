@@ -39,10 +39,9 @@ class AuthController extends Controller
         return response()->json([
             'user' => new UserResource(Auth::user()),
             'token' => $token,
-            'remember_me' => $remember,
+            'remember me' => $remember,
         ]);
     }
-
 
     public function register(RegisteredRequest $request): ?JsonResponse
     {

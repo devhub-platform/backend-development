@@ -56,7 +56,7 @@ class VerifyEmailController
         $otp = random_int(100000, 999999);
         $user->update([
             'otp' => $otp,
-            'two_factor_expires_at' => now()->addMinutes(1),
+            'two_factor_expires_at' => now()->addMinutes(10),
         ]);
 
         Mail::to($user->email)->send(new VerifyOtpMail($otp));
@@ -77,36 +77,6 @@ class VerifyEmailController
         return $this->errorResponse('Email is not verified', 400);
     }
 
-//    public function resetEmailVerification(Request $request)
-//    {
-//        $request->validate([
-//            'email' => 'required|email',
-//            'otp' => 'required|digits:6',
-//            'password' => 'required|string|min:8',
-//        ]);
-//
-//        $user = User::where('email', $request->email)->first();
-//
-//        if (!$user || $user->otp !== $request->otp) {
-//            return $this->errorResponse('Invalid email or OTP', 400);
-//        }
-//
-//        if ($user->two_factor_expires_at && $user->two_factor_expires_at < now()) {
-//            return $this->errorResponse('OTP has expired', 400);
-//        }
-//
-//        $user->update([
-//            'otp' => null,
-//            'otp_expires_at' => null,
-//            'two_factor_expires_at' => null,
-//            'password' => Hash::make($request->password),
-//        ]);
-//
-//        Log::notice('Email reset successful for user ID: ' . $user->id);
-//
-//        return $this->successResponse('Password reset successful');
-//    }
-//
     private function errorResponse(string $message, int $status)
     {
         return response()->json(['error' => $message], $status);

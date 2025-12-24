@@ -42,7 +42,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::controller(VerifyEmailController::class)->group(function () {
             Route::post('email/verify-otp', 'verifyEmailOtp');
             Route::post('email/send-otp', 'sendEmailOTP');
-//            Route::post('email/reset-otp', 'resetEmailVerification');
             Route::get('email/is-verified', 'isVerified');
         });
 

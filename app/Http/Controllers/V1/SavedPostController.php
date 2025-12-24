@@ -18,6 +18,7 @@ class SavedPostController
             ->with(['user', 'tags'])
             ->latest('created_at')
             ->get();
+
         if ($posts->isEmpty()) {
             return response()->json(['message' => 'No saved posts found'], 404);
         }
