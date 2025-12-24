@@ -22,6 +22,7 @@ use Tymon\JWTAuth\Exceptions\JWTException;
 class ProfileController
 {
     use AuthorizesRequests;
+
     public function show()
     {
         $user = Auth::user();

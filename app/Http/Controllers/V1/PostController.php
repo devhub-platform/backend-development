@@ -53,7 +53,6 @@ class PostController extends Controller
         ]);
     }
 
-
     public function store(PostStoreRequest $request)
     {
         $this->authorize('create', Post::class);
