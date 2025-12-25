@@ -1,0 +1,50 @@
+# Elastic Beanstalk ignore file
+# Similar to .gitignore but specifically for EB deployments
+
+# Dependencies (will be installed on deployment)
+/vendor/
+/node_modules/
+
+# Local environment files
+.env
+.env.local
+.env.*.local
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs and cache (generated on server)
+storage/logs/*
+!storage/logs/.gitkeep
+storage/framework/cache/*
+!storage/framework/cache/.gitkeep
+storage/framework/sessions/*
+!storage/framework/sessions/.gitkeep
+storage/framework/views/*
+!storage/framework/views/.gitkeep
+
+# Testing
+.phpunit.result.cache
+coverage/
+
+# Build artifacts
+public/hot
+public/storage
+
+# Documentation and development files
+*.md
+!README.md
+tests/
+phpunit.xml
+
+# Git
+.git/
+.gitattributes
