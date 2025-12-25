@@ -35,7 +35,7 @@ class CodeEditorController
 
     public function getPackages()
     {
-        try { 
+        try {
             $response = Http::get($this->pistonBaseUrl . '/packages');
 
             return response()->json([
@@ -111,6 +111,7 @@ class CodeEditorController
 
                 return response()->json([
                     'language' => $validated['language'],
+                    'file' => 'main.' . $extension,
                     'output' => $output,
                 ]);
             }
@@ -136,27 +137,29 @@ class CodeEditorController
      */
     private function getFileExtension($language)
     {
+        $lang = strtolower(trim($language));
+
         $extensions = [
-            'python' => 'py',
-            'javascript' => 'js',
+            'python' => 'py', 'py' => 'py',
+            'javascript' => 'js', 'js' => 'js',
             'java' => 'java',
             'php' => 'php',
-            'cpp' => 'cpp',
+            'c++' => 'cpp', 'cpp' => 'cpp',
             'c' => 'c',
-            'csharp' => 'cs',
+            'csharp' => 'cs', 'c#' => 'cs', 'cs' => 'cs',
             'go' => 'go',
             'rust' => 'rs',
-            'ruby' => 'rb',
-            'typescript' => 'ts',
-            'kotlin' => 'kt',
+            'ruby' => 'rb', 'rb' => 'rb',
+            'typescript' => 'ts', 'ts' => 'ts',
+            'kotlin' => 'kt', 'kt' => 'kt',
             'swift' => 'swift',
-            'bash' => 'sh',
+            'bash' => 'sh', 'sh' => 'sh',
             'r' => 'r',
-            'perl' => 'pl',
+            'perl' => 'pl', 'pl' => 'pl',
             'scala' => 'scala',
-            'haskell' => 'hs',
+            'haskell' => 'hs', 'hs' => 'hs',
         ];
 
-        return $extensions[strtolower($language)] ?? 'txt';
+        return $extensions[$lang] ?? 'txt';
     }
 }
