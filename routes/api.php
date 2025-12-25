@@ -111,6 +111,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('profile/update-password', 'updatePassword');
             Route::get('profile/activity', 'activity');
             Route::get('profile/details', 'details');
+            Route::post('profile/add-social-link', 'addSocialAccounts');
         });
 
         Route::controller(FollowersController::class)->group(function () {

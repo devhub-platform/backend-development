@@ -67,7 +67,9 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'deleted_at',
         'location',
         'website_url',
-        'pronouns'
+        'pronouns',
+        'linkedin_username',
+        'github_username',
     ];
 
     /**

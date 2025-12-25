@@ -93,6 +93,31 @@ class ProfileController
         ]);
     }
 
+    public function addSocialAccounts(Request $request)
+    {
+        $request->validate([
+            'linkedin_username' => 'sometimes|nullable|string|max:255',
+            'github_username' => 'sometimes|nullable|string|max:255',
+        ]);
+
+        $user = auth()->user();
+        if (!$user) {
+            return response()->json([
+                'message' => 'User not found',
+            ], 404);
+        }
+
+//        $linkedin_username = 'https://www.linkedin.com/in/' . $request->linkedin_username;
+//        $github_username = 'https://github.com/' . $request->github_username;
+
+        $user->update($request->only(['linkedin_username','github_username']));
+
+        return response()->json([
+            'message' => 'Social accounts updated successfully',
+            'data' => new UserResource($user),
+        ]);
+    }
+
     public function delete()
     {
         $user = auth()->user();
