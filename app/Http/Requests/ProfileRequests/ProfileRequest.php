@@ -21,6 +21,8 @@ class ProfileRequest extends FormRequest
             'location' => 'sometimes|nullable|string|max:255',
             'website_url' => 'sometimes|nullable|url|max:255',
             'pronouns' => 'sometimes|nullable|string|max:50|in:he/him,she/her|min:6',
+            'linkedin_username' => 'sometimes|nullable|string|max:255',
+            'github_username' => 'sometimes|nullable|string|max:255',
         ];
     }
 
