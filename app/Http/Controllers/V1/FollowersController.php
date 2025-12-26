@@ -27,7 +27,7 @@ class FollowersController
         $authUser->following()->detach($user->id);
         Log::info('Unfollowed ' . $user->name);
         return response()->json([
-            'message' => 'Successfully unfollowed user'
+            'message' => 'Successfully unfollowed user ' . $user->name
         ]);
     }
 
@@ -70,6 +70,61 @@ class FollowersController
         $count = $user->following()->count();
         return response()->json([
             'following_count' => $count,
+        ]);
+    }
+
+    public function myFollowers()
+    {
+        $user = auth()->user();
+        $followers = $user->followers()->pluck('users.name');
+
+        if ($followers->isEmpty()) {
+            return response()->json([
+                'message' => 'You have no followers yet.'
+            ]);
+        }
+
+        return response()->json([
+            'number of followers: ' => $followers->count(),
+            'Followers' => $followers,
+
+        ]);
+    }
+
+    public function myFollowing()
+    {
+        $user = auth()->user();
+        $following = $user->following()->pluck('users.name');
+
+        if ($following->isEmpty()) {
+            return response()->json([
+                'message' => 'You are not following anyone yet.'
+            ]);
+        }
+
+        return response()->json([
+            'number of following: ' => $following->count(),
+            'Following' => $following,
+        ]);
+    }
+
+    public function suggestions()
+    {
+        $user = auth()->user();
+        $followingIds = $user->following()->pluck('users.id')->toArray();
+        $suggestedUsers = User::whereNotIn('id', array_merge($followingIds, [$user->id]))
+            ->inRandomOrder()
+            ->take(5)
+            ->get(['id', 'name', 'username', 'bio']);
+
+        if ($suggestedUsers->isEmpty()) {
+            return response()->json([
+                'message' => 'No user suggestions available at the moment.'
+            ]);
+        }
+
+        return response()->json([
+            'Suggested Users' => $suggestedUsers,
         ]);
     }
 

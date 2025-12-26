@@ -29,9 +29,10 @@ class UserResource extends JsonResource
             'Location' => $this->location ?? 'Not specified',
             'Website URL' => $this->website_url ?? 'Not specified',
 
-            'LinkedIn Username' => 'https://www.linkedin.com/in/'.$this->linkedin_username ?? 'Not specified',
-            'GitHub Username' => 'https://github.com/'.$this->github_username ?? 'Not specified',
+            'LinkedIn Username' => $this->linkedin_username ? 'https://www.linkedin.com/in/' . $this->linkedin_username : 'Not specified',
+            'GitHub Username' => $this->github_username ? 'https://github.com/' . $this->github_username : 'Not specified',
 
+            'Currently Learning' => $this->currently_learning ?? 'Not specified',
             'Email verified at' => $this->email_verified_at ? $this->email_verified_at->format('Y-m-d H:i:s') : null,
             'Join At' => $this->created_at ? $this->created_at->format('Y-m-d H:i:s') : null,
             'Last Update' => $this->updated_at ? $this->updated_at->format('Y-m-d H:i:s') : null,

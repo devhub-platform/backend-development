@@ -100,23 +100,21 @@ class ProfileController
             'github_username' => 'sometimes|nullable|string|max:255',
         ]);
 
-        $user = auth()->user();
+        $user = Auth::user();
         if (!$user) {
             return response()->json([
                 'message' => 'User not found',
             ], 404);
         }
 
-//        $linkedin_username = 'https://www.linkedin.com/in/' . $request->linkedin_username;
-//        $github_username = 'https://github.com/' . $request->github_username;
-
-        $user->update($request->only(['linkedin_username','github_username']));
+        $user->update($request->only(['linkedin_username', 'github_username']));
 
         return response()->json([
             'message' => 'Social accounts updated successfully',
             'data' => new UserResource($user),
         ]);
     }
+
 
     public function delete()
     {
@@ -201,20 +199,33 @@ class ProfileController
     public function activity()
     {
         $user = auth()->user();
-        $posts = $user->posts()->select('id', 'title', 'created_at')->get()->map(function ($p) {
-            $p->type = 'post';
-            return $p;
-        });
-        $comments = $user->comments()->select('id', 'content', 'created_at')->get()->map(function ($c) {
-            $c->type = 'comment';
-            return $c;
-        });
-        $activity = $posts->concat($comments)->sortByDesc('created_at')->values();
+
+        $posts = $user->posts()
+            ->select('id', 'title', 'created_at')
+            ->get()
+            ->map(function ($p) {
+                $p->activity_type = 'post';
+                return $p;
+            });
+
+        $comments = $user->comments()
+            ->select('id', 'content', 'created_at')
+            ->get()
+            ->map(function ($c) {
+                $c->activity_type = 'comment';
+                return $c;
+            });
+
+        $activity = $posts
+            ->concat($comments)
+            ->sortByDesc('created_at')
+            ->values();
 
         return response()->json([
             'data' => $activity,
         ]);
     }
+
 
     public function details()
     {

@@ -24,7 +24,7 @@ class ForgetPasswordController
             return response()->json(['error' => 'Email not found or create account!'], 404);
         }
 
-        $otp = rand(1000, 9999);
+        $otp = rand(100000, 999999); // Generate a 6-digit OTP
         $otp = strval($otp); // Convert to string
         $user->update(['otp' => $otp]);
         $subject = 'OTP for Password Reset';
@@ -38,7 +38,7 @@ class ForgetPasswordController
     {
         $request->validate([
             'email' => 'required|email',
-            'otp' => 'required|digits:4',
+            'otp' => 'required|digits:6',
         ]);
 
         $user = User::where('email', $request->email)->first();
@@ -51,6 +51,7 @@ class ForgetPasswordController
             return response()->json(['error' => 'Invalid OTP'], 400);
         }
 
+        Log::info('OTP verified for email: ' . $user->email);
         return response()->json(['message' => 'OTP verified successfully'], 200);
     }
 
@@ -58,7 +59,7 @@ class ForgetPasswordController
     {
         $request->validate([
             'email' => 'required|email',
-            'otp' => 'required|digits:4',
+            'otp' => 'required|digits:6',
             'password' => ['required', 'string', Password::defaults(), 'confirmed'],
         ]);
 
@@ -76,6 +77,7 @@ class ForgetPasswordController
         $user->otp = null; // Clear the OTP
         $user->save();
 
-        return response()->json(['message' => 'Password reset successful'], 200);
+        Log::alert('Password reset for email: ' . $user->email);
+        return response()->json(['message' => 'Password reset successful login with new password!'], 200);
     }
 }
