@@ -68,6 +68,7 @@ class SocialiteMediaController
             [
                 'name' => $mediaUser->getName(),
                 'username' => $username,
+                'website_url' => null,
                 'role' => 'user',
                 'bio' => $mediaUser->getNickname() ?? 'Bio not set yet.',
                 'provider_id' => $mediaUser->getId(),

@@ -121,6 +121,10 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('users/{user}/following/count', 'followingCount');
             Route::post('users/{user}/follow', 'follow');
             Route::post('users/{user}/unfollow', 'unfollow');
+
+            Route::get('followers/suggestions', 'suggestions');
+            Route::get('followers/my-followers', 'myFollowers');
+            Route::get('followers/my-following', 'myFollowing');
         });
 
         Route::controller(ReactionController::class)->group(function () {
