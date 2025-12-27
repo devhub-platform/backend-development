@@ -7,6 +7,7 @@ use App\Http\Resources\ReadingListResource;
 use App\Models\Post;
 use App\Models\ReadingList;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class ReadingListController
@@ -15,7 +16,7 @@ class ReadingListController
 
     public function index()
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
         if (!$user) {
             return response()->json([
@@ -25,14 +26,11 @@ class ReadingListController
 
         $this->authorize('viewAny', ReadingList::class);
 
-        $lists = $user->readingLists()
-            ->with('posts.user')
-            ->get();
+        $lists = $user->readingLists()->with('posts.user')->get();
 
         if ($lists->isEmpty()) {
             return response()->json([
                 'message' => 'No reading lists found for this user.',
-                'reading_lists' => [],
             ]);
         }
 
@@ -47,6 +45,12 @@ class ReadingListController
     {
         $this->authorize('create', ReadingList::class);
 
+        if (ReadingList::where('title', $request->title)->where('user_id', auth()->id())->exists()) {
+            return response()->json([
+                'message' => 'A reading list with this title already exists.',
+            ], 409);
+        }
+
         $readingList = ReadingList::create([
             'title' => $request->title,
             'description' => $request->description,
@@ -55,9 +59,10 @@ class ReadingListController
 
         $readingList->loadCount('posts');
 
-        return (new ReadingListResource($readingList))
-            ->response()
-            ->setStatusCode(201);
+        return response()->json([
+            'message' => 'Reading list created successfully.',
+            'reading_list' => new ReadingListResource($readingList),
+        ]);
     }
 
 
@@ -65,7 +70,27 @@ class ReadingListController
     {
         $this->authorize('view', $readingList);
 
-        return new ReadingListResource($readingList);
+        return response()->json([
+            'message' => 'Reading list retrieved successfully.',
+            'List' => new ReadingListResource($readingList),
+        ]);
+    }
+
+    public function Lists(ReadingList $readingList)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json([
+                'message' => 'User not authenticated.',
+            ], 401);
+        }
+
+        $lists = $user->readingLists()->get();
+
+        return response()->json([
+            'message' => 'Reading lists retrieved successfully.',
+            'reading_lists' => ReadingListResource::collection($lists),
+        ]);
     }
 
     public function update(ReadingListRequest $request, ReadingList $readingList)
@@ -76,7 +101,10 @@ class ReadingListController
 
         $readingList->update($data);
 
-        return new ReadingListResource($readingList);
+        return response()->json([
+            'message' => 'Reading list updated successfully.',
+            'data' => new ReadingListResource($readingList),
+        ]);
     }
 
     public function destroy(ReadingList $readingList)
@@ -87,7 +115,7 @@ class ReadingListController
 
         Log::notice('Reading list deleted: ' . $readingList->id . ' by user: ' . auth()->user()->email);
         return response()->json([
-            'message' => 'Reading list deleted successfully',
+            'message' => "Reading list $readingList->title deleted successfully",
         ]);
     }
 
@@ -97,8 +125,9 @@ class ReadingListController
 
         $readingList->posts()->attach($post->id);
 
+        Log::info("Reading list post $post->title added to reading list: " . $readingList->id);
         return response()->json([
-            'message' => 'Post added to reading list successfully',
+            'message' => "Post $post->title added to reading list ($readingList->title) successfully",
         ]);
     }
 
@@ -106,10 +135,16 @@ class ReadingListController
     {
         $this->authorize('delete', $readingList);
 
+        if (!$readingList->posts()->where('post_id', $post->id)->exists()) {
+            return response()->json([
+                'message' => "Post $post->title not found in reading list",
+            ], 404);
+        }
+
         $readingList->posts()->detach($post->id);
 
         return response()->json([
-            'message' => 'Post removed from reading list successfully',
+            'message' => "Post $post->title removed from reading list ($readingList->title) successfully",
         ]);
     }
 }
