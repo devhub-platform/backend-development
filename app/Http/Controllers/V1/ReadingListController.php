@@ -10,6 +10,7 @@ use App\Models\ReadingList;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Laravel\Prompts\Note;
 
 class ReadingListController
 {
@@ -153,6 +154,48 @@ class ReadingListController
 
         return response()->json([
             'message' => "Post $post->title removed from reading list ($readingList->title) successfully",
+        ]);
+    }
+
+    public function addNoteToPostInReadingList(ReadingList $readingList, Post $post)
+    {
+        $this->authorize('update', $readingList);
+
+        if (!$readingList->posts()->where('post_id', $post->id)->exists()) {
+            return response()->json([
+                'message' => "Post $post->title not found in reading list",
+            ], 404);
+        }
+
+        $noteContent = request()->input('note');
+        if (!$noteContent) {
+            return response()->json([
+                'message' => 'Note content is required.',
+            ], 422);
+        }
+
+        $readingList->posts()->updateExistingPivot($post->id, ['note' => $noteContent]);
+
+        return response()->json([
+            'message' => "Note added to post '$post->title' in reading list '('$readingList->title)' successfully",
+            'note' => $noteContent
+        ]);
+    }
+
+    public function deleteNoteInPostInReadingList(ReadingList $readingList, Post $post)
+    {
+        $this->authorize('update', $readingList);
+
+        if (!$readingList->posts()->where('post_id', $post->id)->exists()) {
+            return response()->json([
+                'message' => "Post $post->title not found in reading list",
+            ], 404);
+        }
+
+        $readingList->posts()->updateExistingPivot($post->id, ['note' => null]);
+
+        return response()->json([
+            'message' => "Note deleted from post '$post->title' in reading list '('$readingList->title)' successfully",
         ]);
     }
 }
