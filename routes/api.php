@@ -171,9 +171,10 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         });
 
         Route::controller(ReadingListController::class)->group(function () {
-            Route::get('reading-lists', 'index');
+            Route::get('reading-lists/lists/posts', 'index');
             Route::post('reading-lists', 'store');
             Route::get('reading-lists/{readingList}', 'show');
+            Route::get('reading-lists/', 'Lists');
             Route::put('reading-lists/{readingList}', 'update');
             Route::delete('reading-lists/{readingList}', 'destroy');
 
