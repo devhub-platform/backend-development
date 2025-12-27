@@ -59,7 +59,7 @@ class AuthController extends Controller
         }
         $token = JWTAuth::fromUser($user);
 
-//        Mail::to($user->email)->send(new WelcomeEmailMail($user));
+       Mail::to($user->email)->send(new WelcomeEmailMail($user));
 
         return response()->json([
             'message' => 'User registered successfully',

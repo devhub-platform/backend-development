@@ -167,4 +167,9 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     {
         return $this->followedTags()->where('tag_id', $tagId)->exists();
     }
+
+    public function readingLists()
+    {
+        return $this->hasMany(ReadingList::class);
+    }
 }

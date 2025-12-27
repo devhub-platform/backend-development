@@ -9,6 +9,7 @@ use App\Http\Controllers\V1\FollowersController;
 use App\Http\Controllers\V1\PostController;
 use App\Http\Controllers\V1\ProfileController;
 use App\Http\Controllers\V1\ReactionController;
+use App\Http\Controllers\V1\ReadingListController;
 use App\Http\Controllers\V1\SavedPostController;
 use App\Http\Controllers\V1\SearchController;
 use App\Http\Controllers\V1\TagController;
@@ -100,7 +101,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
         Route::controller(ProfileController::class)->group(function () {
             Route::get('profile', 'show');
-            Route::put('profile', 'update');
+            Route::patch('profile', 'update');
             Route::delete('profile', 'delete');
             Route::delete('profile/force', 'forceDelete');
             Route::get('profile/user/posts', 'userPosts');
@@ -115,9 +116,9 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         });
 
         Route::controller(FollowersController::class)->group(function () {
-            Route::get('users/{user}/followers', 'followers');
+            Route::get('users/{user}/followers', 'usersFollowers');
             Route::get('users/{user}/followers/count', 'followersCount');
-            Route::get('users/{user}/following', 'following');
+            Route::get('users/{user}/following', 'usersFollowing');
             Route::get('users/{user}/following/count', 'followingCount');
             Route::post('users/{user}/follow', 'follow');
             Route::post('users/{user}/unfollow', 'unfollow');
@@ -168,6 +169,18 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('user/statuses', 'store');
             Route::delete('user/statuses', 'delete');
         });
+
+        Route::controller(ReadingListController::class)->group(function () {
+            Route::get('reading-lists', 'index');
+            Route::post('reading-lists', 'store');
+            Route::get('reading-lists/{readingList}', 'show');
+            Route::put('reading-lists/{readingList}', 'update');
+            Route::delete('reading-lists/{readingList}', 'destroy');
+
+            Route::post('reading-lists/{readingList}/add-post/{post}', 'addPostToReadingList');
+            Route::delete('reading-lists/{readingList}/remove-post/{post}', 'removePostFromReadingList');
+        });
+
     });
 });
 

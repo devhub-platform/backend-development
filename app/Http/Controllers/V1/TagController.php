@@ -6,6 +6,7 @@ use App\Http\Resources\TagResource;
 use App\Models\Tag;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class TagController
 {
@@ -53,6 +54,7 @@ class TagController
             'name' => $request->name,
         ]);
 
+        Log::info('New tag created: ' . $tag->name . ' by user ID: ' . auth()->id());
         return response()->json([
             'message' => 'Tag created successfully',
             'tag' => new TagResource($tag),

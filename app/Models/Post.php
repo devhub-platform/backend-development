@@ -72,4 +72,10 @@ class Post extends Model implements HasReaction
         return $this->belongsToMany(User::class, 'saved_posts')
             ->withTimestamps();
     }
+
+    public function readingLists()
+    {
+        return $this->belongsToMany(ReadingList::class, 'reading_list_story', 'post_id', 'reading_list_id')
+            ->withTimestamps();
+    }
 }
