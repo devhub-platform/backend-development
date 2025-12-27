@@ -243,7 +243,7 @@ class PostController extends Controller
             return response()->json(['message' => 'course not found or not trashed.'], 404);
         }
 //        $this->authorize('restore', $post);
-        if(auth()->id() !== $post->user_id){
+        if (auth()->id() !== $post->user_id) {
             return response()->json(['message' => 'Unauthorized to restore this post.'], 403);
         }
         $post->restore();
@@ -261,8 +261,15 @@ class PostController extends Controller
         $tags = collect($request->tags)->map(function ($tagName) {
             return Tag::firstOrCreate(['name' => $tagName])->id;
         });
+
         $post->tags()->syncWithoutDetaching($tags);
-        return response()->json($post->load('tags'), 200);
+        $post->load('tags');
+        $post->tags->each->setHidden(['pivot']);
+
+        return response()->json([
+            'message' => "Tags attached to Post {$post->title} successfully",
+            'data' => new PostResource($post)
+        ], 200);
     }
 
     public function detachTag(Post $post, Tag $tag)
@@ -284,10 +291,11 @@ class PostController extends Controller
         ]);
     }
 
-    public function archivesTrashed(Post $post)
+    public function archivesTrashed()
     {
-        $this->authorize('view-any', $post);
-        $archivedPosts = $post->onlyTrashed()->get();
+        $this->authorize('viewAny', Post::class);
+        $user = auth()->user();
+        $archivedPosts = Post::where('user_id', $user->id)->onlyTrashed()->get();
         return response()->json([
             'archives' => PostResource::collection($archivedPosts)
         ]);

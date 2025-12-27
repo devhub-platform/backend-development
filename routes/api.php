@@ -154,7 +154,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
         Route::controller(CodeEditorController::class)->group(function () {
             Route:: get('/code/runtimes', 'runtimes');
-            Route::post('/code/execute','execute');
+            Route::post('/code/execute', 'execute');
 
         });
 
@@ -180,6 +180,12 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
             Route::post('reading-lists/{readingList}/add-post/{post}', 'addPostToReadingList');
             Route::delete('reading-lists/{readingList}/remove-post/{post}', 'removePostFromReadingList');
+            Route::post('reading-lists/{readingList}/move-post/{post}', 'movePostToAnotherList');
+
+
+            Route::post('reading-lists/{readingList}/add-note/{post}', 'addNoteToPostInReadingList');
+            Route::delete('reading-lists/{readingList}/delete-note/{post}', 'deleteNoteInPostInReadingList');
+
         });
 
     });
