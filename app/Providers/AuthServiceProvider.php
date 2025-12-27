@@ -4,7 +4,9 @@ namespace App\Providers;
 
 use App\Models\Comment;
 use App\Models\Post;
+use App\Models\ReadingList;
 use App\Policies\CommentPolicy;
+use App\Policies\ReadingListPolicy;
 use Illuminate\Support\ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -21,5 +23,6 @@ class AuthServiceProvider extends ServiceProvider
     protected $policies = [
         Post::class => PostPolicy::class,
         Comment::class => CommentPolicy::class,
+        ReadingList::class => ReadingListPolicy::class
     ];
 }

@@ -7,15 +7,18 @@ use App\Models\User;
 use App\Notifications\FollowNotification;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Auth;
 
 class FollowersController
 {
     public function follow(User $user)
     {
-        $authUser = auth()->user();
+        $authUser = Auth::user();
         $authUser->following()->attach($user->id);
+
         Notification::send($user, new FollowNotification($user));
         Log::info('Followed ' . $user->name);
+
         return response()->json([
             'message' => "Successfully followed user {$user->name}"
         ]);
@@ -25,13 +28,14 @@ class FollowersController
     {
         $authUser = auth()->user();
         $authUser->following()->detach($user->id);
-        Log::info('Unfollowed ' . $user->name);
+
+        Log::notice('Unfollowed ' . $user->name);
         return response()->json([
             'message' => 'Successfully unfollowed user ' . $user->name
         ]);
     }
 
-    public function following(User $user)
+    public function usersFollowing(User $user)
     {
         $following = $user->following()->get();
         if ($following->isEmpty()) {
@@ -44,7 +48,7 @@ class FollowersController
         ]);
     }
 
-    public function followers(User $user)
+    public function usersFollowers(User $user)
     {
         $followers = $user->followers()->get();
         if ($followers->isEmpty()) {
@@ -76,7 +80,7 @@ class FollowersController
     public function myFollowers()
     {
         $user = auth()->user();
-        $followers = $user->followers()->pluck('users.name');
+        $followers = $user->followers()->get(['name','username','avatar_url']);
 
         if ($followers->isEmpty()) {
             return response()->json([
@@ -86,7 +90,7 @@ class FollowersController
 
         return response()->json([
             'number of followers: ' => $followers->count(),
-            'Followers' => $followers,
+            'Followers' => $followers->makeHidden('pivot'),
 
         ]);
     }
@@ -94,7 +98,7 @@ class FollowersController
     public function myFollowing()
     {
         $user = auth()->user();
-        $following = $user->following()->pluck('users.name');
+        $following = $user->following()->get(['name','username','avatar_url']);
 
         if ($following->isEmpty()) {
             return response()->json([
@@ -104,7 +108,7 @@ class FollowersController
 
         return response()->json([
             'number of following: ' => $following->count(),
-            'Following' => $following,
+            'Following' => $following->makeHidden('pivot'),
         ]);
     }
 
