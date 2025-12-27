@@ -175,7 +175,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('reading-lists', 'store');
             Route::get('reading-lists/{readingList}', 'show');
             Route::get('reading-lists/', 'Lists');
-            Route::put('reading-lists/{readingList}', 'update');
+            Route::patch('reading-lists/{readingList}', 'update');
             Route::delete('reading-lists/{readingList}', 'destroy');
 
             Route::post('reading-lists/{readingList}/add-post/{post}', 'addPostToReadingList');

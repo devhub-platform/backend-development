@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers\V1;
 
-use App\Http\Requests\ReadingListRequest;
+use App\Http\Requests\ReadingListRequests\ReadingListRequest;
+use App\Http\Requests\ReadingListRequests\ReadingListUpdateRequest;
 use App\Http\Resources\ReadingListResource;
 use App\Models\Post;
 use App\Models\ReadingList;
@@ -93,11 +94,12 @@ class ReadingListController
         ]);
     }
 
-    public function update(ReadingListRequest $request, ReadingList $readingList)
+    public function update(ReadingListUpdateRequest $request, ReadingList $readingList)
     {
         $this->authorize('update', $readingList);
 
         $data = $request->validated();
+        $data['user_id'] = auth()->id();
 
         $readingList->update($data);
 
@@ -122,6 +124,12 @@ class ReadingListController
     public function addPostToReadingList(ReadingList $readingList, Post $post)
     {
         $this->authorize('update', $readingList);
+
+        if ($readingList->posts()->where('post_id', $post->id)->exists()) {
+            return response()->json([
+                'message' => "Post $post->title is already in the reading list",
+            ], 409);
+        }
 
         $readingList->posts()->attach($post->id);
 
