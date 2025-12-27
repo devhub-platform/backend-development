@@ -99,6 +99,7 @@ class CommentController
         $validated = $request->validated();
         $validated['user_id'] = auth()->id();
         $validated['parent_id'] = $parentComment->id;
+        $validated['post_id'] = $parentComment->post_id;
 
         $comment = Comment::create($validated);
 
