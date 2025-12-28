@@ -129,12 +129,12 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         });
 
         Route::controller(ReactionController::class)->group(function () {
+            Route::get('user/posts/total-reactions', 'getTotalReactionsOnPosts');
             Route::post('posts/{post}/react', 'reactToPost');
             Route::delete('posts/{post}/remove-react', 'removeReaction');
             Route::get('posts/{post}/reactors', 'getReactors');
             Route::get('posts/{post}/my-reaction', 'myReaction');
             Route::get('posts/{post}/reactions-count', 'reactionCounts');
-            Route::get('posts/user-total-reacted', 'getTotalReactionsOnPosts');
         });
 
         Route::controller(SavedPostController::class)->group(function () {
@@ -153,9 +153,8 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         });
 
         Route::controller(CodeEditorController::class)->group(function () {
-            Route:: get('/code/runtimes', 'runtimes');
+            Route::get('/code/runtimes', 'runtimes');
             Route::post('/code/execute', 'execute');
-
         });
 
         Route::controller(TagFollowController::class)->group(function () {
@@ -185,9 +184,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
             Route::post('reading-lists/{readingList}/add-note/{post}', 'addNoteToPostInReadingList');
             Route::delete('reading-lists/{readingList}/delete-note/{post}', 'deleteNoteInPostInReadingList');
-
         });
-
     });
 });
 

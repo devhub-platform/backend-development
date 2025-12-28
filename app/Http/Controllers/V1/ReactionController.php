@@ -10,10 +10,11 @@ use Illuminate\Support\Facades\Notification;
 
 class ReactionController
 {
+    public int $numberOfReactions = 0;
     public function reactToPost(Request $request, $postId)
     {
         $request->validate([
-            'type' => 'required|string|max:50'
+            'type' => 'required|string|max:50|in:like,sad,love,angry,wow,haha',
         ]);
 
         $post = Post::findOrFail($postId);
@@ -22,6 +23,7 @@ class ReactionController
         $user->reaction($request->type, $post);
         $reactType = $request->type;
         Notification::send($post->user, new ReactNotification($post, $reactType));
+
         return response()->json([
             'message' => 'Reaction added successfully',
             'reaction' => $request->type,
@@ -39,9 +41,10 @@ class ReactionController
 
     public function getReactors(Post $post)
     {
+        $users = $post->getReactors();
         return response()->json([
-            'post_id' => $post->title,
-            'reactors' => $post->getReactors(),
+            'post' => $post->title,
+            'reactors' => $users,
         ]);
     }
 
@@ -60,13 +63,13 @@ class ReactionController
         $reactionCounts = $post->getReactionsWithCount();
         return response()->json([
             'post title' => $post->title,
-            'all_reaction_counts' => $reactionCounts,
+            'all reactions count' => $reactionCounts,
         ]);
     }
 
     public function getTotalReactionsOnPosts()
     {
-        $user = auth()->user();
+        $user = auth('api')->user();
         if (!$user) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
@@ -77,7 +80,7 @@ class ReactionController
         }
 
         return response()->json([
-            'user_id' => $user->id,
+            'user' => $user->name,
             'total_reactions_on_posts' => $totalReactions,
         ]);
     }

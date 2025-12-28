@@ -178,6 +178,7 @@ class ProfileController
             $this->authorize('update', Auth::user());
             $user = Auth::user();
             $name = $user->name;
+
             if (!Hash::check($request->current_password, $user->password)) {
                 return response()->json(['message' => 'Current password is incorrect'], 400);
             }
@@ -227,7 +228,7 @@ class ProfileController
     }
 
 
-    public function details()
+    public function details() // this details shown in dashboard
     {
         $user = Auth::user();
         return response()->json([
@@ -236,10 +237,11 @@ class ProfileController
             'number of comments made' => $user->comments()->count(),
             'number of archives (posts)' => $user->posts()->onlyTrashed()->count(),
             'pronouns' => $user->pronouns,
-            'joined at' => $user->created_at->format('Y-m-d H:i:s'),
+            'joined at' => $user->created_at->diffForHumans(),
             'number of followers' => $user->followers()->count(),
             'number of users followed' => $user->following()->count(),
             'tags followed' => $user->followedTags()->count(),
+            // 'number of likes given' => $this->CountReactionsOnUserPosts(),
         ]);
     }
 }
