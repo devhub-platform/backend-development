@@ -28,12 +28,9 @@ class Post extends Model implements HasReaction
         'slug',
         'image_url',
         'content',
-        'created_at',
-        'updated_at',
         'status',
         'read_time',
         'cover_image',
-        'deleted_at'
     ];
 
 
