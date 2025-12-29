@@ -34,7 +34,7 @@ class UserResource extends JsonResource
 
             'Currently Learning' => $this->currently_learning ?? 'Not specified',
             'Email verified at' => $this->email_verified_at ? $this->email_verified_at->format('Y-m-d H:i:s') : null,
-            'Join At' => $this->created_at ? $this->created_at->format('Y-m-d H:i:s') : null,
+            'Join At' => $this->created_at ? $this->created_at->diffForHumans() : null,
             'Last Update' => $this->updated_at ? $this->updated_at->format('Y-m-d H:i:s') : null,
         ];
     }
