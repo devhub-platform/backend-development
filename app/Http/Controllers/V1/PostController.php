@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use App\Services\SummarizePostService;
 
 class PostController extends Controller
 {
@@ -301,4 +302,25 @@ class PostController extends Controller
         ]);
     }
 
+
+    public function summarizationPost(Post $post, SummarizePostService $summarizeService)
+    {
+        $this->authorize('summarize', $post);
+
+        $summary = $summarizeService->summarize($post->content, 'en');
+
+        if (!$summary) {
+            Log::error("Failed to summarize post: " . $post->id);
+            return response()->json([
+                'message' => 'Failed to summarize the post'
+            ], 503);
+        }
+
+        return response()->json([
+            'message' => 'Post summarized successfully',
+            'post_title' => $post->title,
+            'post by' => $post->user->name,
+            'summary' => $summary
+        ]);
+    }
 }

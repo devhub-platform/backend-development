@@ -59,4 +59,9 @@ class PostPolicy
     {
         return $user->id == $post->user_id;
     }
+
+    public function summarize(Post $post)
+    {
+        return true;
+    }
 }

@@ -444,7 +444,7 @@ class ObjectSerializer
         }
 
         if ($class === '\DateTime') {
-            // Some APIs return an invalid, empty string as a
+            // Some Show APIs return an invalid, empty string as a
             // date-time property. DateTime::__construct() will return
             // the current time for empty input which is probably not
             // what is meant. The invalid empty string is probably to
@@ -454,7 +454,7 @@ class ObjectSerializer
                 try {
                     return new \DateTime($data);
                 } catch (\Exception $exception) {
-                    // Some APIs return a date-time with too high nanosecond
+                    // Some Show APIs return a date-time with too high nanosecond
                     // precision for php's DateTime to handle.
                     // With provided regexp 6 digits of microseconds saved
                     return new \DateTime(self::sanitizeTimestamp($data));
@@ -472,7 +472,7 @@ class ObjectSerializer
             // determine file name
             if (
                 is_array($httpHeaders)
-                && array_key_exists('Content-Disposition', $httpHeaders) 
+                && array_key_exists('Content-Disposition', $httpHeaders)
                 && preg_match('/inline; filename=[\'"]?([^\'"\s]+)[\'"]?$/i', $httpHeaders['Content-Disposition'], $match)
             ) {
                 $filename = Configuration::getDefaultConfiguration()->getTempFolderPath() . DIRECTORY_SEPARATOR . self::sanitizeFilename($match[1]);
