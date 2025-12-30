@@ -7,19 +7,10 @@ use Illuminate\Support\Facades\Http;
 
 class LlamaController
 {
-    public $baseUrl;
-
-    public function __construct()
-    {
-        $this->baseUrl = env('LLAMA_API_URL');
-    }
+    public $baseUrl = "https://llama-3-2-3b1.p.rapidapi.com/chat_completions";
 
     public function sendRequest(Request $request)
     {
-        $request->validate([
-            'prompt' => 'required|string|max:2000',
-        ]);
-
         $prompt = $request->input('prompt');
 
         $response = Http::withHeaders([
@@ -35,20 +26,13 @@ class LlamaController
             ]
         ]);
 
-        if ($response->failed()) {
-            return response()->json([
-                'error' => 'Failed to get response from Llama 3 API',
-                'details' => $response->body()
-            ], 500);
-        }
-
         $data = $response->json();
 
         $content = $data['choices'][0]['message']['content'] ?? 'No response';
 
         $user = auth()->user()->name;
         return response()->json([
-            'message' => "Hi $user! This is Llama 3 Model Response:",
+            "Hi $user! " =>  'This is Llama 3 Model Response',
             'content' => $content
         ]);
     }

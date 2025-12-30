@@ -15,15 +15,19 @@ class PostResource extends JsonResource
     {
         return [
             'ID' => $this->id,
-            'Tile' => $this->title,
+            'Title' => $this->title,
             'Content' => Str::limit($this->content, 200, '...'),
-            'Author' => $this->user->name,
             'Created_at' => $this->created_at->diffForHumans(),
             'Updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
-            'Image url' => $this->cover_image ?? null,
-            'Cover image' => $this->image_url ?? null,
+            'Image_url' => $this->cover_image ?? null,
+            'Cover_image' => $this->image_url ?? null,
             'Status' => $this->status,
-            'Read time' => $this->read_time ? $this->read_time . ' min read' : null,
+            'Read_time' => $this->read_time ? $this->read_time . ' min read' : null,
+            'user' => [
+                'Name' => $this->user->name,
+                'Username' => $this->user->username,
+                'Avatar_Image' => $this->user->avatar_url ?? null,
+            ],
             'Tags' => TagResource::collection($this->whenLoaded('tags')),
             'Comments' => CommentResource::collection($this->whenLoaded('comments')),
         ];
