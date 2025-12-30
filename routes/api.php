@@ -19,6 +19,7 @@ use App\Http\Controllers\V1\NotificationController;
 use App\Http\Controllers\V1\Auth\VerifyEmailController;
 use App\Http\Controllers\V1\TagFollowController;
 use App\Http\Controllers\V1\UserStatusesController;
+use App\Http\Controllers\V1\AiModels\LlamaController;
 
 Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
     Route::controller(SocialiteMediaController::class)->group(function () {
@@ -186,6 +187,11 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::delete('reading-lists/{readingList}/delete-note/{post}', 'deleteNoteInPostInReadingList');
             Route::get('reading-lists/{readingList}/show-notes/{post}', 'showNotesInReadingList');
         });
+
+        Route::controller(LlamaController::class)->group(function () {
+            Route::post('ai/llama/generate-text', 'sendRequest');
+        });
+
     });
 });
 
