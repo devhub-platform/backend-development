@@ -14,6 +14,19 @@ class FollowersController
     public function follow(User $user)
     {
         $authUser = Auth::user();
+
+        if ($authUser->id === $user->id) {
+            return response()->json([
+                'message' => 'You cannot follow yourself.'
+            ], 400);
+        }
+
+        if ($authUser->following()->where('following_id', $user->id)->exists()) {
+            return response()->json([
+                'message' => 'You are already following this user.'
+            ], 400);
+        }
+
         $authUser->following()->attach($user->id);
 
         Notification::send($user, new FollowNotification($user));
@@ -27,6 +40,12 @@ class FollowersController
     public function unfollow(User $user)
     {
         $authUser = auth()->user();
+
+        if (!$authUser->following()->where('following_id', $user->id)->exists()) {
+            return response()->json([
+                'message' => 'You are not following this user.'
+            ], 400);
+        }
         $authUser->following()->detach($user->id);
 
         Log::notice('Unfollowed ' . $user->name);
@@ -64,6 +83,13 @@ class FollowersController
     public function followersCount(User $user)
     {
         $count = $user->followers()->count();
+
+        if ($count === 0) {
+            return response()->json([
+                'message' => 'This user has no followers yet.'
+            ]);
+        }
+
         return response()->json([
             'followers_count' => $count,
         ]);
@@ -72,6 +98,13 @@ class FollowersController
     public function followingCount(User $user)
     {
         $count = $user->following()->count();
+
+        if ($count === 0) {
+            return response()->json([
+                'message' => 'This user is not following anyone yet.'
+            ]);
+        }
+
         return response()->json([
             'following_count' => $count,
         ]);
@@ -80,7 +113,7 @@ class FollowersController
     public function myFollowers()
     {
         $user = auth()->user();
-        $followers = $user->followers()->get(['name','username','avatar_url']);
+        $followers = $user->followers()->get(['name', 'username', 'avatar_url']);
 
         if ($followers->isEmpty()) {
             return response()->json([
@@ -98,7 +131,7 @@ class FollowersController
     public function myFollowing()
     {
         $user = auth()->user();
-        $following = $user->following()->get(['name','username','avatar_url']);
+        $following = $user->following()->get(['name', 'username', 'avatar_url']);
 
         if ($following->isEmpty()) {
             return response()->json([

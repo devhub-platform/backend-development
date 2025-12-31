@@ -28,6 +28,12 @@ class PostResource extends JsonResource
                 'Username' => $this->user->username,
                 'Avatar_Image' => $this->user->avatar_url ?? null,
             ],
+
+            'reaction' => [
+                'reaction with count' => $this->getReactionsWithCount(),
+                'comments_count' => $this->comments()->count(),
+            ],
+
             'Tags' => TagResource::collection($this->whenLoaded('tags')),
             'Comments' => CommentResource::collection($this->whenLoaded('comments')),
         ];
