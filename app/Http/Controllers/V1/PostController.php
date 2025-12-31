@@ -88,55 +88,6 @@ class PostController extends Controller
         ], 201);
     }
 
-//    public function uploadPostImage(Request $request, Post $post)
-//    {
-//        $this->authorize('update', $post);
-//
-//        $request->validate([
-//            'image_url' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-//        ]);
-//
-//        $image = $request->file('image_url');
-//        if (!$image) {
-//            return response()->json(['message' => 'No image uploaded'], 422);
-//        }
-//
-//        $extension = $image->getClientOriginalExtension();
-//        $slug = Str::slug($post->title ?? Auth::user()->username);
-//        $filename = $slug . '-' . time() . '.' . $extension;
-//        $path = $image->storeAs('posts-images', $filename, 's3');
-//
-//        $post->image_url = $path;
-//        $post->save();
-//
-//        return response()->json([
-//            'message' => 'Post image uploaded successfully',
-//            'data' => new PostResource($post->fresh()),
-//        ]);
-//    }
-//
-//    public function uploadPostCover(Request $request)
-//    {
-//        $request->validate([
-//            'cover_image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-//        ]);
-//
-//        $image = $request->file('cover_image');
-//        $extension = $image->getClientOriginalExtension();
-//        $slug = Str::slug(Auth::user()->username);
-//        $filename = $slug . '-' . time() . '.' . $extension;
-//        $path = $image->storeAs('posts-covers', $filename, 's3');
-//
-//        $user = Auth::user();
-//        $user->image_url = $path;
-//        $user->save();
-//
-//        return response()->json([
-//            'message' => 'Avatar image uploaded successfully',
-//            'data' => new PostResource($user),
-//        ]);
-//    }
-
     public function generateCoverImage(GeminiImageService $geminiImage, Request $request)
     {
         $prompt = $request->input('prompt');
@@ -148,7 +99,7 @@ class PostController extends Controller
     }
 
 
-    public function show(Post $post)
+    public function show(Post $post) // view a single post
     {
         $this->authorize('view', $post);
         visits($post)->increment();
@@ -183,12 +134,10 @@ class PostController extends Controller
         return response()->json(['message' => "Post $post->title archived successfully"]);
     }
 
-    public function userPosts(Request $request)
+    public function userPosts() // all posts of authenticated user
     {
-        $this->authorize('userPosts', $post);
-
-        $user = $request->user();
-        $posts = Post::where('user_id', $user->id)->get();
+        $user = auth()->user();
+        $posts = $user->posts;
 
         return response()->json([
             'data' => PostResource::collection($posts)
@@ -303,9 +252,9 @@ class PostController extends Controller
     }
 
 
-    public function summarizationPost(Post $post, SummarizePostService $summarizeService)
+    public function summarizationPost(Post $post, SummarizePostService $summarizeService) // ai summary feature
     {
-        $this->authorize('summarize', $post);
+//        $this->authorize('summarize', $post);
 
         $summary = $summarizeService->summarize($post->content, 'en');
 

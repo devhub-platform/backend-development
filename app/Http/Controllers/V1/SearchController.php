@@ -80,22 +80,27 @@ class SearchController
     public function searchUsersByUsername(User $user, Request $request)
     {
         $request->validate([
-            'username' => 'required|string|min:3|exists:users,username',
+            'username' => 'required|string|min:3',
         ]);
 
         $username = $request->input('username');
+
         $results = $user->search($username)->get();
+
         if ($results->isNotEmpty()) {
             $results->load('posts');
+
             SearchHistory::create([
                 'user_id' => auth()->id(),
                 'query' => $username,
             ]);
         }
+
         if ($results->isEmpty()) {
             Log::error('No users found matching the search criteria: ' . $username);
             return response()->json(['message' => 'No users found matching the search criteria.'], 404);
         }
+
         return response()->json([
             'user' => SearchUsersResource::collection($results),
         ]);

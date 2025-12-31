@@ -122,13 +122,6 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             ->withTimestamps();
     }
 
-//    public function generateTwoFactorCode()
-//    {
-//        $this->timestamps = false;
-//        $this->otp = rand(1000, 9999);
-//        $this->two_factor_expires_at = now()->addMinutes(10);
-//        $this->save();
-//    }
     public function followedTags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class, 'tag_user', 'user_id', 'tag_id')
