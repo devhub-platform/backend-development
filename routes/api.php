@@ -81,7 +81,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('search/posts', 'searchPosts');
             Route::get('search/users', 'searchUsersByUsername');
             Route::get('search/tags', 'searchTagsName');
-            Route::get('search/general', 'globalSearch');
+//            Route::get('search/general', 'globalSearch');
             Route::get('search/histories', 'searchHistories');
             Route::delete('search/clear', 'clearSearch');
         });
@@ -191,7 +191,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         });
 
         Route::controller(LlamaController::class)->group(function () {
-            Route::post('ai/llama/generate-text', 'sendRequest');
+            Route::post('ai/llama/generate-text', 'sendAiRequest');
         });
 
     });
@@ -201,4 +201,6 @@ Route::fallback(function () {
     return response()->json([
         'message' => 'Resource not found. Please check the URL or API endpoint you are trying to access.'
     ], 404);
+
+    Log::notice('Fallback route triggered: Resource not found');
 });
