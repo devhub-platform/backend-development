@@ -9,7 +9,7 @@ class LlamaController
 {
     public $baseUrl = "https://llama-3-2-3b1.p.rapidapi.com/chat_completions";
 
-    public function sendRequest(Request $request)
+    public function sendAiRequest(Request $request)
     {
         $prompt = $request->input('prompt');
 
@@ -17,6 +17,7 @@ class LlamaController
             "x-rapidapi-key" => env('LLAMA_RAPIDAPI_KEY'),
             "x-rapidapi-host" => "llama-3-2-3b1.p.rapidapi.com",
             "Content-Type" => "application/json",
+
         ])->post($this->baseUrl, [
             "messages" => [
                 [
@@ -32,7 +33,7 @@ class LlamaController
 
         $user = auth()->user()->name;
         return response()->json([
-            "Hi $user! " =>  'This is Llama 3 Model Response',
+            "Hi $user! " => 'This is Llama 3 Model Response',
             'content' => $content
         ]);
     }

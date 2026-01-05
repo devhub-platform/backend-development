@@ -59,6 +59,7 @@ class SearchController
 
         if ($results->isNotEmpty()) {
             $results->load('user');
+
             SearchHistory::create([
                 'user_id' => auth()->id(),
                 'query' => $query,
@@ -162,12 +163,27 @@ class SearchController
     public function searchHistories()
     {
         $user = auth()->user();
-        $histories = SearchHistory::where('user_id', $user->id)
-            ->orderBy('created_at', 'desc')
-            ->take(10)
-            ->get();
+
+        if (!$user->check()) {
+            return response()->json([
+                'message' => 'User not found',
+            ], 401);
+        }
+
+        $histories = Cache::remember(
+            "search_histories_{$user->id}",
+            now()->addMinutes(5),
+            function () use ($user) {
+                return SearchHistory::where('user_id', $user->id)
+                    ->orderBy('created_at', 'desc')
+                    ->take(10)
+                    ->distinct()
+                    ->pluck('query');
+            }
+        );
+
         return response()->json([
-            'Searching Data:' => $histories->pluck('query'),
+            'searching_data' => $histories,
         ]);
     }
 
@@ -176,6 +192,7 @@ class SearchController
         $user = auth()->user();
         SearchHistory::where('user_id', $user->id)->delete();
         Log::info('Search history cleared for user: ' . $user->email);
+
         return response()->json([
             'message' => 'Search history cleared successfully',
         ]);

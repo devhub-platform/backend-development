@@ -50,6 +50,7 @@ class AuthController extends Controller
             ?? Str::before($data['email'], '@')
             . '_' . strval(rand(9999, 99999));
         $data['username'] = $username;
+
         $user = User::create($data);
 
         if (!$user) {
