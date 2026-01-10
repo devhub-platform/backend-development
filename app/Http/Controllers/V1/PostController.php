@@ -2,23 +2,22 @@
 
 namespace App\Http\Controllers\V1;
 
+use App\Http\Controllers\Controller;
 use App\Http\Requests\PostsRequests\PostStoreRequest;
 use App\Http\Requests\PostsRequests\PostUpdateRequest;
 use App\Http\Resources\PostCollection;
 use App\Http\Resources\PostResource;
 use App\Http\Resources\SearchPostResource;
-use App\Http\Resources\UserResource;
 use App\Models\Post;
 use App\Models\Tag;
 use App\Services\GeminiImageService;
+use App\Services\SummarizePostService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use App\Services\SummarizePostService;
 
 class PostController extends Controller
 {
