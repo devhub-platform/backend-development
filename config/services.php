@@ -46,5 +46,10 @@ return [
         'client_secret' => env('GITHUB_CLIENT_SECRET'),
         'redirect' => env('GITHUB_REDIRECT_URL'),
     ],
+    'hackai' => [
+        'base_url' => env('HACKAI_BASE_URL'),
+        'token' => env('HACKAI_API_KEY'),
+    ],
+
 
 ];

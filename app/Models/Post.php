@@ -16,6 +16,54 @@ use Laravel\Scout\Searchable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[ObservedBy([PostObserver::class])]
+/**
+ * @property int $id
+ * @property int $user_id
+ * @property string $title
+ * @property string $content
+ * @property string $slug
+ * @property string|null $image_url
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property \Illuminate\Support\Carbon|null $deleted_at
+ * @property string $status
+ * @property int|null $read_time
+ * @property string|null $cover_image
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Comment> $comments
+ * @property-read int|null $comments_count
+ * @property-read bool $is_reacted
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \Binafy\LaravelReaction\Models\Reaction> $reactions
+ * @property-read int|null $reactions_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ReadingList> $readingLists
+ * @property-read int|null $reading_lists_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\User> $savedBy
+ * @property-read int|null $saved_by_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Tag> $tags
+ * @property-read int|null $tags_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \Laravel\Sanctum\PersonalAccessToken> $tokens
+ * @property-read int|null $tokens_count
+ * @property-read \App\Models\User $user
+ * @method static \Database\Factories\PostFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Post newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Post newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Post onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Post query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Post whereContent($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Post whereCoverImage($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Post whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Post whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Post whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Post whereImageUrl($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Post whereReadTime($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Post whereSlug($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Post whereStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Post whereTitle($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Post whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Post whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Post withTrashed(bool $withTrashed = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Post withoutTrashed()
+ * @mixin \Eloquent
+ */
 class Post extends Model implements HasReaction
 {
     use HasApiTokens, HasFactory, AuthorizesRequests, Searchable, SoftDeletes, Reactable;

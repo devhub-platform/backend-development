@@ -15,19 +15,21 @@
         "api-platform/laravel": "^4.2",
         "awssat/laravel-visits": "^6.2",
         "binafy/laravel-reactions": "^1.0",
+        "guzzlehttp/guzzle": "^7.10",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.0",
         "laravel/scout": "*",
         "laravel/socialite": "^5.23",
         "laravel/telescope": "*",
         "laravel/tinker": "^2.10.1",
-        "league/flysystem-aws-s3-v3": "^3.0",
+        "league/flysystem-aws-s3-v3": "^3.30",
         "opcodesio/log-viewer": "^3.21",
         "socialiteproviders/medium": "^4.1",
         "socialiteproviders/microsoft": "^4.7",
         "tymon/jwt-auth": "^2.2"
     },
     "require-dev": {
+        "barryvdh/laravel-ide-helper": "^3.6",
         "fakerphp/faker": "^1.23",
         "laravel/pail": "^1.2.2",
         "laravel/pint": "^1.24",
@@ -41,7 +43,11 @@
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
-        }
+        },
+        "exclude-from-classmap": [
+            "vendor/league/flysystem-aws-s3-v3/*",
+            "vendor/league/flysystem-local/*"
+        ]
     },
     "autoload-dev": {
         "psr-4": {

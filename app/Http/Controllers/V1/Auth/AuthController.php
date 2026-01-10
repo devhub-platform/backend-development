@@ -2,20 +2,20 @@
 
 namespace App\Http\Controllers\V1\Auth;
 
-use App\Http\Controllers\V1\Controller;
+use App\Http\Controllers\Controller;
 use App\Http\Requests\AuthRequests\LoginRequest;
 use App\Http\Requests\AuthRequests\RegisteredRequest;
 use App\Http\Resources\UserResource;
 use App\Mail\WelcomeEmailMail;
 use App\Models\User;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Facades\JWTAuth;
-use Illuminate\Http\JsonResponse;
 
 class AuthController extends Controller
 {
