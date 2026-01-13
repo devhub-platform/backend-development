@@ -218,9 +218,11 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
 Route::prefix('v1')->group(function () {
 
-    // --- AI Chat routes OUTSIDE auth/throttle  ---
-    Route::post('/ai-chat', [AIChatController::class, 'chat']);
-    Route::get('/ai-chat/models', [AIChatController::class, 'models']);
+    // AI Chat routes
+    Route::prefix('ai-chat')->group(function () {
+        Route::post('/', [AIChatController::class, 'chat']); // send message
+        Route::get('/models', [AIChatController::class, 'models']); // list models
+    });
 
 });
 // Fallback
