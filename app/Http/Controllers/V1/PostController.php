@@ -81,8 +81,10 @@ class PostController extends Controller
             $validated['image_url'] = strval(Storage::url($path));
         }
 
-        $check = $moderationService->moderateContent($validated['content']);
-        if ($check) {
+        $check_content = $moderationService
+            ->moderateContent($validated['content'] . ' ' . $validated['title']);
+
+        if ($check_content) {
             Log::warning("Post content flagged by moderation service for user ID: " . auth()->id());
             return response()->json([
                 'message' => 'Post content violates our content policies and cannot be created'
@@ -122,6 +124,15 @@ class PostController extends Controller
     public function update(PostUpdateRequest $request, Post $post)
     {
         $this->authorize('update', $post);
+
+
+        $check = $moderationService->moderateContent($validated['content'] . ' ' . $validated['title']);
+        if ($check) {
+            Log::warning("Post content flagged by moderation service for user ID: " . auth()->id());
+            return response()->json([
+                'message' => 'Post content violates our content policies and cannot be updated'
+            ], 422);
+        }
 
         $post->update($request->validated());
         return response()->json(['message' => "Post $post->title updated successfully",
@@ -193,7 +204,7 @@ class PostController extends Controller
         return response()->json(['message' => "Post $post->title permanently deleted successfully"]);
     }
 
-    public function restore(int $id)
+    public function restore(int $id) # restore (unarchive) a post
     {
         $post = Post::onlyTrashed()->find($id);
 

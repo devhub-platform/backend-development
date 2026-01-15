@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Http\Requests\CodeEditorRequests\CodeEditorRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class CodeEditorService
 {
@@ -80,6 +82,52 @@ class CodeEditorService
             ], 500);
         }
     }
+
+    public function searchInRuntimes(Request $request): JsonResponse
+    {
+        $validated = $request->input('q')
+            ?? $request->input('query')
+            ?? $request->input('search')
+            ?? $request->input('language')
+            ?? 'python';
+
+        $searchTerm = Str::lower($validated);
+
+        try {
+            $response = Http::get($this->pistonBaseUrl . '/runtimes');
+            $runtimes = $response->json();
+
+            if (!is_array($runtimes)) {
+                throw new \UnexpectedValueException('Invalid response format from runtimes API');
+            }
+
+            $filteredRuntimes = array_filter($runtimes, function ($runtime) use ($searchTerm) {
+                $language = strtolower($runtime['language'] ?? '');
+                $version = strtolower($runtime['version'] ?? '');
+                return strpos($language, $searchTerm) !== false || strpos($version, $searchTerm) !== false;
+            });
+
+            if (empty($filteredRuntimes)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No runtimes found matching the search term'
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => array_values($filteredRuntimes)
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error searching runtimes: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error searching runtimes',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 
     private function getFileExtension($language)
     {
