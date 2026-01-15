@@ -11,6 +11,7 @@ use App\Http\Resources\UserResource;
 use App\Models\Post;
 use App\Models\Tag;
 use App\Services\GeminiImageService;
+use App\Services\ModerationService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -54,7 +55,7 @@ class PostController extends Controller
         ]);
     }
 
-    public function store(PostStoreRequest $request)
+    public function store(PostStoreRequest $request, ModerationService $moderationService)
     {
         $this->authorize('create', Post::class);
 
@@ -78,6 +79,14 @@ class PostController extends Controller
             $filename = $slug . '-' . time() . '.' . $extension;
             $path = $image->storeAs('posts-images', $filename, 's3');
             $validated['image_url'] = strval(Storage::url($path));
+        }
+
+        $check = $moderationService->moderateContent($validated['content']);
+        if ($check) {
+            Log::warning("Post content flagged by moderation service for user ID: " . auth()->id());
+            return response()->json([
+                'message' => 'Post content violates our content policies and cannot be created'
+            ], 422);
         }
 
         $post = Post::create($validated);
@@ -120,7 +129,7 @@ class PostController extends Controller
         ]);
     }
 
-    public function destroy(int $id)
+    public function destroy(int $id) // delete (archive) a post
     {
         $post = Post::find($id);
         $this->authorize('delete', $post);
