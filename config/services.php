@@ -47,4 +47,8 @@ return [
         'redirect' => env('GITHUB_REDIRECT_URL'),
     ],
 
+    'hackClub' => [
+        'api_key' => env('HACKCLUB_API_KEY'),
+    ]
+
 ];
