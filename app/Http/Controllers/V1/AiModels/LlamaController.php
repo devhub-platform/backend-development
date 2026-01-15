@@ -7,18 +7,22 @@ use Illuminate\Support\Facades\Http;
 
 class LlamaController
 {
-    public $baseUrl = "https://llama-3-2-3b1.p.rapidapi.com/chat_completions";
-
     public function sendAiRequest(Request $request)
     {
-        $prompt = $request->input('prompt');
+        $request->validate([
+            'prompt' => 'required|string|max:1000|min:3',
+        ]);
+
+        $prompt = $request->input('prompt') ??
+            $request->input('q');
+
+        $base_url = config('services.Llama.base_url');
 
         $response = Http::withHeaders([
-            "x-rapidapi-key" => env('LLAMA_RAPIDAPI_KEY'),
-            "x-rapidapi-host" => "llama-3-2-3b1.p.rapidapi.com",
+            "x-rapidapi-key" => config('services.Llama.api_key'),
+            "x-rapidapi-host" => config('services.Llama.host'),
             "Content-Type" => "application/json",
-
-        ])->post($this->baseUrl, [
+        ])->post($base_url, [
             "messages" => [
                 [
                     "role" => "user",

@@ -49,6 +49,12 @@ return [
 
     'hackClub' => [
         'api_key' => env('HACKCLUB_API_KEY'),
+    ],
+
+    'Llama' => [
+        'api_key' => env('LLAMA_RAPIDAPI_KEY'),
+        'base_url' => env('LLAMA_API_URL'),
+        'host' => env('LLAMA_API_HOST')
     ]
 
 ];
