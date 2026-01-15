@@ -27,6 +27,12 @@ class LlamaController
             ]
         ]);
 
+        if ($response->failed()) {
+            return response()->json([
+                'error' => 'Llama 3 API request failed'
+            ], 500);
+        }
+
         $data = $response->json();
 
         $content = $data['choices'][0]['message']['content'] ?? 'No response';

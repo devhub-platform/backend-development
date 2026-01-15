@@ -158,6 +158,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::controller(CodeEditorController::class)->group(function () {
             Route::get('/code/runtimes', 'runtimes');
             Route::post('/code/execute', 'execute');
+            Route::get('/code/search-runtimes', 'searchInRuntimes');
         });
 
         Route::controller(TagFollowController::class)->group(function () {

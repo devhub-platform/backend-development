@@ -10,17 +10,16 @@ class ModerationService
     {
         $response = Http::withHeaders([
             'Content-Type' => 'application/json',
-            'Authorization' => 'Bearer ' .env('HACKCLUB_API_KEY'),
+            'Authorization' => 'Bearer ' . config('services.hackClub.api_key'),
         ])->post('https://ai.hackclub.com/proxy/v1/moderations', [
             'input' => $text
         ]);
 
-        if($response->failed()) {
+        if ($response->failed()) {
             return $response->json([
                 'error' => 'Moderation request failed'
             ]);
         }
-
 
         return $response->json()['results'][0]['flagged'] ?? false;
     }
