@@ -165,4 +165,26 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     {
         return $this->hasMany(ReadingList::class);
     }
+
+
+    public function blockedUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            User::class,
+            'reports',
+            'reporter_id',
+            'reported_user_id'
+        )->withTimestamps();
+    }
+
+    public function blockers(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            User::class,
+            'reports',
+            'reported_user_id',
+            'reporter_id'
+        )->withTimestamps();
+    }
+
 }

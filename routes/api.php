@@ -20,11 +20,12 @@ use App\Http\Controllers\V1\Auth\VerifyEmailController;
 use App\Http\Controllers\V1\TagFollowController;
 use App\Http\Controllers\V1\UserStatusesController;
 use App\Http\Controllers\V1\AiModels\LlamaController;
+use App\Http\Controllers\V1\ReportController;
 
 Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
     Route::controller(SocialiteMediaController::class)->group(function () {
-        Route::get('auth/google/login', 'login');
-        Route::get('auth/google/callback', 'callback');
+        Route::get('auth/google/login', 'loginGoogle');
+        Route::get('auth/google/callback', 'callbackGoogle');
 
         Route::get('auth/github/login', 'loginGithub');
         Route::get('auth/github/callback', 'callbackGithub');
@@ -193,6 +194,13 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
         Route::controller(LlamaController::class)->group(function () {
             Route::post('ai/llama/generate-text', 'sendLlamaAiRequest');
+        });
+
+        Route::controller(ReportController::class)->group(function () {
+            Route::post('reports/block/{target}', 'block');
+            Route::post('reports/report/{target}', 'report');
+            Route::post('reports/unblock/{target}', 'unblock');
+            Route::get('reports/blocked-users', 'blockList');
         });
 
     });
