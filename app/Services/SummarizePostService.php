@@ -11,20 +11,22 @@ class SummarizePostService
     public function summarize(string $text, string $lang = 'en')
     {
         $response = Http::withHeaders([
-            "x-rapidapi-key" => env('RAPIDAPI_KEY'),
-            "x-rapidapi-host" => "article-extractor-and-summarizer.p.rapidapi.com",
+            "x-rapidapi-key" => config('services.summarize.api_key'),
+            "x-rapidapi-host" => config('services.summarize.host'),
             "Content-Type" => "application/json",
             "Accept" => "application/json",
-            "Content-Length" => 1245,
-            "Host" => "article-extractor-and-summarizer.p.rapidapi.com",
+            "Content-Length" => 1500,
+            "Host" => config('services.summarize.host'),
 
         ])->post($this->baseUrl, [
             "text" => $text,
             "lang" => $lang
         ]);
 
-        if($response->failed()) {
-            return null;
+        if ($response->failed()) {
+            return $response->json([
+                'error' => 'Summarization request failed'
+            ]);
         }
 
         $data = $response->json();

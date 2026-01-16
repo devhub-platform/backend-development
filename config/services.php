@@ -55,6 +55,15 @@ return [
         'api_key' => env('LLAMA_KEY'),
         'base_url' => env('LLAMA_API_URL'),
         'host' => env('LLAMA_API_HOST')
-    ]
+    ],
 
+    'summarize' => [
+        'api_key' => env('SUMMARIZE_KEY'),
+        'host' => env('SUMMARIZE_HOST')
+    ],
+
+    'admin_emails' => [
+        'email1' => env('ADMIN_EMAIL1'),
+        'email2' => env('ADMIN_EMAIL2'),
+    ]
 ];

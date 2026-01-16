@@ -12,7 +12,7 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class SocialiteMediaController
 {
-    public function login(): JsonResponse
+    public function loginGoogle(): JsonResponse
     {
         $redirectUrl = Socialite::driver('google')
             ->stateless() // Use stateless to avoid session issues in API
@@ -38,7 +38,7 @@ class SocialiteMediaController
         ]);
     }
 
-    public function callback(): JsonResponse
+    public function callbackGoogle(): JsonResponse
     {
         $googleUser = Socialite::driver('google')->stateless()->user();
 
@@ -48,7 +48,6 @@ class SocialiteMediaController
     public function callbackGithub(): JsonResponse
     {
         $githubUser = Socialite::driver('github')->stateless()->user();
-
         return $this->extracted($githubUser);
     }
 
@@ -71,6 +70,7 @@ class SocialiteMediaController
                 'website_url' => null,
                 'role' => 'user',
                 'bio' => $mediaUser->getNickname() ?? 'Bio not set yet.',
+                'github_username' => $mediaUser->getNickname(),
                 'provider_id' => $mediaUser->getId(),
                 'password' => bcrypt(str()->random(16)),
                 'avatar_url' => $mediaUser->getAvatar(),
