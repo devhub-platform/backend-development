@@ -274,8 +274,6 @@ class PostController extends Controller
 
     public function summarizationPost(Post $post, SummarizePostService $summarizeService) // ai summary feature
     {
-//        $this->authorize('summarize', $post);
-
         $summary = $summarizeService->summarize($post->content, 'en');
 
         if (!$summary) {
