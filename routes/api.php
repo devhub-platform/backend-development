@@ -192,7 +192,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         });
 
         Route::controller(LlamaController::class)->group(function () {
-            Route::post('ai/llama/generate-text', 'sendAiRequest');
+            Route::post('ai/llama/generate-text', 'sendLlamaAiRequest');
         });
 
     });
