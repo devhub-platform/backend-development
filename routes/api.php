@@ -7,6 +7,7 @@ use App\Http\Controllers\V1\CodeEditorController;
 use App\Http\Controllers\V1\CommentController;
 use App\Http\Controllers\V1\FollowersController;
 use App\Http\Controllers\V1\PostController;
+use App\Http\Controllers\V1\PostViewController;
 use App\Http\Controllers\V1\ProfileController;
 use App\Http\Controllers\V1\ReactionController;
 use App\Http\Controllers\V1\ReadingListController;
@@ -64,8 +65,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('posts/recent', 'recentPosts');
             Route::get('posts/tags', 'postsTags');
             Route::get('posts/{post}/tags', 'postsTags');
-            Route::post('posts/{post}/tags', 'attachTags');
-            Route::delete('posts/{post}/tags/{tag}', 'detachTag');
             Route::get('posts/{post}/tags-list', 'postsTagsList');
             Route::get('posts/{post}/comments', 'postComments');
             Route::get('posts/drafts', 'drafts');
@@ -77,6 +76,12 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('posts/{post}/summarize', 'summarizationPost');
         });
         Route::apiResource('posts', PostController::class);
+
+        Route::controller(PostViewController::class)->group(function () {
+            Route::get('posts/viewed/recent', 'getRecentViewedPosts');
+            Route::delete('posts/viewed/clear', 'clearViewedPosts');
+            Route::get('posts/viewing-stats', 'getUserViewCount');
+        });
 
         Route::controller(SearchController::class)->group(function () {
             Route::get('search/posts', 'searchPosts');
@@ -100,8 +105,11 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('tags/popular', 'popularTag');
             Route::get('tags', 'allTags');
             Route::post('tags', 'store');
+
+            Route::post('posts/{post}/tags', 'attachTagsToPost');
+            Route::delete('posts/{post}/tags/{tag}', 'detachTagFromPost');
         });
-        Route::apiResource('tags', TagController::class);
+//        Route::apiResource('tags', TagController::class);
 
         Route::controller(ProfileController::class)->group(function () {
             Route::get('profile', 'show');
@@ -117,6 +125,11 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('profile/activity', 'activity');
             Route::get('profile/details', 'details');
             Route::post('profile/add-social-link', 'addSocialAccounts');
+
+            Route::get('profile/viewed-posts', 'viewedPostsHistory');
+            Route::get('profile/viewed-posts/recent', 'recentViewedPosts');
+            Route::get('profile/viewing-stats', 'viewingStats');
+            Route::delete('profile/viewed-posts/clear', 'clearViewedPostsHistory');
         });
 
         Route::controller(FollowersController::class)->group(function () {

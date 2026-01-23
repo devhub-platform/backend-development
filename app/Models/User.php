@@ -187,4 +187,20 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         )->withTimestamps();
     }
 
+    /**
+     * Get all posts viewed by this user
+     */
+    public function viewedPosts(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Post::class,
+            'post_views',
+            'user_id',
+            'post_id'
+        )
+            ->withPivot('viewed_at')
+            ->withTimestamps()
+            ->orderByPivot('viewed_at', 'desc');
+    }
+
 }
