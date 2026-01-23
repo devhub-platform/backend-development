@@ -119,6 +119,17 @@ class PostController extends Controller
         $user = auth()->user();
         $this->authorize('view', $post);
 
+        if (!$post->exists()) {
+            Log::error("Post {$post->id} not found");
+            return response()->json(['message' => 'Post not found.'], 404);
+        }
+
+        if ($post->status === 'draft' || $post->trashed()) {
+            return response()->json([
+                'message' => 'post dose not exist or is not accessible'
+            ], 403);
+        }
+
         visits($post)->increment();
         $views = visits($post)->count(); // get total views
 

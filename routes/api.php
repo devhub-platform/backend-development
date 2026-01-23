@@ -173,6 +173,8 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('/code/runtimes', 'runtimes');
             Route::post('/code/execute', 'execute');
             Route::get('/code/search-runtimes', 'searchInRuntimes');
+            Route::get('/code/languages', 'languages');
+            Route::post('/code/refresh-runtimes', 'refreshRuntimes');
         });
 
         Route::controller(TagFollowController::class)->group(function () {
@@ -184,7 +186,12 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::controller(UserStatusesController::class)->group(function () {
             Route::get('user/statuses', 'getStatuses');
             Route::post('user/statuses', 'store');
+            Route::patch('user/statuses', 'update');
             Route::delete('user/statuses', 'delete');
+            Route::post('user/statuses/set-busy', 'setBusy');
+            Route::post('user/statuses/set-available', 'setAvailable');
+            Route::post('user/statuses/clear-expired', 'clearExpiredStatuses');
+            Route::get('users/{username}/status', 'getUserStatus');
         });
 
         Route::controller(ReadingListController::class)->group(function () {
