@@ -16,11 +16,11 @@ class CodeEditorController
         $this->service = $service;
     }
 
-    # c++ , python, javascript, java, php, ruby, go, csharp , swift , kotlin , rust , typescript , etc.
-    public function runtimes()
+    public function runtimes(): JsonResponse
     {
         return $this->service->getRuntimes();
     }
+
 
     public function execute(CodeEditorRequest $request): JsonResponse
     {
@@ -30,5 +30,15 @@ class CodeEditorController
     public function searchInRuntimes(Request $request): JsonResponse
     {
         return $this->service->searchInRuntimes($request);
+    }
+
+    public function languages(): JsonResponse
+    {
+        return $this->service->getSupportedLanguages();
+    }
+
+    public function refreshRuntimes(): JsonResponse
+    {
+        return $this->service->clearRuntimesCache();
     }
 }
