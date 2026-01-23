@@ -10,11 +10,11 @@ class PostUpdateRequest extends FormRequest
     {
         return [
             'user_id' => ['sometimes', 'exists:users'],
-            'title' => ['sometimes', 'required', 'string'],
-            'content' => ['sometimes', 'required', 'string'],
-            'slug' => ['sometimes', 'required', 'string', 'unique:posts,slug,' . $this->route('post')],
-            'image_url' => ['sometimes', 'required', 'string'],
-            'status' => ['sometimes', 'required', 'in:draft,published'],
+            'title' => ['sometimes', 'string'],
+            'content' => ['sometimes', 'string'],
+            'slug' => ['sometimes', 'string', 'unique:posts,slug,' . $this->route('post')],
+            'image_url' => ['sometimes', 'string'],
+            'status' => ['sometimes', 'in:draft,published'],
         ];
     }
 

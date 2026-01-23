@@ -9,6 +9,7 @@ use App\Http\Resources\PostResource;
 use App\Http\Resources\UserResource;
 use App\Mail\PasswordUpdatedSuccessfullyMail;
 use App\Models\User;
+use App\Services\ViewedPostService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -242,6 +243,90 @@ class ProfileController
             'number of users followed' => $user->following()->count(),
             'tags followed' => $user->followedTags()->count(),
             // 'number of likes given' => $this->CountReactionsOnUserPosts(),
+        ]);
+    }
+
+    // ...existing code...
+
+    // new feature to store history of viewed posts by user with database persistence
+    public function viewedPostsHistory(Request $request)
+    {
+        $perPage = $request->query('per_page', 15);
+        $user = auth()->user();
+        $viewedPostsService = new ViewedPostService();
+
+        $viewedPosts = $viewedPostsService->getUserViewedPosts($user->id, $perPage);
+
+        if ($viewedPosts->isEmpty()) {
+            return response()->json([
+                'message' => 'No viewed posts history found.',
+                'data' => [],
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Viewed posts history retrieved successfully',
+            'data' => PostResource::collection($viewedPosts->pluck('post')),
+            'pagination' => [
+                'total' => $viewedPosts->total(),
+                'per_page' => $viewedPosts->perPage(),
+                'current_page' => $viewedPosts->currentPage(),
+                'last_page' => $viewedPosts->lastPage(),
+            ],
+        ]);
+    }
+
+    /**
+     * Get recent viewed posts (limit to 10)
+     */
+    public function recentViewedPosts()
+    {
+        $user = auth()->user();
+        $viewedPostsService = new ViewedPostService();
+
+        $recentPosts = $viewedPostsService->getRecentViewedPosts($user->id, 10);
+
+        if ($recentPosts->isEmpty()) {
+            return response()->json([
+                'message' => 'No recently viewed posts found.',
+                'data' => [],
+            ]);
+        }
+
+        return response()->json([
+            'data' => PostResource::collection($recentPosts->pluck('post')),
+        ]);
+    }
+
+    /**
+     * Get viewing statistics for user
+     */
+    public function viewingStats()
+    {
+        $user = auth()->user();
+        $viewedPostsService = new ViewedPostService();
+
+        $stats = [
+            'total_posts_viewed' => $viewedPostsService->getUserViewCount($user->id),
+        ];
+
+        return response()->json([
+            'data' => $stats,
+        ]);
+    }
+
+    /**
+     * Clear viewed posts history for authenticated user
+     */
+    public function clearViewedPostsHistory()
+    {
+        $user = auth()->user();
+        $viewedPostsService = new ViewedPostService();
+
+        $viewedPostsService->clearUserViewHistory($user->id);
+
+        return response()->json([
+            'message' => 'Viewed posts history cleared successfully',
         ]);
     }
 }

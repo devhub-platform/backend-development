@@ -91,7 +91,7 @@ class CodeEditorService
             ?? $request->input('language')
             ?? 'python';
 
-        $searchTerm = Str::lower($validated);
+        $searchTerm = Str::trim(Str::lower($validated));
 
         try {
             $response = Http::get($this->pistonBaseUrl . '/runtimes');

@@ -75,4 +75,20 @@ class Post extends Model implements HasReaction
         return $this->belongsToMany(ReadingList::class, 'reading_list_story', 'post_id', 'reading_list_id')
             ->withTimestamps();
     }
+
+    /**
+     * Get all users who have viewed this post
+     */
+    public function viewedByUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            User::class,
+            'post_views',
+            'post_id',
+            'user_id'
+        )
+            ->withPivot('viewed_at')
+            ->withTimestamps()
+            ->orderByPivot('viewed_at', 'desc');
+    }
 }

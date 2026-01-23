@@ -12,6 +12,7 @@ use App\Models\Post;
 use App\Models\Tag;
 use App\Services\GeminiImageService;
 use App\Services\ModerationService;
+use App\Services\ViewedPostService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -25,13 +26,16 @@ class PostController extends Controller
 {
     use AuthorizesRequests;
 
-    public function index()
+    public function index() // show all posts except drafts and archived and blocked users
     {
         $this->authorize('viewAny', Post::class);
 
         $posts = Post::query()
             ->with(['user', 'tags'])
             ->where('status', '!=', 'draft')
+            ->whereNull('deleted_at')
+            ->latest()
+            ->limit(10)
             ->get();
 
         return PostResource::collection($posts);
@@ -87,7 +91,7 @@ class PostController extends Controller
         if ($check_content) {
             Log::warning("Post content flagged by moderation service for user ID: " . auth()->id());
             return response()->json([
-                'message' => 'Post content violates our content policies and cannot be created'
+                'message' => 'Post content violates our content policies and cannot be created , your account may be reviewed.'
             ], 422);
         }
 
@@ -99,34 +103,42 @@ class PostController extends Controller
         ], 201);
     }
 
-    public function generateCoverImage(GeminiImageService $geminiImage, Request $request)
+//    public function generateCoverImage(GeminiImageService $geminiImage, Request $request)
+//    {
+//        $prompt = $request->input('prompt');
+//        $imageUrl = $geminiImage->generateImage($prompt);
+//
+//        return response()->json([
+//            'cover_image' => $imageUrl
+//        ]);
+//    }
+
+
+    public function show(Post $post, ViewedPostService $viewedPostService) // view a single post
     {
-        $prompt = $request->input('prompt');
-        $imageUrl = $geminiImage->generateImage($prompt);
-
-        return response()->json([
-            'cover_image' => $imageUrl
-        ]);
-    }
-
-
-    public function show(Post $post) // view a single post
-    {
+        $user = auth()->user();
         $this->authorize('view', $post);
+
         visits($post)->increment();
-        $views = visits($post)->count();
+        $views = visits($post)->count(); // get total views
+
+        $viewedPostService->trackView($user->id, $post->id);
+
         return response()->json([
             'data' => new PostResource($post->load('tags')),
             'views' => $views
         ]);
     }
 
-    public function update(PostUpdateRequest $request, Post $post)
-    {
+    public function update(PostUpdateRequest $request, Post $post, ModerationService $moderationService)
+    {// update a post
+        $validated = $request->validated();
         $this->authorize('update', $post);
 
 
-        $check = $moderationService->moderateContent($validated['content'] . ' ' . $validated['title']);
+        $textToModerate = ($validated['content'] ?? '') . ' ' . ($validated['title'] ?? '');
+        $check = $moderationService->moderateContent($textToModerate);
+
         if ($check) {
             Log::warning("Post content flagged by moderation service for user ID: " . auth()->id());
             return response()->json([
@@ -135,9 +147,10 @@ class PostController extends Controller
         }
 
         $post->update($request->validated());
+
         return response()->json(['message' => "Post $post->title updated successfully",
             'data' => new PostResource($post)
-        ]);
+        ], 200);
     }
 
     public function destroy(int $id) // delete (archive) a post
@@ -224,33 +237,6 @@ class PostController extends Controller
         ], 200);
     }
 
-    public function attachTags(Request $request, Post $post)
-    {
-        $this->authorize('update', $post);
-        $request->validate(['tags' => 'required|array']);
-        $tags = collect($request->tags)->map(function ($tagName) {
-            return Tag::firstOrCreate(['name' => $tagName])->id;
-        });
-
-        $post->tags()->syncWithoutDetaching($tags);
-        $post->load('tags');
-        $post->tags->each->setHidden(['pivot']);
-
-        return response()->json([
-            'message' => "Tags attached to Post {$post->title} successfully",
-            'data' => new PostResource($post)
-        ], 200);
-    }
-
-    public function detachTag(Post $post, Tag $tag)
-    {
-        $post->tags()->detach($tag);
-        return response()->json([
-            'message' => "Tag {$tag->name} detached from Post {$post->title} successfully",
-            $post->load('tags')
-        ]);
-    }
-
     public function drafts(Post $post)
     {
         $user = Auth::user();
@@ -261,7 +247,7 @@ class PostController extends Controller
         ]);
     }
 
-    public function archivesTrashed()
+    public function archivesTrashed() // archived posts
     {
         $this->authorize('viewAny', Post::class);
         $user = auth()->user();
@@ -290,4 +276,5 @@ class PostController extends Controller
             'summary' => $summary
         ]);
     }
+
 }
