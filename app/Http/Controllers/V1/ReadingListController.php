@@ -8,15 +8,19 @@ use App\Http\Resources\ReadingListResource;
 use App\Models\Post;
 use App\Models\ReadingList;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
-use Laravel\Prompts\Note;
 
 class ReadingListController
 {
     use AuthorizesRequests;
 
-    public function index()
+    /**
+     * Get all reading lists for authenticated user
+     *
+     * @return JsonResponse
+     */
+    public function index(): JsonResponse
     {
         $user = Auth::user();
 
@@ -30,172 +34,146 @@ class ReadingListController
 
         $lists = $user->readingLists()->with('posts.user')->get();
 
-        if ($lists->isEmpty()) {
-            return response()->json([
-                'message' => 'No reading lists found for this user.',
-            ]);
-        }
-
         return response()->json([
             'message' => 'Reading lists retrieved successfully.',
-            'reading_lists' => ReadingListResource::collection($lists),
-        ]);
+            'count' => $lists->count(),
+            'data' => ReadingListResource::collection($lists),
+        ], 200);
     }
 
-
-    public function store(ReadingListRequest $request)
+    public function store(ReadingListRequest $request): JsonResponse
     {
         $this->authorize('create', ReadingList::class);
 
-        if (ReadingList::where('title', $request->title)->where('user_id', auth()->id())->exists()) {
+        $validated = $request->validated();
+
+        if (ReadingList::where('title', $validated['title'])->where('user_id', auth()->id())->exists()) {
             return response()->json([
                 'message' => 'A reading list with this title already exists.',
             ], 409);
         }
 
-        $readingList = ReadingList::create([
-            'title' => $request->title,
-            'description' => $request->description,
-            'user_id' => auth()->id(),
-        ]);
-
+        $validated['user_id'] = auth()->id();
+        $readingList = ReadingList::create($validated);
         $readingList->loadCount('posts');
 
         return response()->json([
             'message' => 'Reading list created successfully.',
-            'reading_list' => new ReadingListResource($readingList),
-        ]);
+            'data' => new ReadingListResource($readingList),
+        ], 201);
     }
 
-
-    public function show(ReadingList $readingList)
+    public function show(ReadingList $readingList): JsonResponse
     {
         $this->authorize('view', $readingList);
+        $readingList->loadCount('posts');
 
         return response()->json([
             'message' => 'Reading list retrieved successfully.',
-            'List' => new ReadingListResource($readingList),
-        ]);
+            'data' => new ReadingListResource($readingList),
+        ], 200);
     }
 
-    public function Lists(ReadingList $readingList)
-    {
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json([
-                'message' => 'User not authenticated.',
-            ], 401);
-        }
-
-        $lists = $user->readingLists()->get();
-
-        return response()->json([
-            'message' => 'Reading lists retrieved successfully.',
-            'reading_lists' => ReadingListResource::collection($lists),
-        ]);
-    }
-
-    public function update(ReadingListUpdateRequest $request, ReadingList $readingList)
+    public function update(ReadingListUpdateRequest $request, ReadingList $readingList): JsonResponse
     {
         $this->authorize('update', $readingList);
 
         $data = $request->validated();
-        $data['user_id'] = auth()->id();
-
         $readingList->update($data);
 
         return response()->json([
             'message' => 'Reading list updated successfully.',
             'data' => new ReadingListResource($readingList),
-        ]);
+        ], 200);
     }
 
-    public function destroy(ReadingList $readingList)
+    public function destroy(ReadingList $readingList): JsonResponse
     {
         $this->authorize('delete', $readingList);
 
+        $title = $readingList->title;
         $readingList->delete();
 
-        Log::notice('Reading list deleted: ' . $readingList->id . ' by user: ' . auth()->user()->email);
         return response()->json([
-            'message' => "Reading list $readingList->title deleted successfully",
-        ]);
+            'message' => "Reading list '$title' deleted successfully.",
+        ], 200);
     }
 
-    public function addPostToReadingList(ReadingList $readingList, Post $post)
+    public function addPostToReadingList(ReadingList $readingList, Post $post): JsonResponse
     {
         $this->authorize('update', $readingList);
 
+        // Check if post already exists in reading list
         if ($readingList->posts()->where('post_id', $post->id)->exists()) {
             return response()->json([
-                'message' => "Post $post->title is already in the reading list",
+                'message' => "Post is already in this reading list.",
             ], 409);
         }
 
         $readingList->posts()->attach($post->id);
 
-        Log::info("Reading list post $post->title added to reading list: " . $readingList->id);
         return response()->json([
-            'message' => "Post $post->title added to reading list ($readingList->title) successfully",
-        ]);
+            'message' => "Post added to reading list successfully.",
+            'data' => new ReadingListResource($readingList->fresh()),
+        ], 201);
     }
 
-    public function removePostFromReadingList(ReadingList $readingList, Post $post)
+    public function removePostFromReadingList(ReadingList $readingList, Post $post): JsonResponse
     {
-        $this->authorize('delete', $readingList);
+        $this->authorize('update', $readingList);
 
         if (!$readingList->posts()->where('post_id', $post->id)->exists()) {
             return response()->json([
-                'message' => "Post $post->title not found in reading list",
+                'message' => "Post not found in this reading list.",
             ], 404);
         }
 
         $readingList->posts()->detach($post->id);
 
         return response()->json([
-            'message' => "Post $post->title removed from reading list ($readingList->title) successfully",
-        ]);
+            'message' => "Post removed from reading list successfully.",
+            'data' => new ReadingListResource($readingList->fresh()),
+        ], 200);
     }
 
-    public function addNoteToPostInReadingList(ReadingList $readingList, Post $post)
+    public function addNoteToPostInReadingList(ReadingList $readingList, Post $post): JsonResponse
     {
         $this->authorize('update', $readingList);
 
         if (!$readingList->posts()->where('post_id', $post->id)->exists()) {
             return response()->json([
-                'message' => "Post $post->title not found in reading list",
+                'message' => "Post not found in this reading list.",
             ], 404);
         }
 
-        $noteContent = request()->input('note');
-        if (!$noteContent) {
-            return response()->json([
-                'message' => 'Note content is required.',
-            ], 422);
-        }
+        $validated = request()->validate([
+            'note' => 'required|string|max:1000',
+        ]);
 
-        $readingList->posts()->updateExistingPivot($post->id, ['note' => $noteContent]);
+        $readingList->posts()->updateExistingPivot($post->id, ['note' => $validated['note']]);
 
         return response()->json([
-            'message' => "Note added to post '$post->title' in reading list '('$readingList->title)' successfully",
-            'note' => $noteContent
-        ]);
+            'message' => "Note added to post successfully.",
+            'data' => [
+                'note' => $validated['note'],
+            ],
+        ], 200);
     }
 
-    public function deleteNoteInPostInReadingList(ReadingList $readingList, Post $post)
+    public function deleteNoteInPostInReadingList(ReadingList $readingList, Post $post): JsonResponse
     {
         $this->authorize('update', $readingList);
 
         if (!$readingList->posts()->where('post_id', $post->id)->exists()) {
             return response()->json([
-                'message' => "Post $post->title not found in reading list",
+                'message' => "Post not found in this reading list.",
             ], 404);
         }
 
         $readingList->posts()->updateExistingPivot($post->id, ['note' => null]);
 
         return response()->json([
-            'message' => "Note deleted from post '$post->title' in reading list '('$readingList->title)' successfully",
-        ]);
+            'message' => "Note deleted successfully.",
+        ], 200);
     }
 }

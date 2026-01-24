@@ -5,53 +5,57 @@ namespace App\Http\Controllers\V1;
 use App\Http\Controllers\V1\Controller;
 use App\Models\Tag;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 
 class TagFollowController extends Controller
 {
-    public function follow(Request $request, int $tagId)
+    public function follow(int $tagId): JsonResponse
     {
+        $tag = Tag::findOrFail($tagId);
         $user = Auth::user();
-        $tag = Tag::find($tagId);
 
-        if (!$tag) {
-            return response()->json(['error' => 'Tag not found'], 404);
+        // Only attach if not already following
+        if (!$user->isFollowingTag($tagId)) {
+            $user->followTag($tagId);
         }
 
-        $user->followTag($tag->id);
-
-        return response()->json(['message' => 'Followed tag', 'tag' => $tag->name], 200);
+        return response()->json([
+            'message' => 'Successfully followed tag',
+            'tag' => [
+                'id' => $tag->id,
+                'name' => $tag->name,
+            ],
+        ], 200);
     }
 
-    public function unfollow(Request $request, int $tagId)
+    public function unfollow(int $tagId): JsonResponse
     {
+        $tag = Tag::findOrFail($tagId);
         $user = Auth::user();
-        $tag = Tag::find($tagId);
 
-        if (!$tag) {
-            return response()->json(['error' => 'Tag not found'], 404);
-        }
+        $user->unfollowTag($tagId);
 
-        $user->unfollowTag($tag->id);
-
-        return response()->json(['message' => 'Unfollowed tag', 'tag' => $tag->name], 200);
+        return response()->json([
+            'message' => 'Successfully unfollowed tag',
+            'tag' => [
+                'id' => $tag->id,
+                'name' => $tag->name,
+            ],
+        ], 200);
     }
 
-    public function listFollowing()
+    public function listFollowing(): JsonResponse
     {
         $user = Auth::user();
 
         $tags = $user->followedTags()
-            ->select('tags.id as id', 'tags.name')
-            ->pluck('tags.id', 'tags.name');
+            ->select('id', 'name')
+            ->get();
 
-        if ($tags->isEmpty()) {
-            Log::error('User ' . $user->name . ' has no followed tags');
-            return response()->json(['message' => 'No followed tags found'], 404);
-        }
-
-        return response()->json(['tags' => $tags], 200);
+        return response()->json([
+            'message' => 'Tags retrieved successfully',
+            'count' => $tags->count(),
+            'tags' => $tags,
+        ], 200);
     }
 }

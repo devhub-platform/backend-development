@@ -7,14 +7,14 @@ use App\Http\Resources\TagResource;
 use App\Models\Post;
 use App\Models\Tag;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class TagController
 {
     use AuthorizesRequests;
 
-    public function popularTag()
+    public function popularTag(): JsonResponse
     {
         $tags = Tag::withCount('posts')
             ->orderBy('posts_count', 'desc')
@@ -22,74 +22,75 @@ class TagController
             ->get();
 
         return response()->json([
-            'data' => $tags->map(function ($tag) {
-                return [
-                    'name' => $tag->name,
-                    'posts_count' => $tag->posts_count,
-                ];
-            })
-        ]);
+            'message' => 'Popular tags retrieved successfully',
+            'count' => $tags->count(),
+            'data' => TagResource::collection($tags),
+        ], 200);
     }
 
-    public function allTags()
+    public function allTags(): JsonResponse
     {
         $tags = Tag::withCount('posts')
             ->orderBy('name', 'asc')
             ->get();
 
         return response()->json([
-            'Tags' => $tags->map(function ($tag) {
-                return [
-                    'name' => $tag->name,
-                    'posts_count' => $tag->posts_count,
-                ];
-            })
-        ]);
-    }
-
-    public function store(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|unique:tags,name',
-        ]);
-
-        $tag = Tag::create([
-            'name' => $request->name,
-        ]);
-
-        Log::info('New tag created: ' . $tag->name . ' by user ID: ' . auth()->id());
-        return response()->json([
-            'message' => 'Tag created successfully',
-            'tag' => new TagResource($tag),
-        ], 201);
-    }
-
-    public function attachTagsToPost(Request $request, Post $post)
-    {
-        $this->authorize('update', $post);
-
-        $request->validate(['tags' => 'required|array']);
-
-        $tags = collect($request->tags)->map(function ($tagName) {
-            return Tag::firstOrCreate(['name' => $tagName])->id;
-        });
-
-        $post->tags()->syncWithoutDetaching($tags);
-        $post->load('tags');
-        $post->tags->each->setHidden(['pivot']);
-
-        return response()->json([
-            'message' => "Tags attached to Post {$post->title} successfully",
-            'data' => new PostResource($post)
+            'message' => 'All tags retrieved successfully',
+            'count' => $tags->count(),
+            'data' => TagResource::collection($tags),
         ], 200);
     }
 
-    public function detachTagFromPost(Post $post, Tag $tag)
+    public function store(Request $request): JsonResponse
     {
-        $post->tags()->detach($tag);
-        return response()->json([
-            'message' => "Tag {$tag->name} detached from Post {$post->title} successfully",
-            $post->load('tags')
+        $validated = $request->validate([
+            'name' => 'required|string|max:50|unique:tags,name',
         ]);
+
+        $tag = Tag::create($validated);
+
+        return response()->json([
+            'message' => 'Tag created successfully',
+            'data' => new TagResource($tag),
+        ], 201);
+    }
+
+    public function attachTagsToPost(Request $request, Post $post): JsonResponse
+    {
+        $this->authorize('update', $post);
+
+        $validated = $request->validate([
+            'tags' => 'required|array|max:10',
+            'tags.*' => 'string|max:50',
+        ]);
+
+        $tagIds = collect($validated['tags'])
+            ->unique()
+            ->map(fn($tagName) => Tag::firstOrCreate(
+                ['name' => $tagName],
+                ['name' => trim($tagName)]
+            )->id)
+            ->values();
+
+        $post->tags()->syncWithoutDetaching($tagIds);
+        $post->load('tags');
+
+        return response()->json([
+            'message' => "Tags attached to post successfully",
+            'data' => new PostResource($post),
+        ], 200);
+    }
+
+    public function detachTagFromPost(Post $post, Tag $tag): JsonResponse
+    {
+        $this->authorize('update', $post);
+
+        $post->tags()->detach($tag);
+        $post->load('tags');
+
+        return response()->json([
+            'message' => "Tag detached from post successfully",
+            'data' => new PostResource($post),
+        ], 200);
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Models\Post;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Str;
 
 /** @mixin Post */
 class SearchPostResource extends JsonResource
@@ -13,7 +14,7 @@ class SearchPostResource extends JsonResource
     {
         return [
             'title' => $this->title,
-            'content' => $this->content,
+            'content' => Str::limit($this->content, 100),
             'post by' => new SearchUsersResource($this->whenLoaded('user')),
         ];
     }

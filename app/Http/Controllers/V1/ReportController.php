@@ -28,14 +28,14 @@ class ReportController
 
         if ($user->blockedUsers()->where('reported_user_id', $target->id)->exists()) {
             return response()->json([
-                'message' => 'User is already blocked',
+                'message' => "User $target->name is already blocked",
             ], 400);
         }
 
         $user->blockedUsers()->attach($target->id);
 
         return response()->json([
-            'message' => 'User blocked successfully',
+            'message' => "User $target->name blocked successfully",
         ]);
     }
 
@@ -63,7 +63,7 @@ class ReportController
             ->send(new SupportReportMail($user, $report));
 
         return response()->json([
-            'message' => 'User reported successfully',
+            'message' => "User $target->name reported successfully",
             'data' => new ReportResource($report->load(['reporter', 'reportedUser'])),
             'admin_notification_sent_to' => $adminMails,
         ]);
@@ -79,7 +79,7 @@ class ReportController
 
         $user->blockedUsers()->detach($target->id);
 
-        return response()->json(['message' => 'User unblocked']);
+        return response()->json(['message' => "User {$target->name} unblocked"]);
     }
 
     public function blockList()

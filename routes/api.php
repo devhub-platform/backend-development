@@ -86,10 +86,10 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::controller(SearchController::class)->group(function () {
             Route::get('search/posts', 'searchPosts');
             Route::get('search/users', 'searchUsersByUsername');
-            Route::get('search/tags', 'searchTagsName');
+            Route::get('search/tags', 'searchTags');
 //            Route::get('search/general', 'globalSearch');
-            Route::get('search/histories', 'searchHistories');
-            Route::delete('search/clear', 'clearSearch');
+            Route::get('search/histories', 'getSearchHistory');
+            Route::delete('search/clear', 'clearSearchHistory');
         });
 
         Route::controller(CommentController::class)->group(function () {
