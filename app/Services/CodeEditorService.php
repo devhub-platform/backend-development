@@ -74,8 +74,12 @@ class CodeEditorService
                     'name' => 'main.' . $extension,
                     'content' => $validated['code']
                 ]
-            ]
+            ],
         ];
+
+        if (array_key_exists('stdin', $validated)) {
+            $pistonPayload['stdin'] = (string)$validated['stdin'];
+        }
 
         try {
 

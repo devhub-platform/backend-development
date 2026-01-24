@@ -36,7 +36,12 @@ class CodeEditorRequest extends FormRequest
                 'nullable',
                 'integer',
                 'between:1,35' // Max 35 seconds
-            ]
+            ],
+            'stdin' => [
+                'nullable',
+                'string',
+                'max:5000' // Max 5000 characters for stdin
+            ],
         ];
     }
 

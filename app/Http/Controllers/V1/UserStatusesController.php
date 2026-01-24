@@ -194,10 +194,6 @@ class UserStatusesController
         }
     }
 
-    /**
-     * Set user as busy
-     * POST /api/v1/user/statuses/set-busy
-     */
     public function setBusy(Request $request)
     {
         try {
