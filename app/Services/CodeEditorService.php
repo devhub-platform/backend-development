@@ -242,9 +242,6 @@ class CodeEditorService
         }
     }
 
-    /**
-     * Parse execution output from Piston API response
-     */
     private function parseExecutionOutput(array $result): array
     {
         $stdout = $result['run']['stdout'] ?? '';
@@ -292,7 +289,7 @@ class CodeEditorService
             'scala' => 'scala',
             'haskell' => 'hs', 'hs' => 'hs',
             'golang' => 'go', 'clojure' => 'clj', 'elixir' => 'exs',
-            'lua' => 'lua', 'groovy' => 'groovy', 'dart' => 'dart'
+            'lua' => 'lua', 'groovy' => 'groovy', 'dart' => 'dart',
         ];
 
         return $extensions[$lang] ?? 'txt';

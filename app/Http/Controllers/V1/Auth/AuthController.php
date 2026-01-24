@@ -141,6 +141,7 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'username' => $user->username,
             ], 200);
+
         } catch (JWTException $e) {
             Log::error('Token refresh failed: ' . $e->getMessage());
 

@@ -89,9 +89,12 @@ class PostController extends Controller
             ->moderateContent($validated['content'] . ' ' . $validated['title']);
 
         if ($check_content) {
-            Log::warning("Post content flagged by moderation service for user ID: " . auth()->id());
+            $moderation = $moderationService->getModerationMessage($check_content);
+            Log::warning("Post content flagged by moderation service for user ID: " . auth()->id() . ' ' . $moderation);
+
             return response()->json([
-                'message' => 'Post content violates our content policies and cannot be created , your account may be reviewed.'
+                'message' => 'Post content violates our content policies and cannot be created , your account may be reviewed , and we take action against it.',
+                'reasons' => $moderation
             ], 422);
         }
 
@@ -151,9 +154,12 @@ class PostController extends Controller
         $check = $moderationService->moderateContent($textToModerate);
 
         if ($check) {
-            Log::warning("Post content flagged by moderation service for user ID: " . auth()->id());
+            $moderation = $moderationService->getModerationMessage($check);
+            Log::warning("Post content flagged by moderation service for user ID: " . auth()->id() . ' ' . $moderation);
+
             return response()->json([
-                'message' => 'Post content violates our content policies and cannot be updated'
+                'message' => 'Post content violates our content policies and cannot be updated',
+                'reasons' => $moderation
             ], 422);
         }
 
@@ -188,17 +194,17 @@ class PostController extends Controller
         ]);
     }
 
-    public function search(Request $request, Post $post)
-    {
-        $this->authorize('search', $post);
-        $query = $request->input('query');
-        $results = $post->search($query)->take(10)->get();
-        if ($results->isEmpty()) {
-            Log::error('No posts found matching the search criteria: ' . $query);
-            return response()->json(['message' => 'No posts found matching the search criteria.'], 404);
-        }
-        return SearchPostResource::collection($results);
-    }
+//    public function search(Request $request, Post $post)
+//    {
+//        $this->authorize('search', $post);
+//        $query = $request->input('query');
+//        $results = $post->search($query)->take(10)->get();
+//        if ($results->isEmpty()) {
+//            Log::error('No posts found matching the search criteria: ' . $query);
+//            return response()->json(['message' => 'No posts found matching the search criteria.'], 404);
+//        }
+//        return SearchPostResource::collection($results);
+//    }
 
     public function recentPosts(Post $post)
     {
@@ -271,7 +277,8 @@ class PostController extends Controller
 
     public function summarizationPost(Post $post, SummarizePostService $summarizeService) // ai summary feature
     {
-        $summary = $summarizeService->summarize($post->content, 'en');
+        $content = $post->titlr . ' ' . $post->content;
+        $summary = $summarizeService->summarize($content, 'en');
 
         if (!$summary) {
             Log::error("Failed to summarize post: " . $post->id);
