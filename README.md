@@ -1,59 +1,255 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 🚀 DevHub - Developer Community Platform
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A modern, feature-rich social platform built for developers to share knowledge, collaborate, and grow together. Built with Laravel 12 and cutting-edge web technologies.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## ✨ Key Features
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### 👤 User Management & Authentication
+- **JWT-based Authentication** - Secure token-based authentication system
+- **Social Login Integration** - Sign up/login via Google, Microsoft, and Medium
+- **Email Verification** - Two-factor authentication support with OTP
+- **User Profiles** - Comprehensive profiles with avatar, bio, education, skills, and social links
+- **Profile Customization** - Cover images, pronouns, location, GitHub/LinkedIn integration
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 📝 Content Creation & Discovery
+- **Post Management** - Create, edit, and delete posts with rich formatting
+- **Comments & Discussions** - Nested comment threads for engaging discussions
+- **Post Reactions** - Like, love, clap reactions on posts (powered by Laravel Reactions)
+- **Reading List** - Save posts to personalized reading lists
+- **Post Views** - Track and display post view counts
+- **Search Functionality** - Full-text search for posts and users (powered by Algolia)
+- **Search History** - Track user search history
+- **Tagging System** - Organize content with tags and follow specific topics
 
-## Learning Laravel
+### 👥 Social Features
+- **Follow System** - Follow/unfollow users and receive updates
+- **Notifications** - Real-time notifications for follows, comments, and reactions
+- **User Relationships** - Track followers and following
+- **User Status** - Display user availability status
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### 🤖 AI-Powered Features
+- **AI Post Summarization** - Automatically summarize lengthy posts using AI
+- **Code Editor Integration** - Built-in code editor with AI assistance
+- **Llama AI Model** - Advanced AI model integration for intelligent suggestions
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 📊 Analytics & Monitoring
+- **Post Analytics** - Track post engagement metrics
+- **User Visit Tracking** - Monitor user activity (powered by Laravel Visits)
+- **Telescope Debugging** - Built-in Laravel Telescope for debugging and monitoring
 
-## Laravel Sponsors
+### 🛡️ Content Moderation
+- **Reporting System** - Report inappropriate content and users
+- **Admin Notifications** - Notify administrators of reported content
+- **Soft Deletes** - Safely archive user data while maintaining relationships
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 🔍 Advanced Search & Discovery
+- **Algolia Integration** - Lightning-fast search across posts and users
+- **Tag Following** - Follow tags to get curated content
 
-### Premium Partners
+### 📧 Communication
+- **Email Notifications** - OTP verification, password reset, welcome emails
+- **Welcome Emails** - Personalized onboarding emails
+- **Verified Successfully Mails** - Email verification confirmations
+- **Support Reports** - Email support for user issues
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### 🌐 API Features
+- **RESTful API** - Comprehensive API platform (API Platform Laravel)
+- **Rate Limiting** - API throttling to prevent abuse
+- **API Versioning** - V1 API endpoints for organized development
+- **Sanctum Integration** - Token-based API authentication
 
-## Contributing
+### ☁️ Cloud Integration
+- **AWS S3 Storage** - File uploads and storage on AWS S3
+- **Cloudflare Tunneling** - Secure tunneling with Cloudflare
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### 🎨 Frontend Integration
+- **Vite Build System** - Modern JavaScript bundling with Vite
+- **Vue.js Support** - Interactive frontend components
 
-## Code of Conduct
+### 📦 Additional Features
+- **Database Support** - SQLite for development, production-ready database
+- **Job Queue** - Background job processing for async operations
+- **Caching** - Multiple caching backends for performance
+- **API Documentation** - Postman collections included
+- **Docker Support** - Containerized application deployment
+- **Testing** - PHPUnit tests with feature and unit test coverage
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+---
 
-## Security Vulnerabilities
+## 🛠️ Technology Stack
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Backend
+- **PHP 8.3+**
+- **Laravel 12**
+- **JWT Authentication** (tymon/jwt-auth)
+- **Algolia Search** (algolia/algoliasearch-client-php)
 
-## License
+### Features & Libraries
+- **Laravel Scout** - Full-text search
+- **Laravel Sanctum** - API token authentication
+- **Laravel Socialite** - Social authentication
+- **Laravel Telescope** - Debugging & monitoring
+- **Laravel Reactions** - Reaction system
+- **Laravel Visits** - Analytics tracking
+- **Laravel Tinker** - Interactive shell
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### Cloud & Storage
+- **AWS S3** - File storage
+- **Cloudflare** - Tunneling & CDN
+
+### Development Tools
+- **Vite** - Frontend bundling
+- **Postman** - API testing
+- **Laravel Pint** - Code styling
+- **PHPUnit** - Testing framework
+- **Faker** - Database seeding
+
+---
+
+## 📁 Project Structure
+
+```
+app/
+├── Models/              # Eloquent Models (Post, User, Comment, etc.)
+├── Http/
+│   ├── Controllers/     # API Controllers
+│   ├── Requests/        # Form Requests
+│   └── Resources/       # API Resources
+├── Notifications/       # Notification Classes
+├── Mail/                # Mailable Classes
+├── Services/            # Business Logic Services
+├── Observers/           # Eloquent Observers
+├── Policies/            # Authorization Policies
+└── Facades/             # Service Facades
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- PHP 8.3 or higher
+- Composer
+- Node.js & npm
+- Git
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd devhub
+   ```
+
+2. **Install PHP dependencies**
+   ```bash
+   composer install
+   ```
+
+3. **Install JavaScript dependencies**
+   ```bash
+   npm install
+   ```
+
+4. **Copy environment file**
+   ```bash
+   cp .env.example .env
+   ```
+
+5. **Generate application key**
+   ```bash
+   php artisan key:generate
+   ```
+
+6. **Generate JWT secret**
+   ```bash
+   php artisan jwt:secret
+   ```
+
+7. **Run migrations**
+   ```bash
+   php artisan migrate
+   ```
+
+8. **Seed the database (optional)**
+   ```bash
+   php artisan db:seed
+   ```
+
+9. **Build frontend assets**
+   ```bash
+   npm run build
+   ```
+
+10. **Start development server**
+    ```bash
+    php artisan serve
+    ```
+
+---
+
+## 📚 API Documentation
+
+Explore the complete API documentation in the `postman/` directory:
+- **Collections** - API endpoint collections
+- **Environments** - Environment configurations
+- **Globals** - Global variables
+- **Specs** - API specifications
+
+---
+
+## 🧪 Testing
+
+Run tests with PHPUnit:
+
+```bash
+php artisan test
+```
+
+Run specific test suite:
+
+```bash
+php artisan test --testsuite=Feature
+php artisan test --testsuite=Unit
+```
+
+---
+
+## 🐳 Docker Support
+
+Build and run with Docker:
+
+```bash
+docker build -t devhub .
+docker run -p 8000:8000 devhub
+```
+
+Or use the provided deployment script:
+
+```bash
+./deploy.sh
+```
+
+---
+
+## 📝 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+---
+
+## 📞 Support
+
+For support, please open an issue or contact the development team.
+
+---
+
+**Built with ❤️ for the developer community**
