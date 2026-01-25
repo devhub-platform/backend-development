@@ -88,7 +88,7 @@ class PostController extends Controller
         $check_content = $moderationService
             ->moderateContent($validated['content'] . ' ' . $validated['title']);
 
-        if ($check_content) {
+        if ($check_content['flagged'] ?? false) {
             $moderation = $moderationService->getModerationMessage($check_content);
             Log::warning("Post content flagged by moderation service for user ID: " . auth()->id() . ' ' . $moderation);
 
@@ -97,6 +97,7 @@ class PostController extends Controller
                 'reasons' => $moderation
             ], 422);
         }
+
 
         $post = Post::create($validated);
 
@@ -153,7 +154,7 @@ class PostController extends Controller
         $textToModerate = ($validated['content'] ?? '') . ' ' . ($validated['title'] ?? '');
         $check = $moderationService->moderateContent($textToModerate);
 
-        if ($check) {
+        if ($check['flagged'] ?? false) {
             $moderation = $moderationService->getModerationMessage($check);
             Log::warning("Post content flagged by moderation service for user ID: " . auth()->id() . ' ' . $moderation);
 

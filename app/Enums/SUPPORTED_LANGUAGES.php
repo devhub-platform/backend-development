@@ -12,4 +12,5 @@ enum SUPPORTED_LANGUAGES: string
     case JAPANESE = 'ja';
     case RUSSIAN = 'ru';
     case HINDI = 'hi';
+    case ARABIC = 'ar';
 }
