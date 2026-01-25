@@ -41,7 +41,7 @@ class VerifyEmailController
     /**
      * @throws \Exception
      */
-    public function sendEmailOTP(ResendEmailRequest $request)
+    public function sendEmailOTP(ResendEmailRequest $request) // resend OTP to email
     {
         $user = User::where('email', $request->email)->first();
 

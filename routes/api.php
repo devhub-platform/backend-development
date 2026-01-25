@@ -74,7 +74,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('posts/upload/cover-image', 'uploadPostCover');
             Route::post('posts/upload/image', 'uploadPostImage');
 
-            Route::post('posts/{post}/summarize', 'summarizationPost');
+//            Route::post('posts/{post}/summarize', 'summarizationPost');
         });
         Route::apiResource('posts', PostController::class);
 

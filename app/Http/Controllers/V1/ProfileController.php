@@ -36,139 +36,285 @@ class ProfileController
     {
         $request->validate([
             'avatar_url' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+        ], [
+            'avatar_url.required' => 'Avatar image is required',
+            'avatar_url.image' => 'The avatar must be a valid image file',
+            'avatar_url.mimes' => 'Avatar must be in JPEG, PNG, JPG, GIF, or SVG format',
+            'avatar_url.max' => 'Avatar size must not exceed 2MB',
         ]);
 
-        $image = $request->file('avatar_url');
-        $extension = $image->getClientOriginalExtension();
-        $slug = Str::slug(Auth::user()->username);
-        $filename = $slug . '-' . time() . '.' . $extension;
-        $path = $image->storeAs('avatars-images', $filename, 's3');
+        try {
+            $user = Auth::user();
+            $image = $request->file('avatar_url');
+            $extension = $image->getClientOriginalExtension();
+            $slug = Str::slug($user->username);
+            $filename = 'avatar-' . $slug . '-' . time() . '.' . $extension;
+            $path = $image->storeAs('avatars-images', $filename, 's3');
 
-        $user = Auth::user();
-        $user->avatar_url = Storage::url($path);
-        $user->save();
+            // Delete old avatar if exists
+            if ($user->avatar_url) {
+                $oldPath = str_replace(Storage::url(''), '', $user->avatar_url);
+                Storage::disk('s3')->delete('avatars-images/' . basename($oldPath));
+            }
 
-        return response()->json([
-            'message' => 'Avatar image uploaded successfully',
-            'data' => new UserResource($user),
-        ]);
+            $user->avatar_url = Storage::url($path);
+            $user->save();
+
+            Log::info("Avatar uploaded for user: {$user->email}");
+
+            return response()->json([
+                'message' => 'Avatar image uploaded successfully',
+                'data' => new UserResource($user),
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error("Avatar upload failed for user: " . Auth::user()->email . " - " . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to upload avatar. Please try again.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function uploadCoverImage(Request $request)
     {
         $request->validate([
-            'cover_image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'cover_image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:5120',
+        ], [
+            'cover_image.required' => 'Cover image is required',
+            'cover_image.image' => 'The cover image must be a valid image file',
+            'cover_image.mimes' => 'Cover image must be in JPEG, PNG, JPG, GIF, or SVG format',
+            'cover_image.max' => 'Cover image size must not exceed 5MB',
         ]);
 
-        $image = $request->file('cover_image');
-        $extension = $image->getClientOriginalExtension();
-        $slug = str(auth()->user()->username)->slug();
-        $filename = 'cover-' . $slug . '-' . time() . '.' . $extension;
-        $path = $image->storeAs('covers-profiles', $filename, 's3');
+        try {
+            $user = auth()->user();
+            $image = $request->file('cover_image');
+            $extension = $image->getClientOriginalExtension();
+            $slug = str($user->username)->slug();
+            $filename = 'cover-' . $slug . '-' . time() . '.' . $extension;
+            $path = $image->storeAs('covers-profiles', $filename, 's3');
 
-        $user = auth()->user();
-        $user->cover_image = Storage::url($path);
-        $user->save();
+            // Delete old cover image if exists
+            if ($user->cover_image) {
+                $oldPath = str_replace(Storage::url(''), '', $user->cover_image);
+                Storage::disk('s3')->delete('covers-profiles/' . basename($oldPath));
+            }
 
-        return response()->json([
-            'message' => 'Cover image uploaded successfully',
-            'data' => new UserResource($user),
-        ]);
+            $user->cover_image = Storage::url($path);
+            $user->save();
+
+            Log::info("Cover image uploaded for user: {$user->email}");
+
+            return response()->json([
+                'message' => 'Cover image uploaded successfully',
+                'data' => new UserResource($user),
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error("Cover image upload failed for user: " . auth()->user()->email . " - " . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to upload cover image. Please try again.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function update(ProfileRequest $request)
     {
-        $validated = $request->validated();
+        try {
+            $validated = $request->validated();
+            $user = auth()->user();
 
-        $user = auth()->user();
-        if (!$user) {
+            if (!$user) {
+                return response()->json([
+                    'message' => 'User not found',
+                ], 404);
+            }
+
+            $originalData = $user->only(array_keys($validated));
+            $user->update($validated);
+
+            Log::info("Profile updated for user: {$user->email}", [
+                'changes' => array_diff($validated, $originalData)
+            ]);
+
             return response()->json([
-                'message' => 'User not found',
-            ], 404);
+                'message' => 'Profile updated successfully',
+                'data' => new UserResource($user->fresh()),
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error("Profile update failed for user: " . auth()->user()->email . " - " . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to update profile. Please try again.',
+                'error' => $e->getMessage()
+            ], 500);
         }
-        $user->update($validated);
-
-        return response()->json([
-            'message' => 'Profile updated successfully',
-            'data' => new UserResource($user->fresh()),
-        ]);
     }
 
     public function addSocialAccounts(Request $request)
     {
         $request->validate([
-            'linkedin_username' => 'sometimes|nullable|string|max:255',
-            'github_username' => 'sometimes|nullable|string|max:255',
+            'linkedin_username' => 'sometimes|nullable|string|max:255|regex:/^[a-zA-Z0-9\-]+$/',
+            'github_username' => 'sometimes|nullable|string|max:255|regex:/^[a-zA-Z0-9\-]+$/',
+        ], [
+            'linkedin_username.regex' => 'LinkedIn username format is invalid',
+            'github_username.regex' => 'GitHub username format is invalid',
         ]);
 
-        $user = Auth::user();
-        if (!$user) {
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json([
+                    'message' => 'User not found',
+                ], 404);
+            }
+
+            $data = $request->only(['linkedin_username', 'github_username']);
+            $user->update($data);
+
+            Log::info("Social accounts updated for user: {$user->email}", $data);
+
             return response()->json([
-                'message' => 'User not found',
-            ], 404);
+                'message' => 'Social accounts updated successfully',
+                'data' => new UserResource($user->fresh()),
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error("Social accounts update failed for user: " . Auth::user()->email . " - " . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to update social accounts. Please try again.',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $user->update($request->only(['linkedin_username', 'github_username']));
-
-        return response()->json([
-            'message' => 'Social accounts updated successfully',
-            'data' => new UserResource($user),
-        ]);
     }
 
 
     public function delete()
     {
-        $user = auth()->user();
-        $user->delete();
-        Log::notice('User deleted-Soft Delete: ' . $user->email);
-        return response()->json([
-            'message' => 'Profile deleted successfully',
-        ]);
+        try {
+            $user = auth()->user();
+
+            if (!$user) {
+                return response()->json([
+                    'message' => 'User not found',
+                ], 404);
+            }
+
+            $email = $user->email;
+            $user->delete();
+
+            Log::info('User soft deleted: ' . $email);
+
+            return response()->json([
+                'message' => 'Profile deleted successfully (soft delete)',
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error("Profile deletion failed for user: " . auth()->user()->email . " - " . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to delete profile. Please try again.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
-    public function forceDelete()
+    public function forceDelete() // permanently delete user
     {
-        $user = auth()->user();
-        $user->forceDelete();
-        Log::notice('User permanently deleted: ' . $user->email);
+        try {
+            $user = auth()->user();
 
-        if ($user->avatar_url)
-            Storage::disk('s3')->delete($user->avatar_url);
-        if ($user->cover_image)
-            Storage::disk('s3')->delete($user->cover_image);
+            if (!$user) {
+                return response()->json([
+                    'message' => 'User not found',
+                ], 404);
+            }
 
-        return response()->json([
-            'message' => 'Profile permanently deleted successfully',
-        ]);
+            $email = $user->email;
+            $userId = $user->id;
+
+            if ($user->avatar_url) {
+                Storage::disk('s3')->delete(basename($user->avatar_url));
+            }
+            if ($user->cover_image) {
+                Storage::disk('s3')->delete(basename($user->cover_image));
+            }
+
+            $user->forceDelete();
+
+            Log::warning('User permanently deleted: ' . $email . ' (ID: ' . $userId . ')');
+
+            return response()->json([
+                'message' => 'Profile permanently deleted successfully',
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error("Permanent profile deletion failed for user: " . auth()->user()->email . " - " . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to permanently delete profile. Please try again.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
-    public function userPosts()
+    public function userPosts(Request $request)
     {
         $user = auth()->user();
-        $posts = $user->posts;
+        $perPage = $request->query('per_page', 15);
+        $status = $request->query('status', null);
+
+        $query = $user->posts()->with('tags', 'user')->latest();
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $posts = $query->paginate($perPage);
+
         return response()->json([
             'data' => PostResource::collection($posts),
+            'pagination' => [
+                'total' => $posts->total(),
+                'per_page' => $posts->perPage(),
+                'current_page' => $posts->currentPage(),
+                'last_page' => $posts->lastPage(),
+            ],
         ]);
     }
 
-    public function userComments()
+    public function userComments(Request $request)
     {
         $user = auth()->user();
-        $comments = $user->comments;
+        $perPage = $request->query('per_page', 15);
+
+        $comments = $user->comments()
+            ->with('post', 'user')
+            ->latest()
+            ->paginate($perPage);
 
         return response()->json([
             'data' => CommentResource::collection($comments),
+            'pagination' => [
+                'total' => $comments->total(),
+                'per_page' => $comments->perPage(),
+                'current_page' => $comments->currentPage(),
+                'last_page' => $comments->lastPage(),
+            ],
         ]);
     }
 
-    public function userTags()
+    public function userTags(Request $request)
     {
         $user = auth()->user();
-        $tags = $user->tags;
+        $perPage = $request->query('per_page', 15);
+
+        $tags = $user->tags()
+            ->withCount('posts')
+            ->paginate($perPage);
 
         return response()->json([
             'data' => $tags,
+            'pagination' => [
+                'total' => $tags->total(),
+                'per_page' => $tags->perPage(),
+                'current_page' => $tags->currentPage(),
+                'last_page' => $tags->lastPage(),
+            ],
         ]);
     }
 
@@ -181,7 +327,10 @@ class ProfileController
             $name = $user->name;
 
             if (!Hash::check($request->current_password, $user->password)) {
-                return response()->json(['message' => 'Current password is incorrect'], 400);
+                Log::warning("Failed password update attempt for user: {$user->email} - incorrect current password");
+                return response()->json([
+                    'message' => 'Current password is incorrect'
+                ], 400);
             }
 
             $user->password = Hash::make($validated['new_password']);
@@ -189,11 +338,22 @@ class ProfileController
 
             Mail::to($user->email)->send(new PasswordUpdatedSuccessfullyMail($user));
 
-            return response()->json(['message' => "Hi $name Your password updated successfully"]);
-        } catch (JWTException $e) {
+            Log::info("Password updated successfully for user: {$user->email}");
+
             return response()->json([
-                'error' => 'Failed to update password',
-                'message' => $e->getMessage()
+                'message' => "Hi $name, your password has been updated successfully"
+            ], 200);
+        } catch (JWTException $e) {
+            Log::error("JWT exception during password update for user: " . Auth::user()->email . " - " . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to update password',
+                'error' => $e->getMessage()
+            ], 500);
+        } catch (\Exception $e) {
+            Log::error("Password update failed for user: " . Auth::user()->email . " - " . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to update password. Please try again.',
+                'error' => $e->getMessage()
             ], 500);
         }
     }
@@ -231,102 +391,34 @@ class ProfileController
 
     public function details() // this details shown in dashboard
     {
-        $user = Auth::user();
-        return response()->json([
-            'number of posts published' => $user->posts()->where('status', '=', 'published')->count(),
-            'number of posts drafts' => $user->posts()->where('status', '=', 'draft')->count(),
-            'number of comments made' => $user->comments()->count(),
-            'number of archives (posts)' => $user->posts()->onlyTrashed()->count(),
-            'pronouns' => $user->pronouns,
-            'joined at' => $user->created_at->diffForHumans(),
-            'number of followers' => $user->followers()->count(),
-            'number of users followed' => $user->following()->count(),
-            'tags followed' => $user->followedTags()->count(),
-            // 'number of likes given' => $this->CountReactionsOnUserPosts(),
-        ]);
-    }
+        try {
+            $user = Auth::user();
 
-    // ...existing code...
+            $stats = [
+                'number_of_posts_published' => $user->posts()->where('status', '=', 'published')->count(),
+                'number_of_posts_drafts' => $user->posts()->where('status', '=', 'draft')->count(),
+                'number_of_comments_made' => $user->comments()->count(),
+                'number_of_archives_posts' => $user->posts()->onlyTrashed()->count(),
+                'pronouns' => $user->pronouns,
+                'joined_at' => $user->created_at->diffForHumans(),
+                'number_of_followers' => $user->followers()->count(),
+                'number_of_users_followed' => $user->following()->count(),
+                'tags_followed' => $user->followedTags()->count(),
+                'reading_list_count' => $user->savedPosts()->count(),
+                'account_status' => $user->status ?? 'active',
+                'email_verified' => $user->email_verified_at !== null,
+            ];
 
-    // new feature to store history of viewed posts by user with database persistence
-    public function viewedPostsHistory(Request $request)
-    {
-        $perPage = $request->query('per_page', 15);
-        $user = auth()->user();
-        $viewedPostsService = new ViewedPostService();
-
-        $viewedPosts = $viewedPostsService->getUserViewedPosts($user->id, $perPage);
-
-        if ($viewedPosts->isEmpty()) {
             return response()->json([
-                'message' => 'No viewed posts history found.',
-                'data' => [],
-            ]);
-        }
-
-        return response()->json([
-            'message' => 'Viewed posts history retrieved successfully',
-            'data' => PostResource::collection($viewedPosts->pluck('post')),
-            'pagination' => [
-                'total' => $viewedPosts->total(),
-                'per_page' => $viewedPosts->perPage(),
-                'current_page' => $viewedPosts->currentPage(),
-                'last_page' => $viewedPosts->lastPage(),
-            ],
-        ]);
-    }
-
-    /**
-     * Get recent viewed posts (limit to 10)
-     */
-    public function recentViewedPosts()
-    {
-        $user = auth()->user();
-        $viewedPostsService = new ViewedPostService();
-
-        $recentPosts = $viewedPostsService->getRecentViewedPosts($user->id, 10);
-
-        if ($recentPosts->isEmpty()) {
+                'data' => $stats,
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error("Failed to fetch profile details for user: " . Auth::user()->email . " - " . $e->getMessage());
             return response()->json([
-                'message' => 'No recently viewed posts found.',
-                'data' => [],
-            ]);
+                'message' => 'Failed to fetch profile details',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            'data' => PostResource::collection($recentPosts->pluck('post')),
-        ]);
     }
 
-    /**
-     * Get viewing statistics for user
-     */
-    public function viewingStats()
-    {
-        $user = auth()->user();
-        $viewedPostsService = new ViewedPostService();
-
-        $stats = [
-            'total_posts_viewed' => $viewedPostsService->getUserViewCount($user->id),
-        ];
-
-        return response()->json([
-            'data' => $stats,
-        ]);
-    }
-
-    /**
-     * Clear viewed posts history for authenticated user
-     */
-    public function clearViewedPostsHistory()
-    {
-        $user = auth()->user();
-        $viewedPostsService = new ViewedPostService();
-
-        $viewedPostsService->clearUserViewHistory($user->id);
-
-        return response()->json([
-            'message' => 'Viewed posts history cleared successfully',
-        ]);
-    }
 }

@@ -21,7 +21,7 @@ class UserResource extends JsonResource
             'Cover Image' => $this->cover_image ?? null,
             'Pronouns' => $this->pronouns ?? 'Not specified',
             'Bio' => $this->bio,
-            'Provider ID' => $this->provider_id,
+//            'Provider ID' => $this->provider_id,
             'Email' => $this->email,
             'Eduction' => $this->education ?? 'Not specified',
             'Work At' => $this->work_at ?? 'Not specified',
