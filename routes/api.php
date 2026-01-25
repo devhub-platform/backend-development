@@ -21,6 +21,7 @@ use App\Http\Controllers\V1\Auth\VerifyEmailController;
 use App\Http\Controllers\V1\TagFollowController;
 use App\Http\Controllers\V1\UserStatusesController;
 use App\Http\Controllers\V1\AiModels\LlamaController;
+use App\Http\Controllers\V1\AiModels\PostSummarizeController;
 use App\Http\Controllers\V1\ReportController;
 
 Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
@@ -214,6 +215,11 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
         Route::controller(LlamaController::class)->group(function () {
             Route::post('ai/llama/generate-text', 'sendLlamaAiRequest');
+        });
+
+        Route::controller(PostSummarizeController::class)->group(function () {
+            Route::post('ai/summarize/post/{post}', 'summarizePost');
+            Route::get('ai/summarize/post/languages', 'getSupportedLanguages');
         });
 
         Route::controller(ReportController::class)->group(function () {

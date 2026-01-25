@@ -160,10 +160,6 @@ class UserStatusesController
         }
     }
 
-    /**
-     * Delete user status
-     * DELETE /api/v1/user/statuses
-     */
     public function delete()
     {
         try {

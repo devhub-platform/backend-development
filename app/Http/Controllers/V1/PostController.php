@@ -275,24 +275,24 @@ class PostController extends Controller
     }
 
 
-    public function summarizationPost(Post $post, SummarizePostService $summarizeService) // ai summary feature
-    {
-        $content = $post->titlr . ' ' . $post->content;
-        $summary = $summarizeService->summarize($content, 'en');
-
-        if (!$summary) {
-            Log::error("Failed to summarize post: " . $post->id);
-            return response()->json([
-                'message' => 'Failed to summarize the post'
-            ], 503);
-        }
-
-        return response()->json([
-            'message' => 'Post summarized successfully',
-            'post_title' => $post->title,
-            'post by' => $post->user->name,
-            'summary' => $summary
-        ]);
-    }
+//    public function summarizationPost(Post $post, SummarizePostService $summarizeService) // ai summary feature
+//    {
+//        $content = $post->titlr . ' ' . $post->content;
+//        $summary = $summarizeService->summarize($content, 'en');
+//
+//        if (!$summary) {
+//            Log::error("Failed to summarize post: " . $post->id);
+//            return response()->json([
+//                'message' => 'Failed to summarize the post'
+//            ], 503);
+//        }
+//
+//        return response()->json([
+//            'message' => 'Post summarized successfully',
+//            'post_title' => $post->title,
+//            'post by' => $post->user->name,
+//            'summary' => $summary
+//        ]);
+//    }
 
 }
