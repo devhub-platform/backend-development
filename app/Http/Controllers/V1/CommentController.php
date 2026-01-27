@@ -9,7 +9,9 @@ use App\Models\Comment;
 use App\Models\Post;
 use App\Notifications\NewCommentNotification;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use App\Services\ModerationService;
 
 class CommentController
 {
@@ -24,12 +26,24 @@ class CommentController
         ]);
     }
 
-    public function store(StoreCommentRequest $request, Post $post)
+    public function store(StoreCommentRequest $request, Post $post, ModerationService $moderationService)
     {
         $this->authorize('create', Comment::class);
         $validated = $request->validated();
         $validated['user_id'] = auth()->id();
         $validated['post_id'] = $post->id;
+
+        $check_content = $moderationService->moderateContent($validated['content']);
+
+        if ($check_content['flagged'] ?? false) {
+            $moderation = $moderationService->getModerationMessage($check_content);
+            Log::warning("Comment content flagged by moderation service for user ID: " . auth()->id() . ' ' . $moderation);
+
+            return response()->json([
+                'message' => 'Comment content violates our content policies and cannot be created , your account may be reviewed , and we take action against it.',
+                'reasons' => $moderation
+            ], 422);
+        }
 
         $post = Post::with('user')->findOrFail($validated['post_id']);
         $comment = Comment::create($validated);
@@ -93,13 +107,25 @@ class CommentController
         ]);
     }
 
-    public function reply(StoreCommentRequest $request, Comment $parentComment)
+    public function reply(StoreCommentRequest $request, Comment $parentComment , ModerationService $moderationService)
     {
         $this->authorize('create', Comment::class);
         $validated = $request->validated();
         $validated['user_id'] = auth()->id();
         $validated['parent_id'] = $parentComment->id;
         $validated['post_id'] = $parentComment->post_id;
+
+        $check_content = $moderationService->moderateContent($validated['content']);
+
+        if ($check_content['flagged'] ?? false) {
+            $moderation = $moderationService->getModerationMessage($check_content);
+            Log::warning("Comment content flagged by moderation service for user ID: " . auth()->id() . ' ' . $moderation);
+
+            return response()->json([
+                'message' => 'Comment content violates our content policies and cannot be created , your account may be reviewed , and we take action against it.',
+                'reasons' => $moderation
+            ], 422);
+        }
 
         $comment = Comment::create($validated);
 

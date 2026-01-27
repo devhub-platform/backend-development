@@ -4,9 +4,11 @@ namespace App\Http\Controllers\V1;
 
 use App\Http\Resources\CommentResource;
 use App\Http\Resources\PostResource;
+use App\Http\Resources\UserResource;
 use App\Http\Resources\UsersCollection;
 use App\Models\User;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
@@ -21,38 +23,58 @@ class UserController extends Controller
         ]);
     }
 
-    public function show(User $user)
+    public function showUserProfile(int $userId)
     {
-        $this->authorize('view', $user);
+        $user = User::findOrFail($userId);
+
         return response()->json([
-            'user' => $user,
+            'data' => new UserResource($user),
         ]);
     }
 
-    public function destroy(User $user)
+    public function userPosts(Request $request, int $userId)
     {
-        $this->authorize('delete', $user);
-        $user->delete();
+        $user = User::findOrFail($userId);
+        $perPage = $request->query('per_page', 15);
+        $status = $request->query('status', null);
+
+        $query = $user->posts()->with('tags', 'user')->latest();
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $posts = $query->paginate($perPage);
+
         return response()->json([
-            'message' => 'User deleted successfully',
+            'data' => PostResource::collection($posts),
+            'pagination' => [
+                'total' => $posts->total(),
+                'per_page' => $posts->perPage(),
+                'current_page' => $posts->currentPage(),
+                'last_page' => $posts->lastPage(),
+            ],
         ]);
     }
 
-    public function userPosts(User $user)
+    public function userComments(Request $request, int $userId)
     {
-        $this->authorize('user-posts', $user);
-        $posts = $user->posts()->get();
-        return response()->json([
-            'posts' => PostResource::collection($posts),
-        ]);
-    }
+        $user = User::findOrFail($userId);
+        $perPage = $request->query('per_page', 15);
 
-    public function userComments(User $user)
-    {
-        $this->authorize('user-comments', $user);
-        $comments = $user->comments()->get();
+        $comments = $user->comments()
+            ->with('post', 'user')
+            ->latest()
+            ->paginate($perPage);
+
         return response()->json([
-            'comments' => CommentResource::collection($comments),
+            'data' => CommentResource::collection($comments),
+            'pagination' => [
+                'total' => $comments->total(),
+                'per_page' => $comments->perPage(),
+                'current_page' => $comments->currentPage(),
+                'last_page' => $comments->lastPage(),
+            ],
         ]);
     }
 }

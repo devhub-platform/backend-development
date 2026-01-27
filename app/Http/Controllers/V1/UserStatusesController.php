@@ -88,10 +88,10 @@ class UserStatusesController
      * Get status for a specific user by username
      * GET /api/v1/users/{username}/status
      */
-    public function getUserStatus($username)
+    public function getUserStatus($id)
     {
         try {
-            $user = User::where('username', $username)->firstOrFail();
+            $user = User::where('id', $id)->firstOrFail();
 
             // Delete expired status if exists
             $this->deleteExpiredStatus($user->id);
@@ -122,10 +122,6 @@ class UserStatusesController
         }
     }
 
-    /**
-     * Update specific status fields
-     * PATCH /api/v1/user/statuses
-     */
     public function update(UserStatusesRequest $request)
     {
         try {
