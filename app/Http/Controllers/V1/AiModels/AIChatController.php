@@ -5,46 +5,39 @@ namespace App\Http\Controllers\V1\AiModels;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use App\Services\Chat\ChatService;
 
 class AIChatController extends Controller
 {
-    protected ChatService $chat;
-
-    public function __construct(ChatService $chat)
-    {
-        $this->chat = $chat;
-    }
+    public function __construct(
+        protected ChatService $chat
+    ) {}
 
     public function chat(Request $request): JsonResponse
     {
-        $data = $request->validate([
-            'session_id'    => 'nullable|exists:ai_chat_sessions,id',
-            'model'         => 'required|string',
-            'message'       => 'required|string',
-            'attachments.*' => 'nullable|file|mimes:jpg,jpeg,png,gif,pdf,txt,doc,docx|max:5120',
+        $validated = $request->validate([
+            'session_id' => 'nullable|exists:ai_chat_sessions,id',
+            'model' => 'required|string',
+            'message' => 'required|string|max:1500',
+            'attachments' => 'nullable|array',
+            'attachments.*' => 'integer|exists:attachments,id'
         ]);
 
-        $attachments = [];
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
-                $path = $file->storeAs('chat-attachments', $filename, 's3');
-                $attachments[] = Storage::disk('s3')->url($path);
-            }
-        }
-
-        $data['attachments'] = $attachments;
+        $data = [
+            'session_id' => $validated['session_id'] ?? null,
+            'model' => $validated['model'],
+            'message' => $validated['message'],
+            'attachments' => $validated['attachments'] ?? []
+        ];
 
         $response = $this->chat->handle($data, $request->user());
 
         return response()->json([
-            'session_id'       => $response['session_id'],
-            'user_message'     => $data['message'],
-            'user_attachments' => $attachments,
-            'ai_message'       => $response['content'],
+            'session_id' => $response['session_id'] ?? null,
+            'ai_message' => $response['content'] ?? 'No response',
+            'model_used' => $response['model_used'] ?? $validated['model'],
+            'processing_time_ms' => $response['processing_time_ms'] ?? 0,
+            'success' => $response['success'] ?? false
         ]);
     }
 
