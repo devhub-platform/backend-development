@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use App\Services\SummarizePostService;
+use Illuminate\Support\Number;
 
 class PostController extends Controller
 {
@@ -141,7 +142,7 @@ class PostController extends Controller
 
         return response()->json([
             'data' => new PostResource($post->load('tags')),
-            'views' => $views
+            'views' => Number::abbreviate($views)
         ]);
     }
 
