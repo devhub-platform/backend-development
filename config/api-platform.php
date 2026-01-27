@@ -1,14 +1,5 @@
 <?php
 
-/*
- * This file is part of the API Platform project.
- *
- * (c) Kévin Dunglas <dunglas@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
-
 declare(strict_types=1);
 
 use ApiPlatform\Metadata\UrlGeneratorInterface;
@@ -24,8 +15,7 @@ return [
 
     'routes' => [
         'domain' => null,
-        // Global middleware applied to every API Platform routes
-        // 'middleware' => [],
+        // 'middleware' => [], // Global middleware for all API routes
     ],
 
     'resources' => [
@@ -87,7 +77,6 @@ return [
         // 'middleware' => null,
     ],
 
-    // set to null if you want to keep snake_case
     'name_converter' => SnakeCaseToCamelCaseNameConverter::class,
 
     'exception_to_status' => [
@@ -97,42 +86,8 @@ return [
 
     'swagger_ui' => [
         'enabled' => true,
-        // 'apiKeys' => [
-        //     'api' => [
-        //         'name' => 'Authorization',
-        //         'type' => 'header',
-        //     ],
-        // ],
-        // 'oauth' => [
-        //     'enabled' => true,
-        //     'type' => 'oauth2',
-        //     'flow' => 'authorizationCode',
-        //     'tokenUrl' => '',
-        //     'authorizationUrl' =>'',
-        //     'refreshUrl' => '',
-        //     'scopes' => ['scope1' => 'Description scope 1'],
-        //     'pkce' => true,
-        // ],
-        // 'license' => [
-        //     'name' => 'Apache 2.0',
-        //     'url' => 'https://www.apache.org/licenses/LICENSE-2.0.html',
-        // ],
-        // 'contact' => [
-        //     'name' => 'API Support',
-        //     'url' => 'https://www.example.com/support',
-        //     'email' => 'support@example.com',
-        // ],
-        // 'http_auth' => [
-        //     'Personal Access Token' => [
-        //         'scheme' => 'bearer',
-        //         'bearerFormat' => 'JWT',
-        //     ],
-        // ],
+        // Uncomment to configure API keys, OAuth, license, contact, or http_auth
     ],
-
-    // 'openapi' => [
-    //     'tags' => [],
-    // ],
 
     'url_generation_strategy' => UrlGeneratorInterface::ABS_PATH,
 
@@ -141,10 +96,9 @@ return [
         // 'datetime_format' => \DateTimeInterface::RFC3339,
     ],
 
-    // we recommend using "file" or "acpu"
     'cache' => 'file',
 
-    // install `api-platform/http-cache`
+    // Uncomment and configure http_cache if using api-platform/http-cache
     // 'http_cache' => [
     //     'etag' => false,
     //     'max_age' => null,
