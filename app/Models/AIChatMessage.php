@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AIChatMessage extends Model
 {
@@ -13,15 +12,15 @@ class AIChatMessage extends Model
         'ai_chat_session_id',
         'role',
         'content',
-        'attachments',
+        'attachments'
     ];
 
     protected $casts = [
-        'attachments' => 'array',
+        'attachments' => 'array'
     ];
 
-    public function session(): BelongsTo
+    public function session()
     {
-        return $this->belongsTo(AIChatSession::class);
+        return $this->belongsTo(AIChatSession::class, 'ai_chat_session_id');
     }
 }

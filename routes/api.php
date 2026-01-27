@@ -24,6 +24,8 @@ use App\Http\Controllers\V1\UserStatusesController;
 use App\Http\Controllers\V1\ReadingListController;
 use App\Http\Controllers\V1\AiModels\LlamaController;
 use App\Http\Controllers\V1\AiModels\AIChatController;
+use App\Http\Controllers\V1\AiModels\AttachmentController;
+use App\Http\Controllers\V1\AiModels\HistoryController;
 
 // v1 API group with throttle
 Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
@@ -212,22 +214,34 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('ai/llama/generate-text', 'sendAiRequest');
         });
 
+        // ============================================
+        // AI Chat Routes
+        // ============================================
+        Route::prefix('ai-chat')->group(function () {
+            Route::post('/send', [AIChatController::class, 'chat']);
+            Route::get('/models', [AIChatController::class, 'models']);
+            Route::post('/attachments/upload', [AttachmentController::class, 'upload']);
+
+            Route::prefix('history')->group(function () {
+                Route::get('/sessions', [HistoryController::class, 'sessions']);
+                Route::post('/sessions/create', [HistoryController::class, 'create']);
+                Route::get('/sessions/{sessionId}', [HistoryController::class, 'show']);
+                Route::delete('/sessions/{sessionId}', [HistoryController::class, 'delete']);
+                Route::post('/sessions/{sessionId}/pin', [HistoryController::class, 'pin']);
+                Route::post('/sessions/{sessionId}/unpin', [HistoryController::class, 'unpin']);
+                Route::post('/sessions/{sessionId}/close', [HistoryController::class, 'close']);
+                Route::post('/sessions/{sessionId}/activate', [HistoryController::class, 'activate']);
+                Route::put('/sessions/{sessionId}/title', [HistoryController::class, 'updateTitle']);
+            });
+        });
+
     });
 
 });
 
-Route::prefix('v1')->group(function () {
-
-    // AI Chat routes
-    Route::prefix('ai-chat')->group(function () {
-        Route::post('/', [AIChatController::class, 'chat']); // send message
-        Route::get('/models', [AIChatController::class, 'models']); // list models
-    });
-
-});
 // Fallback
 Route::fallback(function () {
     return response()->json([
-        'message' => 'Resource not found. Please check the URL or API endpoint you are trying to access.'
+        'message' => 'Resource not found.'
     ], 404);
 });

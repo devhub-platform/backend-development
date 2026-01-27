@@ -11,11 +11,7 @@ class ChatRateLimiter
     {
         if (!$userId) return;
 
-        if (!RateLimiter::attempt(
-            'chat:' . $userId,
-            20,
-            fn () => true
-        )) {
+        if (!RateLimiter::attempt('chat:' . $userId, 20, fn () => true)) {
             throw new HttpResponseException(
                 response()->json(['error' => 'Too many requests'], 429)
             );
