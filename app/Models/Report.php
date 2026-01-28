@@ -8,9 +8,26 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Report extends Model
 {
     protected $fillable = [
-        'message', 'status', 'reporter_id', 'reported_user_id',
+        'message',
+        'status',
+        'reporter_id',
+        'reported_user_id',
+        'reported_post_id',
+        'type',
+        'reason',
+        'report',
     ];
 
+    public const REASONS = [
+        'spam' => 'Spam or misleading',
+        'harassment' => 'Harassment or bullying',
+        'hate_speech' => 'Hate speech or discrimination',
+        'violence' => 'Violence or dangerous content',
+        'adult_content' => 'Adult or explicit content',
+        'copyright' => 'Copyright violation',
+        'misinformation' => 'False information',
+        'other' => 'Other',
+    ];
 
     public function reporter(): BelongsTo
     {
@@ -22,4 +39,24 @@ class Report extends Model
         return $this->belongsTo(User::class, 'reported_user_id');
     }
 
+    public function reportedPost(): BelongsTo
+    {
+        return $this->belongsTo(Post::class, 'reported_post_id');
+    }
+
+    /**
+     * Scope for post reports
+     */
+    public function scopePostReports($query)
+    {
+        return $query->where('type', 'post');
+    }
+
+    /**
+     * Scope for user reports
+     */
+    public function scopeUserReports($query)
+    {
+        return $query->where('type', 'user');
+    }
 }

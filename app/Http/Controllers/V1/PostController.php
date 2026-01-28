@@ -4,12 +4,16 @@ namespace App\Http\Controllers\V1;
 
 use App\Http\Requests\PostsRequests\PostStoreRequest;
 use App\Http\Requests\PostsRequests\PostUpdateRequest;
+use App\Http\Requests\PostsRequests\ReportPostRequest;
 use App\Http\Resources\PostCollection;
 use App\Http\Resources\PostResource;
 use App\Http\Resources\SearchPostResource;
 use App\Http\Resources\UserResource;
 use App\Models\Post;
+use App\Models\Report;
 use App\Models\Tag;
+use App\Notifications\PostReportedNotification;
+use App\Notifications\UserReportedNotification;
 use App\Services\GeminiImageService;
 use App\Services\ModerationService;
 use App\Services\ViewedPostService;
@@ -18,6 +22,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use App\Services\SummarizePostService;
@@ -196,18 +201,6 @@ class PostController extends Controller
         ]);
     }
 
-//    public function search(Request $request, Post $post)
-//    {
-//        $this->authorize('search', $post);
-//        $query = $request->input('query');
-//        $results = $post->search($query)->take(10)->get();
-//        if ($results->isEmpty()) {
-//            Log::error('No posts found matching the search criteria: ' . $query);
-//            return response()->json(['message' => 'No posts found matching the search criteria.'], 404);
-//        }
-//        return SearchPostResource::collection($results);
-//    }
-
     public function recentPosts(Post $post)
     {
         $this->authorize('viewAny', $post);
@@ -276,25 +269,66 @@ class PostController extends Controller
         ]);
     }
 
+    public function reportPost(ReportPostRequest $request, Post $post)
+    {
+        $user = auth()->user();
 
-//    public function summarizationPost(Post $post, SummarizePostService $summarizeService) // ai summary feature
-//    {
-//        $content = $post->titlr . ' ' . $post->content;
-//        $summary = $summarizeService->summarize($content, 'en');
-//
-//        if (!$summary) {
-//            Log::error("Failed to summarize post: " . $post->id);
-//            return response()->json([
-//                'message' => 'Failed to summarize the post'
-//            ], 503);
-//        }
-//
-//        return response()->json([
-//            'message' => 'Post summarized successfully',
-//            'post_title' => $post->title,
-//            'post by' => $post->user->name,
-//            'summary' => $summary
-//        ]);
-//    }
+        if ($user->id === $post->user_id) {
+            return response()->json([
+                'message' => 'You cannot report your own post.',
+            ], 400);
+        }
+
+        if (!$post->exists() || $post->trashed()) {
+            return response()->json([
+                'message' => 'Post not found or is not accessible.',
+            ], 404);
+        }
+
+        $existingReport = Report::where('reporter_id', $user->id)
+            ->where('reported_post_id', $post->id)
+            ->where('type', 'post')
+            ->first();
+
+        if ($existingReport) {
+            return response()->json([
+                'message' => 'You have already reported this post.',
+            ], 400);
+        }
+
+        $validated = $request->validated();
+
+        $report = Report::create([
+            'reporter_id' => $user->id,
+            'reported_user_id' => $post->user_id,
+            'reported_post_id' => $post->id,
+            'type' => 'post',
+            'reason' => $validated['reason'],
+            'message' => $validated['message'] ?? null,
+            'report' => true,
+        ]);
+
+        $adminEmail = config('services.mail.admin_email_2', 'youssef.ahmed.fci@gmail.com');
+        Notification::route('mail', $adminEmail)
+            ->notify(new PostReportedNotification($report));
+
+        Log::info("Post reported - Post ID: {$post->id}, Reporter: {$user->email}, Reason: {$validated['reason']}");
+
+        return response()->json([
+            'message' => 'Post reported successfully. Our team will review it shortly.',
+            'data' => [
+                'report_id' => $report->id,
+                'post_id' => $post->id,
+                'reason' => Report::REASONS[$validated['reason']] ?? $validated['reason'],
+            ],
+        ], 201);
+    }
+
+    public function reasonsToReport()
+    {
+        return response()->json([
+            'reasons' => Report::REASONS,
+        ]);
+    }
 
 }

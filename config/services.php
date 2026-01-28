@@ -62,8 +62,8 @@ return [
         'host' => env('SUMMARIZE_HOST')
     ],
 
-    'admin_emails' => [
-        'email1' => env('ADMIN_EMAIL1'),
-        'email2' => env('ADMIN_EMAIL2'),
+    'mail' => [
+        'admin_email_1' => env('ADMIN_EMAIL1'),
+        'admin_email_2' => env('ADMIN_EMAIL2'),
     ]
 ];

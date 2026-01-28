@@ -19,7 +19,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[ObservedBy([UserObserver::class])]
 class User extends Authenticatable implements JWTSubject, MustVerifyEmail
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, softDeletes, Reactor, Searchable;
 
     public function getJWTIdentifier()
@@ -70,7 +69,11 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'pronouns',
         'linkedin_username',
         'github_username',
-        'currently_learning'
+        'currently_learning',
+        'alt_email',
+        'alt_email_verified_at',
+        'alt_email_otp',
+        'alt_email_otp_expires_at'
     ];
 
     /**
@@ -81,7 +84,9 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     protected $hidden = [
         'password',
         'remember_token',
-        'provider_id'
+        'provider_id',
+        'alt_email_otp',
+        'alt_email_otp_expires_at'
     ];
 
     /**
@@ -94,6 +99,8 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'alt_email_verified_at' => 'datetime',
+            'alt_email_otp_expires_at' => 'datetime',
         ];
     }
 

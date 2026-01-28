@@ -76,9 +76,7 @@ class Post extends Model implements HasReaction
             ->withTimestamps();
     }
 
-    /**
-     * Get all users who have viewed this post
-     */
+
     public function viewedByUsers(): BelongsToMany
     {
         return $this->belongsToMany(

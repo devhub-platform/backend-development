@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers\V1;
 
+use App\Http\Requests\ProfileRequests\AddAltEmailRequest;
 use App\Http\Requests\ProfileRequests\UpdatePasswordRequest;
+use App\Http\Requests\ProfileRequests\VerifyAltEmailRequest;
 use App\Http\Resources\UserResource;
 use App\Mail\PasswordUpdatedSuccessfullyMail;
+use App\Mail\VerifyAltEmailMail;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -13,9 +17,11 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+
 class SettingController
 {
     use AuthorizesRequests;
+
     public function updatePassword(UpdatePasswordRequest $request)
     {
         $validated = $request->validated();
@@ -156,5 +162,6 @@ class SettingController
             ], 500);
         }
     }
+
 }
 
