@@ -26,8 +26,8 @@ class AIChatController extends Controller
     {
         $request->validate([
             'session_id' => 'nullable|exists:ai_chat_sessions,id',
-            'message'    => 'required|string',
-            'model'      => 'required|string',
+            'message' => 'required|string',
+            'model' => 'required|string',
             'attachments.*' =>
                 'nullable|file|mimes:jpg,jpeg,png,gif,pdf,txt,doc,docx|max:5120',
         ]);
@@ -46,7 +46,7 @@ class AIChatController extends Controller
                 ? AIChatSession::findOrFail($request->session_id)
                 : AIChatSession::create([
                     'user_id' => $request->user()?->id,
-                    'model'   => $request->model,
+                    'model' => $request->model,
                 ]);
 
             /* =====================
@@ -66,8 +66,8 @@ class AIChatController extends Controller
              ===================== */
             AIChatMessage::create([
                 'ai_chat_session_id' => $session->id,
-                'role'        => 'user',
-                'content'     => $request->message,
+                'role' => 'user',
+                'content' => $request->message,
                 'attachments' => $attachments,
             ]);
 
@@ -77,8 +77,8 @@ class AIChatController extends Controller
             $messages = AIChatMessage::where('ai_chat_session_id', $session->id)
                 ->orderBy('id')
                 ->get(['role', 'content'])
-                ->map(fn ($m) => [
-                    'role'    => $m->role,
+                ->map(fn($m) => [
+                    'role' => $m->role,
                     'content' => $m->content,
                 ])
                 ->toArray();
@@ -109,23 +109,23 @@ class AIChatController extends Controller
              ===================== */
             $aiMessage = AIChatMessage::create([
                 'ai_chat_session_id' => $session->id,
-                'role'    => 'assistant',
+                'role' => 'assistant',
                 'content' => $aiContent,
                 'attachments' => [],
             ]);
 
             return response()->json([
-                'session_id'       => $session->id,
-                'user_message'     => $request->message,
+                'session_id' => $session->id,
+                'user_message' => $request->message,
                 'user_attachments' => $attachments,
-                'ai_message'       => $aiMessage->content,
+                'ai_message' => $aiMessage->content,
             ]);
 
         } catch (HttpResponseException $e) {
             throw $e;
         } catch (Exception $e) {
             return response()->json([
-                'error'   => 'AI Chat Error',
+                'error' => 'AI Chat Error',
                 'message' => $e->getMessage(),
             ], 500);
         }

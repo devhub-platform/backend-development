@@ -25,6 +25,7 @@ use App\Http\Controllers\V1\UserController;
 use App\Http\Controllers\V1\UserStatusesController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\V1\VerifyAltEmailController;
+use App\Http\Controllers\V1\AiModels\AIChatController;
 
 Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
     // Social Authentication
@@ -148,14 +149,12 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('posts/{post}/reactions-count', 'reactionCounts');
         });
 
-        // Saved Posts (Reading List)
         Route::controller(SavedPostController::class)->group(function () {
             Route::get('saved-posts', 'index');
             Route::post('saved-posts/{post}', 'store');
             Route::delete('saved-posts/{post}', 'destroy');
         });
 
-        // Notifications
         Route::controller(NotificationController::class)->group(function () {
             Route::get('notifications', 'showNewCommentNotify');
             Route::get('notifications/all', 'showAllNotifications');
@@ -239,6 +238,24 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('settings/alt-email/send-otp', 'addAltEmail');
             Route::post('settings/alt-email/verify-otp', 'verifyAltEmail');
             Route::delete('settings/alt-email/remove', 'removeAltEmail');
+        });
+
+        Route::controller(AIChatController::class)->group(function () {
+            Route::post('/send', 'chat');
+            Route::get('/models', 'models');
+            Route::post('/attachments/upload', 'upload');
+
+            Route::prefix('history')->group(function () {
+                Route::get('/sessions', [HistoryController::class, 'sessions']);
+                Route::post('/sessions/create', [HistoryController::class, 'create']);
+                Route::get('/sessions/{sessionId}', [HistoryController::class, 'show']);
+                Route::delete('/sessions/{sessionId}', [HistoryController::class, 'delete']);
+                Route::post('/sessions/{sessionId}/pin', [HistoryController::class, 'pin']);
+                Route::post('/sessions/{sessionId}/unpin', [HistoryController::class, 'unpin']);
+                Route::post('/sessions/{sessionId}/close', [HistoryController::class, 'close']);
+                Route::post('/sessions/{sessionId}/activate', [HistoryController::class, 'activate']);
+                Route::put('/sessions/{sessionId}/title', [HistoryController::class, 'updateTitle']);
+            });
         });
 
     });
