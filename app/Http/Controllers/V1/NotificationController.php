@@ -70,4 +70,40 @@ class NotificationController
             'message' => 'All notifications deleted',
         ]);
     }
+
+    public function showNewFollowersNotifications()
+    {
+        $user = auth()->user(); // youssef
+        $notifications = $user->unreadNotifications()
+            ->where('type', 'App\Notifications\FollowNotification')->get([
+                'type', 'data', 'created_at'
+            ]);
+        return response()->json([
+            'new_follower_notifications' => $notifications,
+        ]);
+    }
+
+    public function newPostCreateFromFollower()
+    {
+        $user = auth()->user();
+        $notifications = $user->unreadNotifications()
+            ->where('type', 'App\Notifications\NewPostNotification')->get([
+                'type', 'data', 'created_at'
+            ]);
+        return response()->json([
+            'new_post_from_follower_notifications' => $notifications,
+        ]);
+    }
+
+//    public function showNewMentionNotifications()
+//    {
+//        $user = auth()->user();
+//        $notifications = $user->unreadNotifications()
+//            ->where('type', 'App\Notifications\MentionNotification')->get([
+//                'type', 'data', 'created_at'
+//            ]);
+//        return response()->json([
+//            'new_mention_notifications' => $notifications,
+//        ]);
+//    }
 }

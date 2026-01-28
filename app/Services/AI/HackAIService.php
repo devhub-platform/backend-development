@@ -4,6 +4,7 @@ namespace App\Services\AI;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use Illuminate\Support\Facades\Log;
 
 class HackAIService
 {
@@ -12,16 +13,16 @@ class HackAIService
 
     public function __construct()
     {
-        \Log::info('Initializing HackAIService', [
+        Log::info('Initializing HackAIService', [
             'base_url' => config('services.hackai.base_url'),
             'has_token' => !empty(config('services.hackai.token'))
         ]);
 
         $this->client = new Client([
             'base_uri' => config('services.hackai.base_url') . '/',
-            'headers'  => [
+            'headers' => [
                 'Authorization' => 'Bearer ' . config('services.hackai.token'),
-                'Content-Type'  => 'application/json',
+                'Content-Type' => 'application/json',
             ],
             'timeout' => 60,
             'connect_timeout' => 15,
@@ -30,7 +31,7 @@ class HackAIService
 
     public function chat(array $messages, string $model, int $maxTokens = 500): array
     {
-        \Log::info('HackAI chat called:', [
+        Log::info('HackAI chat called:', [
             'model' => $model,
             'messages_count' => count($messages),
             'max_tokens' => $maxTokens
@@ -39,39 +40,39 @@ class HackAIService
         $cacheKey = md5(serialize([$messages, $model, $maxTokens]));
 
         if (isset($this->cache[$cacheKey])) {
-            \Log::info('Returning cached response');
+            Log::info('Returning cached response');
             return $this->cache[$cacheKey];
         }
 
         try {
-            \Log::info('Sending request to HackAI API...');
+            Log::info('Sending request to HackAI API...');
 
             $response = $this->client->post('chat/completions', [
                 'json' => [
-                    'model'    => $model,
+                    'model' => $model,
                     'messages' => $messages,
                     'max_tokens' => $maxTokens,
                     'temperature' => 0.7,
                 ],
             ]);
 
-            \Log::info('HackAI API response status:', [
+            Log::info('HackAI API response status:', [
                 'status' => $response->getStatusCode()
             ]);
 
             $data = json_decode($response->getBody(), true);
 
             if (is_array($data)) {
-                \Log::info('HackAI response valid');
+                Log::info('HackAI response valid');
                 $this->cache[$cacheKey] = $data;
                 return $data;
             }
 
-            \Log::warning('HackAI returned invalid response');
+            Log::warning('HackAI returned invalid response');
             return $this->getFallbackResponse();
 
         } catch (GuzzleException $e) {
-            \Log::error('HackAI API Error:', [
+            Log::error('HackAI API Error:', [
                 'message' => $e->getMessage(),
                 'code' => $e->getCode()
             ]);
@@ -82,7 +83,7 @@ class HackAIService
 
     private function getFallbackResponse(): array
     {
-        \Log::warning('Returning fallback response from HackAIService');
+        Log::warning('Returning fallback response from HackAIService');
 
         return [
             'choices' => [

@@ -35,11 +35,23 @@ class CommentPolicy
         return $comment->user_id == $user->id;
     }
 
-//    public function restore(User $user, Comment $comment): bool
-//    {
-//    }
-//
-//    public function forceDelete(User $user, Comment $comment): bool
-//    {
-//    }
+    public function restore(User $user, Comment $comment): bool
+    {
+        return $comment->user_id == $user->id;
+    }
+
+    public function forceDelete(User $user, Comment $comment): bool
+    {
+        return $comment->user_id == $user->id;
+    }
+
+    public function pin(User $user, Comment $comment): bool
+    {
+        return $comment->post->user_id == $user->id;
+    }
+
+    public function unpin(User $user, Comment $comment): bool
+    {
+        return $comment->post->user_id == $user->id;
+    }
 }
