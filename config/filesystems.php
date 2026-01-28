@@ -31,15 +31,15 @@ return [
         ],
 
         'ftp' => [
-            'driver'   => 'ftp',
-            'host'     => env('FTP_HOST'),
+            'driver' => 'ftp',
+            'host' => env('FTP_HOST'),
             'username' => env('FTP_USERNAME'),
             'password' => env('FTP_PASSWORD'),
-            'port'     => env('FTP_PORT', 21),
-            'root'     => env('FTP_ROOT', ''),
-            'passive'  => true,
-            'ssl'      => false,
-            'timeout'  => 30,
+            'port' => env('FTP_PORT', 21),
+            'root' => env('FTP_ROOT', ''),
+            'passive' => true,
+            'ssl' => false,
+            'timeout' => 30,
         ],
 
         'sftp' => [
@@ -52,6 +52,16 @@ return [
             'timeout' => 30,
         ],
 
+    ],
+
+    'cloudinary' => [
+        'driver' => 'cloudinary',
+        'key' => env('CLOUDINARY_KEY'),
+        'secret' => env('CLOUDINARY_SECRET'),
+        'cloud' => env('CLOUDINARY_CLOUD_NAME'),
+        'url' => env('CLOUDINARY_URL'),
+        'secure' => (bool)env('CLOUDINARY_SECURE', true),
+        'prefix' => env('CLOUDINARY_PREFIX'),
     ],
 
     'links' => [

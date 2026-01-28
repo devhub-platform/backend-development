@@ -11,7 +11,9 @@ class AIChatController extends Controller
 {
     public function __construct(
         protected ChatService $chat
-    ) {}
+    )
+    {
+    }
 
     public function chat(Request $request): JsonResponse
     {

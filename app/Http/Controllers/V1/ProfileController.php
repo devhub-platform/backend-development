@@ -19,6 +19,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Tymon\JWTAuth\Exceptions\JWTException;
+use Tymon\JWTAuth\Facades\JWTAuth;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
+
 
 class ProfileController
 {
@@ -62,13 +65,29 @@ class ProfileController
 
         try {
             $user = auth()->user();
-            $image = $request->file('cover_image');
 
-            $uploadService->uploadCoverImage($user, $image);
+            $uploadedFile = Cloudinary::upload($request->file('cover_image')->getRealPath(), [
+                'folder' => 'covers',
+                'public_id' => 'cover_' . $user->id . '_' . time(),
+                'overwrite' => true,
+                'resource_type' => 'image'
+            ]);
+
+            $uploadedFileUrl = $uploadedFile->getSecurePath();
+
+            if (!$uploadedFileUrl) {
+                return response()->json([
+                    'message' => 'Failed to upload cover image. Please try again.',
+                    'error' => 'Cloudinary upload failed'
+                ], 500);
+            }
+
+            $user->update(['cover_image' => $uploadedFileUrl]);
 
             return response()->json([
                 'message' => 'Cover image uploaded successfully',
                 'data' => new UserResource($user->fresh()),
+                'cover_image' => $uploadedFileUrl
             ], 200);
         } catch (\Exception $e) {
             Log::error("Cover image upload failed for user: " . auth()->user()->email . " - " . $e->getMessage());
