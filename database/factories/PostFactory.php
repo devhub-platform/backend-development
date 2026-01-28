@@ -25,6 +25,8 @@ class PostFactory extends Factory
             'content' => fake()->paragraphs(3, true),
             'created_at' => now(),
             'updated_at' => now(),
+            'status' => 'published',
+            'read_time' => fake()->numberBetween(1, 10)
         ];
     }
 }

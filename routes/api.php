@@ -24,6 +24,7 @@ use App\Http\Controllers\V1\TagFollowController;
 use App\Http\Controllers\V1\UserController;
 use App\Http\Controllers\V1\UserStatusesController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\V1\VerifyAltEmailController;
 
 Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
     // Social Authentication
@@ -69,6 +70,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('posts/{post}/tags', 'postsTags');
             Route::get('posts/{post}/tags-list', 'postsTagsList');
             Route::get('posts/{post}/comments', 'postComments');
+            Route::post('posts/{post}/report', 'reportPost');
         });
         Route::apiResource('posts', PostController::class);
 
@@ -227,10 +229,16 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
         // Settings
         Route::controller(SettingController::class)->group(function () {
-            Route::post('settings/update-password', 'updatePassword');
+            Route::patch('settings/update-password', 'updatePassword');
             Route::post('settings/social-accounts', 'addSocialAccounts');
             Route::delete('settings/soft/delete-account', 'delete');
             Route::delete('settings/force/delete-account', 'forceDelete');
+        });
+
+        Route::controller(VerifyAltEmailController::class)->group(function () {
+            Route::post('settings/alt-email/send-otp', 'addAltEmail');
+            Route::post('settings/alt-email/verify-otp', 'verifyAltEmail');
+            Route::delete('settings/alt-email/remove', 'removeAltEmail');
         });
 
     });
