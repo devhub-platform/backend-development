@@ -3,19 +3,24 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AIChatMessage extends Model
 {
     protected $table = 'ai_chat_messages';
-    protected $fillable = ['ai_chat_session_id', 'role', 'content', 'attachments'];
 
-    protected $casts = [
-        'attachments' => 'array',
+    protected $fillable = [
+        'ai_chat_session_id',
+        'role',
+        'content',
+        'attachments'
     ];
 
-    public function session(): BelongsTo
+    protected $casts = [
+        'attachments' => 'array'
+    ];
+
+    public function session()
     {
-        return $this->belongsTo(AIChatSession::class);
+        return $this->belongsTo(AIChatSession::class, 'ai_chat_session_id');
     }
 }

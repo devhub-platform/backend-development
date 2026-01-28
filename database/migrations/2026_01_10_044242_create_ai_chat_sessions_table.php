@@ -12,6 +12,8 @@ return new class extends Migration {
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->string('title')->nullable();
             $table->string('model');
+            $table->boolean('pinned')->default(false);
+            $table->boolean('active')->default(true);
             $table->timestamps();
         });
     }

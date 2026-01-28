@@ -1,41 +1,44 @@
 <?php
 
-use App\Http\Controllers\V1\AiModels\LlamaController;
-use App\Http\Controllers\V1\AiModels\PostSummarizeController;
+use Illuminate\Support\Facades\Route;
+
+// Auth
 use App\Http\Controllers\V1\Auth\AuthController;
 use App\Http\Controllers\V1\Auth\ForgetPasswordController;
 use App\Http\Controllers\V1\Auth\SocialiteMediaController;
 use App\Http\Controllers\V1\Auth\VerifyEmailController;
-use App\Http\Controllers\V1\CodeEditorController;
-use App\Http\Controllers\V1\CommentController;
-use App\Http\Controllers\V1\FollowersController;
-use App\Http\Controllers\V1\NotificationController;
+
+// Main controllers
 use App\Http\Controllers\V1\PostController;
-use App\Http\Controllers\V1\PostViewController;
+use App\Http\Controllers\V1\CommentController;
+use App\Http\Controllers\V1\TagController;
 use App\Http\Controllers\V1\ProfileController;
+use App\Http\Controllers\V1\FollowersController;
 use App\Http\Controllers\V1\ReactionController;
-use App\Http\Controllers\V1\ReadingListController;
-use App\Http\Controllers\V1\ReportController;
 use App\Http\Controllers\V1\SavedPostController;
 use App\Http\Controllers\V1\SearchController;
-use App\Http\Controllers\V1\SettingController;
-use App\Http\Controllers\V1\TagController;
+use App\Http\Controllers\V1\NotificationController;
+use App\Http\Controllers\V1\CodeEditorController;
 use App\Http\Controllers\V1\TagFollowController;
-use App\Http\Controllers\V1\UserController;
 use App\Http\Controllers\V1\UserStatusesController;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\V1\VerifyAltEmailController;
+use App\Http\Controllers\V1\ReadingListController;
+use App\Http\Controllers\V1\AiModels\LlamaController;
 use App\Http\Controllers\V1\AiModels\AIChatController;
+use App\Http\Controllers\V1\AiModels\AttachmentController;
+use App\Http\Controllers\V1\AiModels\HistoryController;
 
+// v1 API group with throttle
 Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
-    // Social Authentication
+
+    // Socialite login
     Route::controller(SocialiteMediaController::class)->group(function () {
-        Route::get('auth/google/login', 'loginGoogle');
-        Route::get('auth/google/callback', 'callbackGoogle');
+        Route::get('auth/google/login', 'login');
+        Route::get('auth/google/callback', 'callback');
         Route::get('auth/github/login', 'loginGithub');
         Route::get('auth/github/callback', 'callbackGithub');
     });
 
+    // Auth routes
     Route::controller(AuthController::class)->group(function () {
         Route::post('login', 'login');
         Route::post('register', 'register');
@@ -45,85 +48,89 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('refresh', 'refreshToken');
             Route::get('me', 'user');
         });
+
+        // Email verification
+        Route::controller(VerifyEmailController::class)->group(function () {
+            Route::post('email/verify-otp', 'verifyEmailOtp');
+            Route::post('email/send-otp', 'sendEmailOTP');
+            Route::get('email/is-verified', 'isVerified');
+        });
+
+        // Password reset
+        Route::controller(ForgetPasswordController::class)->group(function () {
+            Route::post('password/forgot', 'forgetPassword');
+            Route::post('password/verify-otp', 'verifyOtp');
+            Route::post('password/reset', 'resetPassword');
+        });
     });
 
-    Route::controller(VerifyEmailController::class)->group(function () {
-        Route::post('email/verify-otp', 'verifyEmailOtp');
-        Route::post('email/send-otp', 'sendEmailOTP');
-        Route::get('email/is-verified', 'isVerified');
-    });
+    // Protected routes (auth + verified + throttle)
+    Route::middleware(['auth:api', 'verified', 'throttle:15,1'])->group(function () {
 
-    Route::controller(ForgetPasswordController::class)->group(function () {
-        Route::post('password/forgot', 'forgetPassword');
-        Route::post('password/verify-otp', 'verifyOtp');
-        Route::post('password/reset', 'resetPassword');
-    });
-
-    Route::middleware(['auth:api', 'verified', 'throttle:25,1'])->group(function () {
-
+        // Posts
         Route::controller(PostController::class)->group(function () {
             Route::get('user/posts', 'userPosts');
+            Route::get('search/posts', 'search');
             Route::delete('posts/{post}/force', 'forceDelete');
             Route::post('posts/{id}/restore', 'restore');
             Route::get('posts/recent', 'recentPosts');
-            Route::get('posts/drafts', 'drafts');
-            Route::get('posts/archives', 'archivesTrashed');
+            Route::get('posts/tags', 'postsTags');
             Route::get('posts/{post}/tags', 'postsTags');
+            Route::post('posts/{post}/tags', 'attachTags');
+            Route::delete('posts/{post}/tags/{tag}', 'detachTag');
             Route::get('posts/{post}/tags-list', 'postsTagsList');
             Route::get('posts/{post}/comments', 'postComments');
-            Route::post('posts/{post}/report', 'reportPost');
+            Route::get('posts/drafts', 'drafts');
+            Route::get('posts/archives', 'archivesTrashed');
+            Route::get('posts/generate/cover-image', 'generateCoverImage');
+            Route::post('posts/upload/cover-image', 'uploadPostCover');
+            Route::post('posts/upload/image', 'uploadPostImage');
+            Route::post('posts/{post}/summarize', 'summarizationPost');
         });
         Route::apiResource('posts', PostController::class);
 
-        Route::controller(PostViewController::class)->group(function () {
-            Route::get('posts/viewed/recent', 'getRecentViewedPosts');
-            Route::delete('posts/viewed/clear', 'clearViewedPosts');
-//            Route::get('posts/viewing-stats', 'getUserViewCount');
-        });
-
-        // Users
-        Route::controller(UserController::class)->group(function () {
-            Route::get('users', 'index');
-            Route::get('users/{id}', 'showUserProfile');
-            Route::get('users/{user}/posts', 'userPosts');
-            Route::get('users/{user}/comments', 'userComments');
-            Route::get('users/{user}/tags', 'userTags');
-        });
-
+        // Search
         Route::controller(SearchController::class)->group(function () {
             Route::get('search/posts', 'searchPosts');
             Route::get('search/users', 'searchUsersByUsername');
-            Route::get('search/tags', 'searchTags');
-            Route::get('search/histories', 'getSearchHistory');
-            Route::delete('search/clear', 'clearSearchHistory');
+            Route::get('search/tags', 'searchTagsName');
+            Route::get('search/histories', 'searchHistories');
+            Route::delete('search/clear', 'clearSearch');
         });
 
+        // Comments
         Route::controller(CommentController::class)->group(function () {
-            Route::post('posts/{post}/comments', 'store');
+            Route::get('posts/{post}/comments', 'postComments');
+            Route::get('users/{user}/comments', 'getByUser');
+            Route::get('posts/{post}/comments', 'getByPost');
             Route::post('comments/{parentComment}/reply', 'reply');
+            Route::post('posts/{post}/comments', 'store');
         });
         Route::apiResource('comments', CommentController::class);
 
-
+        // Tags
         Route::controller(TagController::class)->group(function () {
             Route::get('tags/popular', 'popularTag');
             Route::get('tags', 'allTags');
             Route::post('tags', 'store');
-            Route::post('posts/{post}/tags', 'attachTagsToPost');
-            Route::delete('posts/{post}/tags/{tag}', 'detachTagFromPost');
         });
+        Route::apiResource('tags', TagController::class);
 
         // Profile
         Route::controller(ProfileController::class)->group(function () {
             Route::get('profile', 'show');
             Route::patch('profile', 'update');
+            Route::delete('profile', 'delete');
+            Route::delete('profile/force', 'forceDelete');
             Route::get('profile/user/posts', 'userPosts');
             Route::get('profile/user/comments', 'userComments');
             Route::get('profile/user/tags', 'userTags');
-            Route::post('profile/upload/avatar', 'uploadAvatarImage');
+            Route::post('profile/upload/avatar', 'uploadAvatar');
             Route::post('profile/upload/cover-image', 'uploadCoverImage');
+            Route::post('profile/update-password', 'updatePassword');
             Route::get('profile/activity', 'activity');
             Route::get('profile/details', 'details');
+            Route::post('profile/add-social-link', 'addSocialAccounts');
         });
 
         // Followers
@@ -149,46 +156,49 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('posts/{post}/reactions-count', 'reactionCounts');
         });
 
+        // Saved posts
         Route::controller(SavedPostController::class)->group(function () {
             Route::get('saved-posts', 'index');
             Route::post('saved-posts/{post}', 'store');
             Route::delete('saved-posts/{post}', 'destroy');
         });
 
+        // Notifications
         Route::controller(NotificationController::class)->group(function () {
             Route::get('notifications', 'showNewCommentNotify');
-            Route::get('notifications/all', 'showAllNotifications');
-            Route::get('notifications/reacts', 'showNewReactNotify');
             Route::post('notifications/mark-as-read', 'makeAllRead');
-            Route::post('notifications/{notification}/mark-as-read', 'makeAsRead');
+            Route::get('notifications/all', 'showAllNotifications');
             Route::delete('notifications/clear', 'clearAllNotifications');
+            Route::post('notifications/{notification}/mark-as-read', 'makeAsRead');
+            Route::get('notifications/reacts', 'showNewReactNotify');
         });
 
-        // Tags Follow
+        // Code editor
+        Route::controller(CodeEditorController::class)->group(function () {
+            Route::get('/code/runtimes', 'runtimes');
+            Route::post('/code/execute', 'execute');
+        });
+
+        // Tag follow
         Route::controller(TagFollowController::class)->group(function () {
             Route::post('tags/{tag}/follow', 'follow');
             Route::delete('tags/{tag}/unfollow', 'unfollow');
             Route::get('tags/{tag}/followers', 'listFollowing');
         });
 
-        // User Statuses
+        // User statuses
         Route::controller(UserStatusesController::class)->group(function () {
             Route::get('user/statuses', 'getStatuses');
             Route::post('user/statuses', 'store');
-            Route::patch('user/statuses', 'update');
             Route::delete('user/statuses', 'delete');
-            Route::post('user/statuses/set-busy', 'setBusy');
-            Route::post('user/statuses/set-available', 'setAvailable');
-            Route::post('user/statuses/clear-expired', 'clearExpiredStatuses');
-            Route::get('users/{username}/status', 'getUserStatus');
         });
 
-        // Reading Lists
+        // Reading lists
         Route::controller(ReadingListController::class)->group(function () {
             Route::get('reading-lists/lists/posts', 'index');
-//            Route::get('reading-lists/', 'Lists');
             Route::post('reading-lists', 'store');
             Route::get('reading-lists/{readingList}', 'show');
+            Route::get('reading-lists/', 'Lists');
             Route::patch('reading-lists/{readingList}', 'update');
             Route::delete('reading-lists/{readingList}', 'destroy');
             Route::post('reading-lists/{readingList}/add-post/{post}', 'addPostToReadingList');
@@ -199,51 +209,18 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('reading-lists/{readingList}/show-notes/{post}', 'showNotesInReadingList');
         });
 
-        // Code Editor
-        Route::controller(CodeEditorController::class)->group(function () {
-            Route::get('code/runtimes', 'runtimes');
-            Route::post('code/execute', 'execute');
-            Route::get('code/search-runtimes', 'searchInRuntimes');
-            Route::get('code/languages', 'languages');
-            Route::post('code/refresh-runtimes', 'refreshRuntimes');
-        });
-
-        // AI Features
+        // Llama AI
         Route::controller(LlamaController::class)->group(function () {
-            Route::post('ai/llama/generate-text', 'sendLlamaAiRequest');
+            Route::post('ai/llama/generate-text', 'sendAiRequest');
         });
 
-        Route::controller(PostSummarizeController::class)->group(function () {
-            Route::post('ai/summarize/post/{post}', 'summarizePost');
-            Route::get('ai/summarize/post/languages', 'getSupportedLanguages');
-        });
-
-        // Reports & Blocking
-        Route::controller(ReportController::class)->group(function () {
-            Route::post('reports/block/{target}', 'block');
-            Route::post('reports/report/{target}', 'report');
-            Route::post('reports/unblock/{target}', 'unblock');
-            Route::get('reports/blocked-users', 'blockList');
-        });
-
-        // Settings
-        Route::controller(SettingController::class)->group(function () {
-            Route::patch('settings/update-password', 'updatePassword');
-            Route::post('settings/social-accounts', 'addSocialAccounts');
-            Route::delete('settings/soft/delete-account', 'delete');
-            Route::delete('settings/force/delete-account', 'forceDelete');
-        });
-
-        Route::controller(VerifyAltEmailController::class)->group(function () {
-            Route::post('settings/alt-email/send-otp', 'addAltEmail');
-            Route::post('settings/alt-email/verify-otp', 'verifyAltEmail');
-            Route::delete('settings/alt-email/remove', 'removeAltEmail');
-        });
-
-        Route::controller(AIChatController::class)->group(function () {
-            Route::post('/send', 'chat');
-            Route::get('/models', 'models');
-            Route::post('/attachments/upload', 'upload');
+        // ============================================
+        // AI Chat Routes
+        // ============================================
+        Route::prefix('ai-chat')->group(function () {
+            Route::post('/send', [AIChatController::class, 'chat']);
+            Route::get('/models', [AIChatController::class, 'models']);
+            Route::post('/attachments/upload', [AttachmentController::class, 'upload']);
 
             Route::prefix('history')->group(function () {
                 Route::get('/sessions', [HistoryController::class, 'sessions']);
@@ -259,11 +236,12 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         });
 
     });
+
 });
 
-// Fallback route for undefined endpoints
+// Fallback
 Route::fallback(function () {
     return response()->json([
-        'message' => 'Resource not found. The API endpoint does not exist.',
+        'message' => 'Resource not found.'
     ], 404);
 });
