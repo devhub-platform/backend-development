@@ -13,6 +13,7 @@ use App\Models\Post;
 use App\Models\Report;
 use App\Models\Tag;
 use App\Notifications\PostReportedNotification;
+use App\Notifications\NewPostNotification;
 use App\Notifications\UserReportedNotification;
 use App\Services\GeminiImageService;
 use App\Services\ModerationService;
@@ -28,7 +29,7 @@ use Illuminate\Support\Str;
 use App\Services\SummarizePostService;
 use Illuminate\Support\Number;
 
-class PostController extends Controller
+class PostController
 {
     use AuthorizesRequests;
 
@@ -106,6 +107,15 @@ class PostController extends Controller
 
 
         $post = Post::create($validated);
+
+        if ($post->status !== 'draft' || $post->trashed()) {
+            $user = auth()->user();
+            $followers = $user->followers()->get();
+
+            if ($followers->isNotEmpty()) {
+                Notification::send($followers, new NewPostNotification($post->load('user')));
+            }
+        }
 
         return response()->json([
             'message' => "Post $post->title created successfully",

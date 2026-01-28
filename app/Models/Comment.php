@@ -2,39 +2,16 @@
 
 namespace App\Models;
 
+use Binafy\LaravelReaction\Contracts\HasReaction;
+use Binafy\LaravelReaction\Traits\Reactable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
-/**
- * @property int $id
- * @property int $post_id
- * @property int $user_id
- * @property string $content
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- * @property int|null $parent_id
- * @property-read Comment|null $parent
- * @property-read \App\Models\Post $post
- * @property-read \Illuminate\Database\Eloquent\Collection<int, Comment> $replies
- * @property-read int|null $replies_count
- * @property-read \App\Models\User $user
- * @method static \Database\Factories\CommentFactory factory($count = null, $state = [])
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Comment newModelQuery()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Comment newQuery()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Comment query()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Comment whereContent($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Comment whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Comment whereId($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Comment whereParentId($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Comment wherePostId($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Comment whereUpdatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Comment whereUserId($value)
- * @mixin \Eloquent
- */
-class Comment extends Model
+class Comment extends Model implements HasReaction
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes, Reactable;
 
     protected $table = 'comments';
     protected $fillable = [
@@ -44,6 +21,11 @@ class Comment extends Model
         'created_at',
         'updated_at',
         'parent_id',
+        'is_pinned',
+    ];
+
+    protected $casts = [
+        'is_pinned' => 'boolean',
     ];
 
     public function user(): BelongsTo
@@ -64,5 +46,51 @@ class Comment extends Model
     public function parent()
     {
         return $this->belongsTo(Comment::class, 'parent_id');
+    }
+
+    /**
+     * Get all nested replies recursively
+     */
+    public function allReplies()
+    {
+        return $this->hasMany(Comment::class, 'parent_id')->with('allReplies');
+    }
+
+    /**
+     * Scope to get only top-level comments (no parent)
+     */
+    public function scopeTopLevel($query)
+    {
+        return $query->whereNull('parent_id');
+    }
+
+    /**
+     * Scope to get pinned comments first
+     */
+    public function scopePinnedFirst($query)
+    {
+        return $query->orderByDesc('is_pinned');
+    }
+
+    /**
+     * Check if comment is a reply
+     */
+    public function isReply(): bool
+    {
+        return $this->parent_id !== null;
+    }
+
+    /**
+     * Get the depth of the comment in the thread
+     */
+    public function getDepth(): int
+    {
+        $depth = 0;
+        $comment = $this;
+        while ($comment->parent_id !== null) {
+            $depth++;
+            $comment = $comment->parent;
+        }
+        return $depth;
     }
 }

@@ -9,8 +9,7 @@ class UpdateCommentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'content' => ['required', 'string'],
-            'post_id' => ['required', 'integer', 'exists:posts,id'],
+            'content' => ['required', 'string', 'max:1500'],
         ];
     }
 
