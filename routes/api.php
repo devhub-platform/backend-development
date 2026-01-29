@@ -76,6 +76,8 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('posts/{post}/report', 'reportPost');
             Route::post('posts/report/', 'reportPost');
             Route::get('posts/report/reasons', 'reasonsToReport');
+
+            Route::get('posts/top-views', 'topPostsViews');
         });
         Route::apiResource('posts', PostController::class);
 
@@ -158,6 +160,8 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('profile/upload/cover-image', 'uploadCoverImage');
             Route::get('profile/activity', 'activity');
             Route::get('profile/details', 'details');
+            Route::get('profile/visits-views', 'visits_views_analysis');
+
         });
 
         // Followers

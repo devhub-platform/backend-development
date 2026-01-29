@@ -23,7 +23,7 @@
         "laravel/socialite": "^5.23",
         "laravel/telescope": "*",
         "laravel/tinker": "^2.10.1",
-        "league/flysystem-aws-s3-v3": "^3.30",
+        "league/flysystem-aws-s3-v3": "^3.31",
         "opcodesio/log-viewer": "^3.21",
         "phpoffice/phpword": "^1.4",
         "smalot/pdfparser": "^2.12",

@@ -52,17 +52,29 @@ return [
             'timeout' => 30,
         ],
 
+        'cloudinary' => [
+            'driver' => 'cloudinary',
+            'key' => env('CLOUDINARY_KEY'),
+            'secret' => env('CLOUDINARY_SECRET'),
+            'cloud' => env('CLOUDINARY_CLOUD_NAME'),
+            'url' => env('CLOUDINARY_URL'),
+            'secure' => (bool)env('CLOUDINARY_SECURE', true),
+            'prefix' => env('CLOUDINARY_PREFIX'),
+        ],
+
+        'idrive' => [
+            'driver' => 's3',
+            'key' => env('IDRIVE_API_KEY'),
+            'secret' => env('IDRIVE_API_SECRET'),
+            'region' => env('IDRIVE_REGION'),
+            'bucket' => env('IDRIVE_BUCKET'),
+            'version' => env('IDRIVE_VERSION'),
+            'endpoint' => env('IDRIVE_ENDPOINT'),
+            'use_path_style_endpoint' => true,
+        ],
+
     ],
 
-    'cloudinary' => [
-        'driver' => 'cloudinary',
-        'key' => env('CLOUDINARY_KEY'),
-        'secret' => env('CLOUDINARY_SECRET'),
-        'cloud' => env('CLOUDINARY_CLOUD_NAME'),
-        'url' => env('CLOUDINARY_URL'),
-        'secure' => (bool)env('CLOUDINARY_SECURE', true),
-        'prefix' => env('CLOUDINARY_PREFIX'),
-    ],
 
     'links' => [
         public_path('storage') => storage_path('app/public'),
