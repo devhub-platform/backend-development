@@ -23,6 +23,8 @@ class PostResource extends JsonResource
             'Cover_image' => $this->image_url ?? null,
             'Status' => $this->status,
             'Read_time' => $this->read_time ? $this->read_time . ' min read' : null,
+            'views' => $this->views ?? 0,
+            'is_edit' => (bool) $this->is_edit,
 
             'user' => [
                 'Name' => $this->user->name,

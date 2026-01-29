@@ -10,7 +10,7 @@ use App\Http\Resources\PostResource;
 use App\Http\Resources\UserResource;
 use App\Mail\PasswordUpdatedSuccessfullyMail;
 use App\Models\User;
-use App\Services\ImageUploadService;
+use App\Services\ImageUploadCloudinaryService;
 use App\Services\ViewedPostService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -20,7 +20,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Facades\JWTAuth;
-use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 
 class ProfileController
@@ -36,7 +35,7 @@ class ProfileController
     }
 
 
-    public function uploadAvatarImage(ImageUploadRequest $request, ImageUploadService $uploadService)
+    public function uploadAvatarImage(ImageUploadRequest $request, ImageUploadCloudinaryService $cloudinaryService)
     {
         $request->validated();
 
@@ -44,11 +43,14 @@ class ProfileController
             $user = Auth::user();
             $image = $request->file('avatar_url');
 
-            $uploadService->uploadAvatar($user, $image);
+            $uploadedFileUrl = $cloudinaryService->uploadAvatar($user, $image);
+
+            $user->update(['avatar_url' => $uploadedFileUrl]);
 
             return response()->json([
                 'message' => 'Avatar image uploaded successfully',
                 'data' => new UserResource($user->fresh()),
+                'avatar_url' => $uploadedFileUrl
             ], 200);
         } catch (\Exception $e) {
             Log::error("Avatar upload failed for user: " . Auth::user()->email . " - " . $e->getMessage());
@@ -59,28 +61,15 @@ class ProfileController
         }
     }
 
-    public function uploadCoverImage(ImageUploadRequest $request, ImageUploadService $uploadService)
+    public function uploadCoverImage(ImageUploadRequest $request, ImageUploadCloudinaryService $cloudinaryService)
     {
         $request->validated();
 
         try {
             $user = auth()->user();
+            $image = $request->file('cover_image');
 
-            $uploadedFile = Cloudinary::upload($request->file('cover_image')->getRealPath(), [
-                'folder' => 'covers',
-                'public_id' => 'cover_' . $user->id . '_' . time(),
-                'overwrite' => true,
-                'resource_type' => 'image'
-            ]);
-
-            $uploadedFileUrl = $uploadedFile->getSecurePath();
-
-            if (!$uploadedFileUrl) {
-                return response()->json([
-                    'message' => 'Failed to upload cover image. Please try again.',
-                    'error' => 'Cloudinary upload failed'
-                ], 500);
-            }
+            $uploadedFileUrl = $cloudinaryService->uploadCoverImage($user, $image);
 
             $user->update(['cover_image' => $uploadedFileUrl]);
 
@@ -245,6 +234,7 @@ class ProfileController
                 'reading_list_count' => $user->savedPosts()->count(),
                 'account_status' => $user->status ?? 'active',
                 'email_verified' => $user->email_verified_at !== null,
+                'number_of_views_in_his_posts' => $user->posts()->sum('views'),
             ];
 
             return response()->json([
@@ -258,5 +248,22 @@ class ProfileController
             ], 500);
         }
     }
+
+//    public function visits_views_analysis()
+//    {
+//        $user = Auth::user();
+//        $posts = $user->posts()->get();
+//
+//        $stats = [
+//            'number_of_visits_in_week' => visits($posts)->period('week')->count(),
+//            'number_of_visits_in_month' => visits($posts)->period('month')->count(),
+//            'number_of_visits_in_year' => visits($posts)->period('year')->count(),
+//        ];
+//
+//        return response()->json([
+//            'data' => $stats,
+//        ], 200);
+//
+//    }
 
 }

@@ -31,6 +31,12 @@ class Post extends Model implements HasReaction
         'status',
         'read_time',
         'cover_image',
+        'views',
+        'is_edit'
+    ];
+
+    protected $casts = [
+        'views' => 'string',
     ];
 
 

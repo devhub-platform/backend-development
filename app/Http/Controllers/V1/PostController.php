@@ -33,6 +33,18 @@ class PostController
 {
     use AuthorizesRequests;
 
+    public function topPostsViews()
+    {
+        $topPosts = visits(Post::class)->top(10);
+        return response()->json([
+            'data' => PostResource::collection($topPosts),
+            'views_count' => $topPosts->mapWithKeys(function ($post) {
+                $views = visits($post)->count();
+                return [$post->id => Number::abbreviate($views)];
+            }),
+        ]);
+    }
+
     public function index() // show all posts except drafts and archived and blocked users
     {
         $this->authorize('viewAny', Post::class);
@@ -152,12 +164,12 @@ class PostController
 
         visits($post)->increment();
         $views = visits($post)->count(); // get total views
+        $post->views = Number::abbreviate($views);
 
         $viewedPostService->trackView($user->id, $post->id);
 
         return response()->json([
             'data' => new PostResource($post->load('tags')),
-            'views' => Number::abbreviate($views)
         ]);
     }
 
@@ -180,7 +192,7 @@ class PostController
             ], 422);
         }
 
-        $post->update($request->validated());
+        $post->update(array_merge($validated, ['is_edit' => true]));
 
         return response()->json(['message' => "Post $post->title updated successfully",
             'data' => new PostResource($post)
