@@ -7,6 +7,8 @@ use App\Http\Requests\CommentsRequests\UpdateCommentRequest;
 use App\Http\Resources\CommentResource;
 use App\Models\Comment;
 use App\Models\Post;
+use App\Models\User;
+use App\Notifications\MentionInCommentNotification;
 use App\Notifications\NewCommentNotification;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -64,10 +66,12 @@ class CommentController
         $post = Post::with('user')->findOrFail($validated['post_id']);
         $comment = Comment::create($validated);
 
-        #send notification to post author if any one comment in his post  , if author comment in his own post do not notify
+        // Send notification to post author if any one comment in his post, if author comment in his own post do not notify
         if ($post->user_id !== auth()->id()) {
             Notification::send($post->user, new NewCommentNotification($comment));
         }
+
+        $this->notifyMentionedUsers($comment, auth()->user());
 
         return response()->json([
             'message' => "Comment created successfully",
@@ -236,6 +240,9 @@ class CommentController
         if ($parentComment->user_id !== auth()->id()) {
             Notification::send($parentComment->user, new NewCommentNotification($comment));
         }
+
+        // Detect and notify mentioned users
+        $this->notifyMentionedUsers($comment, auth()->user());
 
         return response()->json([
             'message' => "Reply created successfully",
@@ -436,5 +443,25 @@ class CommentController
             'replies' => $totalReplies,
             'pinned_comments' => $pinnedComments,
         ]);
+    }
+
+
+    protected function notifyMentionedUsers(Comment $comment, User $mentionedBy): void
+    {
+        preg_match_all('/@([a-zA-Z0-9_]+)/', $comment->content, $matches);
+
+        if (empty($matches[1])) {
+            return;
+        }
+
+        $usernames = array_unique($matches[1]);
+
+        $mentionedUsers = User::whereIn('username', $usernames)
+            ->where('id', '!=', $mentionedBy->id)
+            ->get();
+
+        foreach ($mentionedUsers as $user) {
+            $user->notify(new MentionInCommentNotification($comment->load('post'), $mentionedBy));
+        }
     }
 }
