@@ -83,6 +83,17 @@ class NotificationController
         ]);
     }
 
+    public function clearAllNotificationFromFollowers()
+    {
+        $user = auth()->user();
+        $user->unreadNotifications()
+            ->where('type', 'App\Notifications\FollowNotification')
+            ->delete();
+        return response()->json([
+            'message' => 'All follower notifications deleted',
+        ]);
+    }
+
     public function newPostCreateFromFollower()
     {
         $user = auth()->user();
@@ -95,15 +106,17 @@ class NotificationController
         ]);
     }
 
-//    public function showNewMentionNotifications()
-//    {
-//        $user = auth()->user();
-//        $notifications = $user->unreadNotifications()
-//            ->where('type', 'App\Notifications\MentionNotification')->get([
-//                'type', 'data', 'created_at'
-//            ]);
-//        return response()->json([
-//            'new_mention_notifications' => $notifications,
-//        ]);
-//    }
+    # notification for mention in comment
+
+    public function showNewMentionNotifications()
+    {
+        $user = auth()->user();
+        $notifications = $user->unreadNotifications()
+            ->where('type', 'App\Notifications\MentionInCommentNotification')->get([
+                'type', 'data', 'created_at'
+            ]);
+        return response()->json([
+            'new_mention_notifications' => $notifications,
+        ]);
+    }
 }

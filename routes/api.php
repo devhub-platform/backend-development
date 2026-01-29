@@ -165,6 +165,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('users/{user}/followers', 'usersFollowers');
             Route::get('users/{user}/followers/count', 'followersCount');
             Route::get('users/{user}/following', 'usersFollowing');
+
             Route::get('users/{user}/following/count', 'followingCount');
             Route::post('users/{user}/follow', 'follow');
             Route::post('users/{user}/unfollow', 'unfollow');
@@ -195,8 +196,14 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('notifications', 'showNewCommentNotify');
             Route::get('notifications/all', 'showAllNotifications');
             Route::get('notifications/reacts', 'showNewReactNotify');
+
             Route::get('notifications/new-followers', 'showNewFollowersNotifications');
+            Route::delete('notifications/followers/clear', 'clearAllNotificationFromFollowers');
+
+
             Route::get('notifications/post-created', 'newPostCreateFromFollower');
+
+            Route::get('notifications/mention', 'showNewMentionNotifications');
 
             Route::post('notifications/mark-as-read', 'makeAllRead');
             Route::post('notifications/{notification}/mark-as-read', 'makeAsRead');
