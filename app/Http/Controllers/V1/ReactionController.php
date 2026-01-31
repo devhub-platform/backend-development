@@ -11,23 +11,48 @@ use Illuminate\Support\Facades\Notification;
 class ReactionController
 {
     public int $numberOfReactions = 0;
+
     public function reactToPost(Request $request, $postId)
     {
-        $request->validate([
-            'type' => 'required|string|max:50|in:like,sad,love,angry,wow,haha',
+        $validated = $request->validate([
+            'type' => [
+                'required',
+                'string',
+                'max:50',
+                'in:like,sad,love,angry,wow,haha',
+            ],
+        ], [
+            'type.required' => 'Reaction type is required.',
+            'type.in' => 'Invalid reaction type. Allowed types are: like, sad, love, angry, wow, haha.',
         ]);
 
-        $post = Post::findOrFail($postId);
+        $post = Post::with('user')->findOrFail($postId);
         $user = auth()->user();
 
-        $user->reaction($request->type, $post);
-        $reactType = $request->type;
-        Notification::send($post->user, new ReactNotification($post, $reactType));
+        $existingReaction = $user->myReaction($post);
+        if ($existingReaction) {
+            if ($existingReaction->type === $validated['type']) {
+                return response()->json([
+                    'message' => 'You have already reacted with this type.',
+                ], 409);
+            }
+
+            $user->updateReaction($validated['type'], $post);
+            Notification::send($post->user, new ReactNotification($post, $validated['type']));
+
+            return response()->json([
+                'message' => 'Reaction updated successfully.',
+                'reaction' => $validated['type'],
+            ], 200);
+        }
+
+        $user->reaction($validated['type'], $post);
+        Notification::send($post->user, new ReactNotification($post, $validated['type']));
 
         return response()->json([
-            'message' => 'Reaction added successfully',
-            'reaction' => $request->type,
-        ]);
+            'message' => 'Reaction added successfully.',
+            'reaction' => $validated['type'],
+        ], 201);
     }
 
     public function removeReaction(Post $post)
@@ -41,7 +66,15 @@ class ReactionController
 
     public function getReactors(Post $post)
     {
-        $users = $post->getReactors();
+        $users = $post->getReactors()->map(function ($user) {
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'avatar' => $user->avatar_url,
+                'reaction_time' => $user->pivot->created_at->diffForHumans(),
+            ];
+        });
+
         return response()->json([
             'post' => $post->title,
             'reactors' => $users,

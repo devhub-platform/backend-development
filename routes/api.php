@@ -42,7 +42,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::post('login', 'login');
         Route::post('register', 'register');
 
-        Route::middleware('auth:api')->group(function () {
+        Route::middleware(['auth:api', 'verified'])->group(function () {
             Route::post('logout', 'logout');
             Route::post('refresh', 'refreshToken');
             Route::get('me', 'user');
@@ -245,6 +245,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('reading-lists/{readingList}/move-post/{post}', 'movePostToAnotherList');
             Route::post('reading-lists/{readingList}/add-note/{post}', 'addNoteToPostInReadingList');
             Route::delete('reading-lists/{readingList}/delete-note/{post}', 'deleteNoteInPostInReadingList');
+            Route::post('reading-lists/{readingList}/duplicate','duplicateReadingList');
             Route::get('reading-lists/{readingList}/show-notes/{post}', 'showNotesInReadingList');
         });
 

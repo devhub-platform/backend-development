@@ -58,7 +58,10 @@ class AuthController extends Controller
 
             return response()->json(['message' => 'User registration failed'], 500);
         }
+
+        JWTAuth::factory()->setTTL(60 * 24); // 1 day
         $token = JWTAuth::fromUser($user);
+
 
         Mail::to($user->email)->send(new WelcomeEmailMail($user));
 

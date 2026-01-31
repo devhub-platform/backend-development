@@ -17,20 +17,20 @@ class FollowersController
 
         if ($authUser->id === $user->id) {
             return response()->json([
-                'message' => 'You cannot follow yourself.'
+                'error' => 'You cannot follow yourself.'
             ], 400);
         }
 
         if ($authUser->following()->where('following_id', $user->id)->exists()) {
             return response()->json([
-                'message' => 'You are already following this user.'
+                'error' => 'You are already following this user.'
             ], 400);
         }
 
         $authUser->following()->attach($user->id);
 
         Notification::send($user, new FollowNotification($user));
-        Log::info('Followed ' . $user->name);
+        Log::info("User {$authUser->id} followed user {$user->id}");
 
         return response()->json([
             'message' => "Successfully followed user {$user->name}"
@@ -43,20 +43,21 @@ class FollowersController
 
         if (!$authUser->following()->where('following_id', $user->id)->exists()) {
             return response()->json([
-                'message' => 'You are not following this user.'
+                'error' => 'You are not following this user.'
             ], 400);
         }
+
         $authUser->following()->detach($user->id);
 
-        Log::notice('Unfollowed ' . $user->name);
+        Log::notice("User {$authUser->id} unfollowed user {$user->id}");
         return response()->json([
-            'message' => 'Successfully unfollowed user ' . $user->name
+            'message' => "Successfully unfollowed user {$user->name}"
         ]);
     }
 
     public function usersFollowing(User $user)
     {
-        $following = $user->following()->get();
+        $following = $user->following()->with('followers')->get();
         if ($following->isEmpty()) {
             return response()->json([
                 'message' => 'This user is not following anyone yet.'
@@ -69,7 +70,7 @@ class FollowersController
 
     public function usersFollowers(User $user)
     {
-        $followers = $user->followers()->get();
+        $followers = $user->followers()->with('following')->get();
         if ($followers->isEmpty()) {
             return response()->json([
                 'message' => 'This user has no followers yet.'
@@ -164,5 +165,4 @@ class FollowersController
             'Suggested Users' => $suggestedUsers,
         ]);
     }
-
 }

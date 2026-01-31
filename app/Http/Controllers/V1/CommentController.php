@@ -41,9 +41,6 @@ class CommentController
         ]);
     }
 
-    /**
-     * Store a new comment on a post
-     */
     public function store(StoreCommentRequest $request, Post $post, ModerationService $moderationService)
     {
         $this->authorize('create', Comment::class);
