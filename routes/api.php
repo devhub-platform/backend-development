@@ -42,7 +42,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::post('login', 'login');
         Route::post('register', 'register');
 
-        Route::middleware('auth:api')->group(function () {
+        Route::middleware(['auth:api', 'verified'])->group(function () {
             Route::post('logout', 'logout');
             Route::post('refresh', 'refreshToken');
             Route::get('me', 'user');
@@ -76,13 +76,15 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('posts/{post}/report', 'reportPost');
             Route::post('posts/report/', 'reportPost');
             Route::get('posts/report/reasons', 'reasonsToReport');
+
+            Route::get('posts/top-views', 'topPostsViews');
         });
         Route::apiResource('posts', PostController::class);
 
         Route::controller(PostViewController::class)->group(function () {
             Route::get('posts/viewed/recent', 'getRecentViewedPosts');
             Route::delete('posts/viewed/clear', 'clearViewedPosts');
-//            Route::get('posts/viewing-stats', 'getUserViewCount');
+            //            Route::get('posts/viewing-stats', 'getUserViewCount');
         });
 
         // Users
@@ -158,6 +160,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('profile/upload/cover-image', 'uploadCoverImage');
             Route::get('profile/activity', 'activity');
             Route::get('profile/details', 'details');
+            Route::get('profile/visits-views', 'visits_views_analysis');
         });
 
         // Followers
@@ -232,7 +235,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         // Reading Lists
         Route::controller(ReadingListController::class)->group(function () {
             Route::get('reading-lists/lists/posts', 'index');
-//            Route::get('reading-lists/', 'Lists');
+            //            Route::get('reading-lists/', 'Lists');
             Route::post('reading-lists', 'store');
             Route::get('reading-lists/{readingList}', 'show');
             Route::patch('reading-lists/{readingList}', 'update');
@@ -308,7 +311,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
                 });
             });
         });
-
     });
 });
 
@@ -317,4 +319,10 @@ Route::fallback(function () {
     return response()->json([
         'message' => 'Resource not found. The API endpoint does not exist.',
     ], 404);
+});
+
+Route::get('/', function () {
+    return response()->json([
+        'message' => 'Welcome to the API. Please refer to the documentation for usage details.',
+    ]);
 });
