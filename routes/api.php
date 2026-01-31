@@ -42,7 +42,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::post('login', 'login');
         Route::post('register', 'register');
 
-        Route::middleware('auth:api')->group(function () {
+        Route::middleware(['auth:api', 'verified'])->group(function () {
             Route::post('logout', 'logout');
             Route::post('refresh', 'refreshToken');
             Route::get('me', 'user');

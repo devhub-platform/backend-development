@@ -290,6 +290,7 @@ class CodeEditorService
             'haskell' => 'hs', 'hs' => 'hs',
             'golang' => 'go', 'clojure' => 'clj', 'elixir' => 'exs',
             'lua' => 'lua', 'groovy' => 'groovy', 'dart' => 'dart',
+            'bash' => 'sh', 'shell' => 'sh',
         ];
 
         return $extensions[$lang] ?? 'txt';

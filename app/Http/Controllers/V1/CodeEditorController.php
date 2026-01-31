@@ -9,11 +9,9 @@ use Illuminate\Http\Request;
 
 class CodeEditorController
 {
-    private CodeEditorService $service;
 
-    public function __construct(CodeEditorService $service)
+    public function __construct(private CodeEditorService $service)
     {
-        $this->service = $service;
     }
 
     public function runtimes(): JsonResponse
