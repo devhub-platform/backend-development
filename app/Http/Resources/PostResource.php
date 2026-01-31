@@ -14,26 +14,26 @@ class PostResource extends JsonResource
     public function toArray(Request $request)
     {
         return [
-            'ID' => $this->id,
-            'Title' => $this->title,
-            'Content' => Str::limit($this->content, 200, '...'),
-            'Created_at' => $this->created_at->diffForHumans(),
-            'Updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
-            'Image_url' => $this->cover_image ?? null,
-            'Cover_image' => $this->image_url ?? null,
-            'Status' => $this->status,
-            'Read_time' => $this->read_time ? $this->read_time . ' min read' : null,
+            'id' => $this->id,
+            'title' => $this->title,
+            'content' => Str::limit($this->content, 200, '...'),
+            'created_at' => $this->created_at->diffForHumans(),
+            'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
+            'image_url' => $this->image_url ?? null,
+            'cover_image' => $this->cover_image?? null,
+            'status' => $this->status,
+            'read_time' => $this->read_time ? $this->read_time . ' min read' : null,
             'views' => $this->views ?? 0,
-            'is_edit' => (bool) $this->is_edit,
+            'is_edited' => (bool)$this->is_edit,
 
             'user' => [
                 'Name' => $this->user->name,
                 'Username' => $this->user->username,
-                'Avatar_Image' => $this->user->avatar_url ?? null,
+                'avatar_Image' => $this->user->avatar_url ?? null,
             ],
 
             'reaction' => [
-                'reaction with count' => $this->getReactionsWithCount(),
+                'reaction_with_count' => $this->getReactionsWithCount(),
                 'comments_count' => $this->comments()->count(),
             ],
 

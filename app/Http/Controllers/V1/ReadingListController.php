@@ -10,16 +10,12 @@ use App\Models\ReadingList;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 
 class ReadingListController
 {
     use AuthorizesRequests;
 
-    /**
-     * Get all reading lists for authenticated user
-     *
-     * @return JsonResponse
-     */
     public function index(): JsonResponse
     {
         $user = Auth::user();
@@ -32,11 +28,11 @@ class ReadingListController
 
         $this->authorize('viewAny', ReadingList::class);
 
-        $lists = $user->readingLists()->with('posts.user')->get();
+        $lists = $user->readingLists()->with('posts.user')->paginate(10);
 
         return response()->json([
             'message' => 'Reading lists retrieved successfully.',
-            'count' => $lists->count(),
+            'count' => $lists->total(),
             'data' => ReadingListResource::collection($lists),
         ], 200);
     }
@@ -175,5 +171,23 @@ class ReadingListController
         return response()->json([
             'message' => "Note deleted successfully.",
         ], 200);
+    }
+
+    public function duplicateReadingList(ReadingList $readingList): JsonResponse
+    {
+        $this->authorize('create', ReadingList::class);
+
+        $newReadingList = $readingList->replicate();
+        $newReadingList->title = $readingList->title . ' (Copy)';
+        $newReadingList->save();
+
+        foreach ($readingList->posts as $post) {
+            $newReadingList->posts()->attach($post->id, ['note' => $post->pivot->note]);
+        }
+
+        return response()->json([
+            'message' => 'Reading list duplicated successfully.',
+            'data' => new ReadingListResource($newReadingList),
+        ], 201);
     }
 }
