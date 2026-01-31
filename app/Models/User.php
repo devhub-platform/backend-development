@@ -211,4 +211,10 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             ->orderByPivot('viewed_at', 'desc');
     }
 
+//    public function myReaction(Post $post)
+//    {
+//        return $this->reactions()->where('reactable_id', $post->id)
+//            ->where('reactable_type', Post::class)
+//            ->first();
+//    }
 }
