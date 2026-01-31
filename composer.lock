@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "729aecee740e199d845bb5270a5a8b86",
+    "content-hash": "9abbcef8f84615419b48e62ead9ceff2",
     "packages": [
         {
             "name": "aerni/cloudflared",
@@ -12826,5 +12826,5 @@
         "php": "^8.3"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.6.0"
+    "plugin-api-version": "2.9.0"
 }
