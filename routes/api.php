@@ -266,6 +266,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::controller(PostSummarizeController::class)->group(function () {
             Route::post('ai/summarize/post/{post}', 'summarizePost');
             Route::get('ai/summarize/post/languages', 'getSupportedLanguages');
+            Route::post('ai/summarize/llama/post/{post}', 'summarizePostUsingLlama');
         });
 
         // Reports & Blocking

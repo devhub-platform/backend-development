@@ -3,17 +3,18 @@
 namespace App\Http\Controllers\V1\AiModels;
 
 use App\Models\Post;
+use App\Services\SummarizeLlamaService;
 use App\Services\SummarizePostService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class PostSummarizeController
 {
-    private SummarizePostService $summarizeService;
-
-    public function __construct(SummarizePostService $summarizeService)
+    public function __construct(
+        private SummarizePostService  $summarizeService,
+        private SummarizeLlamaService $llamaService
+    )
     {
-        $this->summarizeService = $summarizeService;
     }
 
     public function summarizePost(Request $request, Post $post, string $lang = 'en'): JsonResponse
@@ -48,5 +49,68 @@ class PostSummarizeController
             'count' => count($languages),
             'languages' => $languages,
         ], 200);
+    }
+
+    public function summarizePostUsingLlama(Request $request, Post $post): JsonResponse
+    {
+        return $this->llamaService->summarize($post->content, 'concise');
+    }
+
+    /**
+     * Translate post content to a target language
+     */
+    public function translatePost(Request $request, Post $post): JsonResponse
+    {
+        $language = $request->query('language', 'English');
+
+        return $this->llamaService->translate($post->content, $language);
+    }
+
+    /**
+     * Analyze post content
+     */
+    public function analyzePost(Request $request, Post $post): JsonResponse
+    {
+        $analysisType = $request->query('type', 'sentiment');
+
+        return $this->llamaService->analyze($post->content, $analysisType);
+    }
+
+    /**
+     * Answer questions about post content
+     */
+    public function answerQuestionAboutPost(Request $request, Post $post): JsonResponse
+    {
+        $request->validate([
+            'question' => 'required|string|max:1000',
+        ]);
+
+        $question = $request->input('question');
+
+        return $this->llamaService->answerQuestion($post->content, $question);
+    }
+
+    public function generateContent(Request $request): JsonResponse
+    {
+        $request->validate([
+            'topic' => 'required|string|max:500',
+            'type' => 'string|in:article,blog,poem,story,script|default=article',
+        ]);
+
+        $topic = $request->input('topic');
+        $contentType = $request->input('type', 'article');
+
+        return $this->llamaService->generate($topic, $contentType);
+    }
+
+    public function chat(Request $request): JsonResponse
+    {
+        $request->validate([
+            'message' => 'required|string|max:5000',
+        ]);
+
+        $message = $request->input('message');
+
+        return $this->llamaService->chat($message);
     }
 }
