@@ -99,13 +99,6 @@ class ViewedPostService
         ];
     }
 
-    /**
-     * Get the most recent viewed posts for a user
-     *
-     * @param int $userId
-     * @param int $limit
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
     public function getRecentViewedPosts(int $userId, int $limit = 10)
     {
         return PostView::where('user_id', $userId)

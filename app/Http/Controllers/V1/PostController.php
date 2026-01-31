@@ -16,6 +16,7 @@ use App\Notifications\PostReportedNotification;
 use App\Notifications\NewPostNotification;
 use App\Notifications\UserReportedNotification;
 use App\Services\GeminiImageService;
+use App\Services\ImageUploadCloudinaryService;
 use App\Services\ModerationService;
 use App\Services\ViewedPostService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -32,6 +33,22 @@ use Illuminate\Support\Number;
 class PostController
 {
     use AuthorizesRequests;
+
+    public function __construct(protected ImageUploadCloudinaryService $cloudinaryService)
+    {
+    }
+
+    public function topPostsViews()
+    {
+        $topPosts = visits(Post::class)->top(10);
+        return response()->json([
+            'data' => PostResource::collection($topPosts),
+            'views_count' => $topPosts->mapWithKeys(function ($post) {
+                $views = visits($post)->count();
+                return [$post->id => Number::abbreviate($views)];
+            }),
+        ]);
+    }
 
     public function index() // show all posts except drafts and archived and blocked users
     {
@@ -75,21 +92,21 @@ class PostController
         $validated['slug'] = Str::slug($validated['title']);
 
         if ($request->hasFile('cover_image')) {
-            $image = $request->file('cover_image');
-            $extension = $image->getClientOriginalExtension();
-            $slug = Str::slug(Auth::user()->username);
-            $filename = $slug . '-' . time() . '.' . $extension;
-            $path = $image->storeAs('posts-covers', $filename, 's3');
-            $validated['cover_image'] = strval(Storage::url($path));
+            $coverImage = $request->file('cover_image');
+            $validated['cover_image'] = $this->cloudinaryService->uploadPostCoverImage(
+                $coverImage,
+                $validated['slug']
+            );
         }
 
+        // Upload post image to Cloudinary
         if ($request->hasFile('image_url')) {
-            $image = $request->file('image_url');
-            $extension = $image->getClientOriginalExtension();
-            $slug = Str::slug(Auth::user()->username);
-            $filename = $slug . '-' . time() . '.' . $extension;
-            $path = $image->storeAs('posts-images', $filename, 's3');
-            $validated['image_url'] = strval(Storage::url($path));
+            $postImage = $request->file('image_url');
+            $validated['image_url'] = $this->cloudinaryService->uploadImage(
+                $postImage,
+                'posts-images',
+                $validated['slug']
+            );
         }
 
         $check_content = $moderationService
@@ -152,12 +169,12 @@ class PostController
 
         visits($post)->increment();
         $views = visits($post)->count(); // get total views
+        $post->views = Number::abbreviate($views);
 
         $viewedPostService->trackView($user->id, $post->id);
 
         return response()->json([
             'data' => new PostResource($post->load('tags')),
-            'views' => Number::abbreviate($views)
         ]);
     }
 
@@ -180,7 +197,7 @@ class PostController
             ], 422);
         }
 
-        $post->update($request->validated());
+        $post->update(array_merge($validated, ['is_edit' => true]));
 
         return response()->json(['message' => "Post $post->title updated successfully",
             'data' => new PostResource($post)
