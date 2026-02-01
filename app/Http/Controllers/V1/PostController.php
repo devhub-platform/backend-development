@@ -51,6 +51,7 @@ class PostController
         $posts = Post::with(['user', 'tags'])
             ->whereIn('id', $postIds)
             ->where('status', '!=', 'draft')
+            ->when(auth()->check(), fn($query) => $query->whereNotIn('user_id', $this->blockedUserIds()))
             ->get()
             ->sortBy(fn($post) => array_search($post->id, $postIds))
             ->each(fn($post) => $post->views = $viewsMap[$post->id] ?? 0);
@@ -68,6 +69,7 @@ class PostController
         $posts = Post::query()
             ->with(['user', 'tags'])
             ->where('status', '!=', 'draft')
+            ->when(auth()->check(), fn($query) => $query->whereNotIn('user_id', $this->blockedUserIds()))
             ->latest()
             ->paginate(10);
 
@@ -91,6 +93,7 @@ class PostController
 
         $posts = Post::with('tags')
             ->where('status', '!=', 'draft')
+            ->when(auth()->check(), fn($query) => $query->whereNotIn('user_id', $this->blockedUserIds()))
             ->paginate(15);
 
         return response()->json([
@@ -255,6 +258,7 @@ class PostController
 
         $posts = Post::with(['user', 'tags'])
             ->where('status', '!=', 'draft')
+            ->when(auth()->check(), fn($query) => $query->whereNotIn('user_id', $this->blockedUserIds()))
             ->latest()
             ->take(5)
             ->get();
@@ -406,4 +410,16 @@ class PostController
         ]);
     }
 
+    private function blockedUserIds(): array
+    {
+        $user = auth()->user();
+        if (!$user) {
+            return [];
+        }
+
+        $blocked = $user->blockedUsers()->pluck('users.id');
+        $blockers = $user->blockers()->pluck('users.id');
+
+        return $blocked->merge($blockers)->unique()->values()->all();
+    }
 }

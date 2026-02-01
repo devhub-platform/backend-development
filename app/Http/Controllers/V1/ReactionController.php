@@ -29,6 +29,12 @@ class ReactionController
         $post = Post::with('user')->findOrFail($postId);
         $user = auth()->user();
 
+        if ($post->user && $user->isBlockedWith($post->user)) {
+            return response()->json([
+                'message' => 'You cannot interact with this content.',
+            ], 403);
+        }
+
         $existingReaction = $user->myReaction($post);
         if ($existingReaction) {
             if ($existingReaction->type === $validated['type']) {
@@ -57,7 +63,12 @@ class ReactionController
 
     public function removeReaction(Post $post)
     {
-        $user = Auth::user(); // return the authenticated user
+        $user = Auth::user();
+        if ($post->user && $user->isBlockedWith($post->user)) {
+            return response()->json([
+                'message' => 'You cannot interact with this content.',
+            ], 403);
+        }
         $user->removeReactions($post);
         return response()->json([
             'message' => 'Reaction removed successfully'
@@ -84,6 +95,12 @@ class ReactionController
     public function myReaction(Post $post)
     {
         $user = auth()->user();
+        if ($post->user && $user->isBlockedWith($post->user)) {
+            return response()->json([
+                'reaction' => null,
+                'message' => 'You cannot interact with this content.',
+            ], 403);
+        }
         $reaction = $user->myReaction($post);
 
         return response()->json([
@@ -93,6 +110,11 @@ class ReactionController
 
     public function reactionCounts(Post $post)
     {
+        if (auth()->check() && $post->user && auth()->user()->isBlockedWith($post->user)) {
+            return response()->json([
+                'message' => 'You cannot interact with this content.',
+            ], 403);
+        }
         $reactionCounts = $post->getReactionsWithCount();
         return response()->json([
             'post title' => $post->title,

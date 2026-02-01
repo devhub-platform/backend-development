@@ -56,9 +56,7 @@ class PostSummarizeController
         return $this->llamaService->summarize($post->content, 'concise');
     }
 
-    /**
-     * Translate post content to a target language
-     */
+
     public function translatePost(Request $request, Post $post): JsonResponse
     {
         $language = $request->query('language', 'English');
@@ -66,9 +64,7 @@ class PostSummarizeController
         return $this->llamaService->translate($post->content, $language);
     }
 
-    /**
-     * Analyze post content
-     */
+
     public function analyzePost(Request $request, Post $post): JsonResponse
     {
         $analysisType = $request->query('type', 'sentiment');
@@ -76,9 +72,6 @@ class PostSummarizeController
         return $this->llamaService->analyze($post->content, $analysisType);
     }
 
-    /**
-     * Answer questions about post content
-     */
     public function answerQuestionAboutPost(Request $request, Post $post): JsonResponse
     {
         $request->validate([
@@ -101,16 +94,5 @@ class PostSummarizeController
         $contentType = $request->input('type', 'article');
 
         return $this->llamaService->generate($topic, $contentType);
-    }
-
-    public function chat(Request $request): JsonResponse
-    {
-        $request->validate([
-            'message' => 'required|string|max:5000',
-        ]);
-
-        $message = $request->input('message');
-
-        return $this->llamaService->chat($message);
     }
 }

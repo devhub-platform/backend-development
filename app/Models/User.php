@@ -211,10 +211,19 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             ->orderByPivot('viewed_at', 'desc');
     }
 
-//    public function myReaction(Post $post)
-//    {
-//        return $this->reactions()->where('reactable_id', $post->id)
-//            ->where('reactable_type', Post::class)
-//            ->first();
-//    }
+
+    public function isBlockedBy(User $other): bool
+    {
+        return $this->blockers()->where('users.id', $other->id)->exists();
+    }
+
+    public function hasBlocked(User $other): bool
+    {
+        return $this->blockedUsers()->where('users.id', $other->id)->exists();
+    }
+
+    public function isBlockedWith(User $other): bool
+    {
+        return $this->hasBlocked($other) || $this->isBlockedBy($other);
+    }
 }

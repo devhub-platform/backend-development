@@ -51,10 +51,6 @@ class SocialiteMediaController
         return $this->extracted($githubUser);
     }
 
-    /**
-     * @param $mediaUser
-     * @return JsonResponse
-     */
     public function extracted($mediaUser): JsonResponse
     {
         $username = str()->before($mediaUser->getEmail(), '@')

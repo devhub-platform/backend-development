@@ -257,16 +257,18 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('code/languages', 'languages');
             Route::post('code/refresh-runtimes', 'refreshRuntimes');
         });
-
-        // AI Features
-        Route::controller(LlamaController::class)->group(function () {
-            Route::post('ai/llama/generate-text', 'sendLlamaAiRequest');
-        });
+        // AI Models - Llama
 
         Route::controller(PostSummarizeController::class)->group(function () {
             Route::post('ai/summarize/post/{post}', 'summarizePost');
             Route::get('ai/summarize/post/languages', 'getSupportedLanguages');
+
             Route::post('ai/summarize/llama/post/{post}', 'summarizePostUsingLlama');
+            Route::post('ai/translate/post/{post}', 'translatePost');
+            Route::post('ai/analyze/post/{post}', 'analyzePost');
+            Route::post('ai/question/post/{post}', 'answerQuestionAboutPost');
+            Route::post('ai/generate/content', 'generateContent');
+
         });
 
         // Reports & Blocking
