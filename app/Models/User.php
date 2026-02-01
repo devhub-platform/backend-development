@@ -73,7 +73,8 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'alt_email',
         'alt_email_verified_at',
         'alt_email_otp',
-        'alt_email_otp_expires_at'
+        'alt_email_otp_expires_at',
+        'otp_expires_at'
     ];
 
     /**
@@ -101,6 +102,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             'password' => 'hashed',
             'alt_email_verified_at' => 'datetime',
             'alt_email_otp_expires_at' => 'datetime',
+            'otp_expires_at' => 'datetime',
         ];
     }
 

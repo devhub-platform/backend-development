@@ -125,7 +125,7 @@ class ProfileController
         $perPage = $request->query('per_page', 15);
         $status = $request->query('status', null);
 
-        $query = $user->posts()->with('tags', 'user')->latest();
+        $query = $user->posts()->with('tags', )->latest();
 
         if ($status) {
             $query->where('status', $status);
