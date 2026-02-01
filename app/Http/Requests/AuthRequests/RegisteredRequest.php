@@ -13,8 +13,6 @@ class RegisteredRequest extends FormRequest
             'name' => ['required'],
             'username' => ['nullable', 'string', 'min:3', 'max:255'],
             'password' => ['required', 'string', Password::defaults(), 'confirmed'],
-            'avatar_url' => ['nullable'],
-            'bio' => ['nullable'],
             'email' => ['required', 'email', 'max:254'],
             "provider_id" => ['nullable', 'string', 'max:255'],
         ];
