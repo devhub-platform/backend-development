@@ -24,7 +24,6 @@ class ForgetPasswordController
             return response()->json(['error' => 'Email not found. Please create an account.'], 404);
         }
 
-        // Rate limiting: Prevent multiple OTP requests within a short time
         if ($user->otp && $user->otp_expires_at > now()) {
             return response()->json(['error' => 'Please wait before requesting another OTP.'], 429);
         }
