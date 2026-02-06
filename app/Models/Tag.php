@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasEmbedding;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -10,6 +11,7 @@ use Laravel\Scout\Searchable;
 /**
  * @property int $id
  * @property string $name
+ * @property string|null $description
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\User> $followers
@@ -28,7 +30,7 @@ use Laravel\Scout\Searchable;
  */
 class Tag extends Model
 {
-    use HasFactory, Searchable;
+    use HasFactory, Searchable, HasEmbedding;
 
     protected $table = 'tags';
     protected $fillable = [
@@ -55,5 +57,13 @@ class Tag extends Model
     {
         return $this->belongsToMany(User::class, 'tag_user', 'tag_id', 'user_id')
             ->withTimestamps();
+    }
+
+    public function getEmbeddableContent(): string
+    {
+        return implode("\n", array_filter([
+            "Tag: {$this->name}",
+            $this->description ? "Description: {$this->description}" : null,
+        ]));
     }
 }

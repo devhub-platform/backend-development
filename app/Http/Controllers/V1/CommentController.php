@@ -341,9 +341,6 @@ class CommentController
         ]);
     }
 
-    /**
-     * Get user's reaction on a comment
-     */
     public function myReaction(Comment $comment)
     {
         $user = Auth::user();
@@ -354,9 +351,6 @@ class CommentController
         ]);
     }
 
-    /**
-     * Get all reactions on a comment
-     */
     public function getReactions(Comment $comment)
     {
         return response()->json([
@@ -366,9 +360,6 @@ class CommentController
         ]);
     }
 
-    /**
-     * Get comment count for a post
-     */
     public function countByPost($postId)
     {
         $count = Comment::where('post_id', $postId)->count();
@@ -382,9 +373,6 @@ class CommentController
         ]);
     }
 
-    /**
-     * Get my deleted comments
-     */
     public function myTrashedComments()
     {
         $comments = Comment::onlyTrashed()

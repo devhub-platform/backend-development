@@ -60,7 +60,7 @@ class ReportController
             $user->blockedUsers()->attach($target->id);
         }
 
-        $adminMails = 'youssef.ahmed.fci@gmail.com';
+        $adminMails = '9gwbk.admin@inbox.testmail.app';
         Notification::route('mail', $adminMails)
             ->notify(new UserReportedNotification($report));
 

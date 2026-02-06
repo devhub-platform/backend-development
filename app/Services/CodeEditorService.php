@@ -16,9 +16,7 @@ class CodeEditorService
     private const RUNTIMES_CACHE_KEY = 'code_editor_runtimes';
     private const RUNTIMES_CACHE_TTL = 3600;
 
-    /**
-     * Get all available runtimes with caching
-     */
+
     public function getRuntimes()
     {
         try {

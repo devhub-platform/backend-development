@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Observers\PostObserver;
+use App\Traits\HasEmbedding;
 use Binafy\LaravelReaction\Contracts\HasReaction;
 use Binafy\LaravelReaction\Traits\Reactable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[ObservedBy([PostObserver::class])]
 class Post extends Model implements HasReaction
 {
-    use HasApiTokens, HasFactory, AuthorizesRequests, Searchable, SoftDeletes, Reactable;
+    use HasApiTokens, HasFactory, AuthorizesRequests, Searchable, SoftDeletes, Reactable, HasEmbedding;
 
     protected $table = 'posts';
     protected $fillable = [
@@ -94,5 +95,19 @@ class Post extends Model implements HasReaction
             ->withPivot('viewed_at')
             ->withTimestamps()
             ->orderByPivot('viewed_at', 'desc');
+    }
+
+    /**
+     * Get content for semantic search embedding
+     */
+    public function getEmbeddableContent(): string
+    {
+        $tags = $this->tags->pluck('name')->implode(', ');
+
+        return implode("\n", array_filter([
+            "Title: {$this->title}",
+            "Content: " . strip_tags($this->content),
+            $tags ? "Tags: {$tags}" : null,
+        ]));
     }
 }
