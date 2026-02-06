@@ -14,6 +14,7 @@ class SearchUsersResource extends JsonResource
         return [
             'name' => $this->name,
             'username' => $this->username,
+            'avatar_url' => $this->avatar_url ?? null,
             'posts' => SearchPostResource::collection($this->whenLoaded('posts')),
         ];
     }

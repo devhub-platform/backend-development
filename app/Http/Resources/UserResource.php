@@ -24,7 +24,7 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'education' => $this->education ,
             'work_at' => $this->work_at ,
-            'skills' => $this->skills ? json_decode($this->skills, true) : [],
+            'skills' => $this->skills ?? [],
             'location' => $this->location ,
             'website_url' => $this->website_url ,
 

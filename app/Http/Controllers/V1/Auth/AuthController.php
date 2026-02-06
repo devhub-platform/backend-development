@@ -51,7 +51,7 @@ class AuthController extends Controller
 
             $user = User::create($data);
 
-            JWTAuth::factory()->setTTL(60 * 24);
+            JWTAuth::factory()->setTTL(60 * 24 * 30); // 30 days
             $token = JWTAuth::fromUser($user);
 
             DB::commit();

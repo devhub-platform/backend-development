@@ -19,6 +19,7 @@ use App\Http\Controllers\V1\ReportController;
 use App\Http\Controllers\V1\SavedPostController;
 use App\Http\Controllers\V1\SearchController;
 use App\Http\Controllers\V1\SettingController;
+use App\Http\Controllers\V1\SmartSearchController;
 use App\Http\Controllers\V1\TagController;
 use App\Http\Controllers\V1\TagFollowController;
 use App\Http\Controllers\V1\UserController;
@@ -84,7 +85,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::controller(PostViewController::class)->group(function () {
             Route::get('posts/viewed/recent', 'getRecentViewedPosts');
             Route::delete('posts/viewed/clear', 'clearViewedPosts');
-            //            Route::get('posts/viewing-stats', 'getUserViewCount');
         });
 
         // Users
@@ -104,7 +104,16 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::delete('search/clear', 'clearSearchHistory');
         });
 
-        // Comments
+        // Smart Search - Semantic Search
+        Route::controller(SmartSearchController::class)->prefix('smart-search')->group(function () {
+            Route::get('/', 'search');                          // Main semantic search
+            Route::get('/posts', 'searchPosts');                // Semantic post search
+            Route::get('/posts/{post}/similar', 'findSimilarPosts'); // Find similar posts
+            Route::get('/suggestions', 'suggestions');          // Search suggestions
+            Route::get('/stats', 'stats');                      // Embedding statistics
+            Route::get('/models', 'models');                    // Available embedding models
+        });
+
         Route::controller(CommentController::class)->group(function () {
             // Create & Reply
             Route::post('posts/{post}/comments', 'store');
@@ -115,9 +124,8 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('posts/{postId}/comments/count', 'countByPost');
             Route::get('users/{userId}/comments', 'getByUser');
 
-            // Replies & Thread
+            // Replies on a comment
             Route::get('comments/{comment}/replies', 'getReplies');
-            Route::get('comments/{comment}/thread', 'getThread');
 
             // Pin/Unpin
             Route::post('comments/{comment}/pin', 'pin');
@@ -235,17 +243,20 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         // Reading Lists
         Route::controller(ReadingListController::class)->group(function () {
             Route::get('reading-lists/lists/posts', 'index');
-            //            Route::get('reading-lists/', 'Lists');
+
             Route::post('reading-lists', 'store');
             Route::get('reading-lists/{readingList}', 'show');
             Route::patch('reading-lists/{readingList}', 'update');
             Route::delete('reading-lists/{readingList}', 'destroy');
+
             Route::post('reading-lists/{readingList}/add-post/{post}', 'addPostToReadingList');
             Route::delete('reading-lists/{readingList}/remove-post/{post}', 'removePostFromReadingList');
             Route::post('reading-lists/{readingList}/move-post/{post}', 'movePostToAnotherList');
+
             Route::post('reading-lists/{readingList}/add-note/{post}', 'addNoteToPostInReadingList');
             Route::delete('reading-lists/{readingList}/delete-note/{post}', 'deleteNoteInPostInReadingList');
-            Route::post('reading-lists/{readingList}/duplicate','duplicateReadingList');
+
+            Route::post('reading-lists/{readingList}/duplicate', 'duplicateReadingList');
             Route::get('reading-lists/{readingList}/show-notes/{post}', 'showNotesInReadingList');
         });
 

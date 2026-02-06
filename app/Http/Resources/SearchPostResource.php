@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Str;
 
-/** @mixin Post */
 class SearchPostResource extends JsonResource
 {
     public function toArray(Request $request): array
@@ -15,7 +14,7 @@ class SearchPostResource extends JsonResource
         return [
             'title' => $this->title,
             'content' => Str::limit($this->content, 100),
-            'post by' => new SearchUsersResource($this->whenLoaded('user')),
+            'author' => new SearchUsersResource($this->whenLoaded('user')),
         ];
     }
 }
