@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Traits\HasEmbedding;
 use Binafy\LaravelReaction\Contracts\HasReaction;
 use Binafy\LaravelReaction\Traits\Reactable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Comment extends Model implements HasReaction
 {
-    use HasFactory, SoftDeletes, Reactable, HasEmbedding;
+    use HasFactory, SoftDeletes, Reactable;
 
     protected $table = 'comments';
     protected $fillable = [
@@ -93,15 +92,5 @@ class Comment extends Model implements HasReaction
             $comment = $comment->parent;
         }
         return $depth;
-    }
-
-    public function getEmbeddableContent(): string
-    {
-        $postTitle = $this->post ? $this->post->title : '';
-
-        return implode("\n", array_filter([
-            "Comment: " . strip_tags($this->content),
-            $postTitle ? "On post: {$postTitle}" : null,
-        ]));
     }
 }

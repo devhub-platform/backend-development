@@ -91,7 +91,7 @@ class ProfileController
     {
         try {
             $validated = $request->validated();
-            $user = User::find(auth()->id());
+            $user = auth()->user();
 
             if (!$user) {
                 return response()->json([
@@ -103,10 +103,7 @@ class ProfileController
             $user->update($validated);
 
             Log::info("Profile updated for user: {$user->email}", [
-                'changes' => array_diff_assoc(
-                    array_map(fn($v) => is_array($v) ? json_encode($v) : $v, $validated),
-                    array_map(fn($v) => is_array($v) ? json_encode($v) : $v, $originalData)
-                )
+                'changes' => array_diff($validated, $originalData)
             ]);
 
             return response()->json([

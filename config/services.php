@@ -71,11 +71,5 @@ return [
     'mail' => [
         'admin_email_1' => env('ADMIN_EMAIL1'),
         'admin_email_2' => env('ADMIN_EMAIL2'),
-    ],
-
-    'openrouter' => [
-        'api_key' => env('HACKCLUB_API_KEY'),
-        'base_url' => env('HACKAI_BASE_URL'),
-        'embedding_model' => env('OPENROUTER_EMBEDDING_MODEL', 'openai/text-embedding-3-small'),
-    ],
+    ]
 ];
