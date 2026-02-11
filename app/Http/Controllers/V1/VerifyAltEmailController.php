@@ -13,7 +13,6 @@ use Illuminate\Support\Facades\Mail;
 
 class VerifyAltEmailController
 {
-
     public function addAltEmail(AddAltEmailRequest $request)
     {
         try {

@@ -21,10 +21,11 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 class AuthController extends Controller
 {
     use AuthorizesRequests;
+
     public function login(LoginRequest $request): JsonResponse
     {
         $credentials = $request->only('email', 'password');
-        $remember = (bool) ($request->input('remember_me') ?? false);
+        $remember = (bool)($request->input('remember_me') ?? false);
 
         JWTAuth::factory()->setTTL($remember ? 60 * 24 * 30 : 60 * 24);
 
