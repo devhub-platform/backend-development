@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Observers\UserObserver;
-use App\Traits\HasEmbedding;
 use Binafy\LaravelReaction\Traits\Reactor;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -20,7 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[ObservedBy([UserObserver::class])]
 class User extends Authenticatable implements JWTSubject, MustVerifyEmail
 {
-    use HasFactory, Notifiable, softDeletes, Reactor, Searchable, HasEmbedding;
+    use HasFactory, Notifiable, softDeletes, Reactor, Searchable;
 
     public function getJWTIdentifier()
     {
@@ -91,6 +90,11 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'alt_email_otp_expires_at'
     ];
 
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
     protected function casts(): array
     {
         return [
@@ -99,7 +103,6 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             'alt_email_verified_at' => 'datetime',
             'alt_email_otp_expires_at' => 'datetime',
             'otp_expires_at' => 'datetime',
-            'skills' => 'array'
         ];
     }
 
@@ -224,23 +227,5 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     public function isBlockedWith(User $other): bool
     {
         return $this->hasBlocked($other) || $this->isBlockedBy($other);
-    }
-
-    /**
-     * Get content for semantic search embedding
-     */
-    public function getEmbeddableContent(): string
-    {
-        $skills = is_array($this->skills) ? implode(', ', $this->skills) : '';
-
-        return implode("\n", array_filter([
-            "Name: {$this->name}",
-            "Username: {$this->username}",
-            $this->bio ? "Bio: {$this->bio}" : null,
-            $skills ? "Skills: {$skills}" : null,
-            $this->work_at ? "Works at: {$this->work_at}" : null,
-            $this->education ? "Education: {$this->education}" : null,
-            $this->location ? "Location: {$this->location}" : null,
-        ]));
     }
 }
