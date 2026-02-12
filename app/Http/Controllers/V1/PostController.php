@@ -7,6 +7,7 @@ use App\Http\Requests\PostsRequests\PostUpdateRequest;
 use App\Http\Requests\PostsRequests\ReportPostRequest;
 use App\Http\Resources\PostCollection;
 use App\Http\Resources\PostResource;
+use App\Jobs\TrackPostViewJob;
 use App\Models\Post;
 use App\Models\Report;
 use App\Models\Tag;
@@ -17,6 +18,7 @@ use App\Services\ModerationService;
 use App\Services\ViewedPostService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Number;
@@ -172,7 +174,7 @@ class PostController
 
     public function show(Post $post, ViewedPostService $viewedPostService): JsonResponse
     {
-        if ($post->status === 'draft' || $post->trashed()) {
+        if ($post->status === 'draft') {
             return response()->json([
                 'message' => 'Post does not exist or is not accessible.'
             ], 404);
@@ -183,12 +185,11 @@ class PostController
         $post->load(['tags', 'user']);
 
         visits($post)->increment();
-        $post->views = Number::abbreviate(visits($post)->count());
+//        $post->views = Number::abbreviate(visits($post)->count());
 
-        $user = auth()->user();
-        if ($user) {
-            $viewedPostService->trackView($user->id, $post->id);
-        }
+        $user = auth()->user()->id;
+        $viewedPostService->trackView($user, $post->id);
+
 
         return response()->json([
             'data' => new PostResource($post),

@@ -34,6 +34,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
     Route::controller(SocialiteMediaController::class)->group(function () {
         Route::get('auth/google/login', 'loginGoogle');
         Route::get('auth/google/callback', 'callbackGoogle');
+
         Route::get('auth/github/login', 'loginGithub');
         Route::get('auth/github/callback', 'callbackGithub');
     });
@@ -90,10 +91,22 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         // Users
         Route::controller(UserController::class)->group(function () {
             Route::get('users', 'index');
+            Route::get('users/recommended', 'getRecommendedUsers');
+
             Route::get('users/{id}', 'showUserProfile');
+            Route::get('users/{id}/similar-skills', 'getUsersWithSimilarSkills');
+
             Route::get('users/{user}/posts', 'userPosts');
             Route::get('users/{user}/comments', 'userComments');
             Route::get('users/{user}/tags', 'userTags');
+
+            Route::get('users/{user}/followers', 'usersFollowers');
+            Route::get('users/{user}/followers/count', 'usersFollowersCount');
+
+            Route::get('users/{user}/following', 'usersFollowing');
+
+            Route::get('users/{id}/mutual-followers', 'getMutualFollowers');
+            Route::get('users/{id}/mutual-following', 'checkMutualFollowing');
         });
 
         Route::controller(SearchController::class)->group(function () {
@@ -165,10 +178,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
         // Followers
         Route::controller(FollowersController::class)->group(function () {
-            Route::get('users/{user}/followers', 'usersFollowers');
-            Route::get('users/{user}/followers/count', 'followersCount');
-            Route::get('users/{user}/following', 'usersFollowing');
-
             Route::get('users/{user}/following/count', 'followingCount');
             Route::post('users/{user}/follow', 'follow');
             Route::post('users/{user}/unfollow', 'unfollow');
@@ -245,7 +254,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('reading-lists/{readingList}/move-post/{post}', 'movePostToAnotherList');
             Route::post('reading-lists/{readingList}/add-note/{post}', 'addNoteToPostInReadingList');
             Route::delete('reading-lists/{readingList}/delete-note/{post}', 'deleteNoteInPostInReadingList');
-            Route::post('reading-lists/{readingList}/duplicate','duplicateReadingList');
+            Route::post('reading-lists/{readingList}/duplicate', 'duplicateReadingList');
             Route::get('reading-lists/{readingList}/show-notes/{post}', 'showNotesInReadingList');
         });
 

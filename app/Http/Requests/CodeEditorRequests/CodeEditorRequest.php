@@ -35,7 +35,7 @@ class CodeEditorRequest extends FormRequest
             'timeout' => [
                 'nullable',
                 'integer',
-                'between:1,35' // Max 35 seconds
+                'between:1,35'
             ],
             'stdin' => [
                 'nullable',
