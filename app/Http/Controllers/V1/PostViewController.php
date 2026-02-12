@@ -32,6 +32,7 @@ class PostViewController
         $viewedPosts = $this->viewedPostService->getUserViewedPosts($user->id, 15);
 
         return response()->json([
+            'viewed_posts_count' => count($viewedPosts),
             'data' => RecentViewsResource::collection($viewedPosts),
         ]);
     }

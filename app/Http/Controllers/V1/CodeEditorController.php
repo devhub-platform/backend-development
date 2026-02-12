@@ -34,9 +34,4 @@ class CodeEditorController
     {
         return $this->service->getSupportedLanguages();
     }
-
-    public function refreshRuntimes(): JsonResponse
-    {
-        return $this->service->clearRuntimesCache();
-    }
 }

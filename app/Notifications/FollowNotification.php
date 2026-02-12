@@ -2,15 +2,16 @@
 
 namespace App\Notifications;
 
+use App\Models\User;
 use Illuminate\Notifications\Notification;
 
 class FollowNotification extends Notification
 {
-    protected $user;
+    protected User $follower;
 
-    public function __construct($user)
+    public function __construct(User $follower)
     {
-        $this->user = $user;
+        $this->follower = $follower;
     }
 
     public function via($notifiable): array
@@ -21,14 +22,18 @@ class FollowNotification extends Notification
     public function toDatabase($notifiable): array
     {
         return [
-            'message' => 'You have a new follower: ' . optional($this->user)->name,
-            'from' => optional($this->user)->name,
-            'number of followers' => optional($this->user)->followers()->count(),
+            'follower_id' => $this->follower->id,
+            'follower_name' => $this->follower->name,
+            'follower_username' => $this->follower->username,
+            'follower_avatar' => $this->follower->avatar_url,
+            'message' => "{$this->follower->name} started following you",
+            'total_followers' => $notifiable->followers()->count(),
+            'action_url' => "/users/{$this->follower->username}",
         ];
     }
 
     public function toArray($notifiable): array
     {
-        return [];
+        return $this->toDatabase($notifiable);
     }
 }
