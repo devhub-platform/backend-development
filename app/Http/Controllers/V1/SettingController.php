@@ -130,11 +130,13 @@ class SettingController
     public function addSocialAccounts(Request $request)
     {
         $request->validate([
-            'linkedin_username' => 'sometimes|nullable|string|max:255|regex:/^[a-zA-Z0-9\-]+$/',
-            'github_username' => 'sometimes|nullable|string|max:255|regex:/^[a-zA-Z0-9\-]+$/',
+            'linkedin_username' => 'sometimes|nullable|string|max:255',
+            'github_username' => 'sometimes|nullable|string|max:255',
+            'orcid_username'=> 'sometimes|nullable|string|max:255',
         ], [
             'linkedin_username.regex' => 'LinkedIn username format is invalid',
             'github_username.regex' => 'GitHub username format is invalid',
+            'orcid_username.regex' => 'ORCID username format is invalid',
         ]);
 
         try {
@@ -145,7 +147,7 @@ class SettingController
                 ], 404);
             }
 
-            $data = $request->only(['linkedin_username', 'github_username']);
+            $data = $request->only(['linkedin_username', 'github_username','orcid_username']);
             $user->update($data);
 
             Log::info("Social accounts updated for user: {$user->email}", $data);

@@ -29,7 +29,7 @@ class FollowersController
 
         $authUser->following()->attach($user->id);
 
-        Notification::send($user, new FollowNotification($user));
+        Notification::send($user, new FollowNotification($authUser));
         Log::info("User {$authUser->id} followed user {$user->id}");
 
         return response()->json([
@@ -52,47 +52,6 @@ class FollowersController
         Log::notice("User {$authUser->id} unfollowed user {$user->id}");
         return response()->json([
             'message' => "Successfully unfollowed user {$user->name}"
-        ]);
-    }
-
-    public function usersFollowing(User $user)
-    {
-        $following = $user->following()->with('followers')->get();
-        if ($following->isEmpty()) {
-            return response()->json([
-                'message' => 'This user is not following anyone yet.'
-            ]);
-        }
-        return response()->json([
-            'Following' => UserResource::collection($following),
-        ]);
-    }
-
-    public function usersFollowers(User $user)
-    {
-        $followers = $user->followers()->with('following')->get();
-        if ($followers->isEmpty()) {
-            return response()->json([
-                'message' => 'This user has no followers yet.'
-            ]);
-        }
-        return response()->json([
-            'Followers' => UserResource::collection($followers),
-        ]);
-    }
-
-    public function followersCount(User $user)
-    {
-        $count = $user->followers()->count();
-
-        if ($count === 0) {
-            return response()->json([
-                'message' => 'This user has no followers yet.'
-            ]);
-        }
-
-        return response()->json([
-            'followers_count' => $count,
         ]);
     }
 
