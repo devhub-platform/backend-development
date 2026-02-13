@@ -185,7 +185,6 @@ class PostController
         $post->load(['tags', 'user']);
 
         visits($post)->increment();
-//        $post->views = Number::abbreviate(visits($post)->count());
 
         $user = auth()->user()->id;
         $viewedPostService->trackView($user, $post->id);

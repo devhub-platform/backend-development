@@ -26,9 +26,9 @@ class PostResource extends JsonResource
             'is_edited' => (bool)$this->is_edit,
 
             'user' => [
-                'Name' => $this->user->name,
-                'Username' => $this->user->username,
-                'avatar_Image' => $this->user->avatar_url ?? null,
+                'name' => $this->user->name,
+                'username' => $this->user->username,
+                'avatar_image' => $this->user->avatar_url ?? null,
             ],
 
             'reaction' => [
@@ -36,8 +36,8 @@ class PostResource extends JsonResource
                 'comments_count' => $this->comments()->count(),
             ],
 
-            'Tags' => TagResource::collection($this->whenLoaded('tags')),
-            'Comments' => CommentResource::collection($this->whenLoaded('comments')),
+            'tags' => TagResource::collection($this->whenLoaded('tags')),
+            'comments' => CommentResource::collection($this->whenLoaded('comments')),
         ];
     }
 }

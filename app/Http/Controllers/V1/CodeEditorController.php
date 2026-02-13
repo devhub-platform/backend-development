@@ -19,7 +19,6 @@ class CodeEditorController
         return $this->service->getRuntimes();
     }
 
-
     public function execute(CodeEditorRequest $request): JsonResponse
     {
         return $this->service->executeCode($request);
