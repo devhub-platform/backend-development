@@ -7,18 +7,16 @@ use App\Http\Requests\PostsRequests\PostUpdateRequest;
 use App\Http\Requests\PostsRequests\ReportPostRequest;
 use App\Http\Resources\PostCollection;
 use App\Http\Resources\PostResource;
-use App\Jobs\TrackPostViewJob;
 use App\Models\Post;
+use App\Models\PostView;
 use App\Models\Report;
 use App\Models\Tag;
 use App\Notifications\PostReportedNotification;
 use App\Notifications\NewPostNotification;
 use App\Services\ImageUploadCloudinaryService;
 use App\Services\ModerationService;
-use App\Services\ViewedPostService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Number;
@@ -36,30 +34,27 @@ class PostController
 
     public function topPostsViews(): JsonResponse
     {
-        $topPostsWithViews = visits(Post::class)->top(10, true);
+        $topPosts = Post::query()
+            ->with(['user', 'tags'])
+            ->where('status', '!=', 'draft')
+            ->when(auth()->check(), fn($query) => $query->whereNotIn('user_id', $this->blockedUserIds()))
+            ->orderByDesc('views')
+            ->limit(10)
+            ->get();
 
-        if (empty($topPostsWithViews)) {
+        if ($topPosts->isEmpty()) {
             return response()->json([
                 'data' => [],
                 'views_count' => [],
             ]);
         }
 
-        $postIds = array_keys($topPostsWithViews);
-        $viewsMap = collect($topPostsWithViews)
-            ->mapWithKeys(fn($views, $id) => [$id => Number::abbreviate((int)$views)])
-            ->toArray();
-
-        $posts = Post::with(['user', 'tags'])
-            ->whereIn('id', $postIds)
-            ->where('status', '!=', 'draft')
-            ->when(auth()->check(), fn($query) => $query->whereNotIn('user_id', $this->blockedUserIds()))
-            ->get()
-            ->sortBy(fn($post) => array_search($post->id, $postIds))
-            ->each(fn($post) => $post->views = $viewsMap[$post->id] ?? 0);
+        $viewsMap = $topPosts->mapWithKeys(fn($post) => [
+            $post->id => Number::abbreviate((int)$post->views)
+        ])->toArray();
 
         return response()->json([
-            'data' => PostResource::collection($posts),
+            'data' => PostResource::collection($topPosts),
             'views_count' => $viewsMap,
         ]);
     }
@@ -172,9 +167,9 @@ class PostController
 //    }
 
 
-    public function show(Post $post, ViewedPostService $viewedPostService): JsonResponse
+    public function show(Post $post): JsonResponse
     {
-        if ($post->status === 'draft') {
+        if ($post->status === 'draft' || $post->trashed()) {
             return response()->json([
                 'message' => 'Post does not exist or is not accessible.'
             ], 404);
@@ -184,14 +179,27 @@ class PostController
 
         $post->load(['tags', 'user']);
 
-        visits($post)->increment();
+        $user = auth()->user();
+        $shouldIncrementView = false;
 
-        $user = auth()->user()->id;
-        $viewedPostService->trackView($user, $post->id);
+        if ($user) {
+            $postView = PostView::firstOrCreate(
+                ['user_id' => $user->id, 'post_id' => $post->id],
+                ['viewed_at' => now()]
+            );
 
+            $shouldIncrementView = $postView->wasRecentlyCreated;
+        } else {
+            $shouldIncrementView = true;
+        }
+
+        if ($shouldIncrementView) {
+            $post->increment('views');
+        }
 
         return response()->json([
             'data' => new PostResource($post),
+            'views' => Number::abbreviate((int)$post->fresh()->views),
         ]);
     }
 
