@@ -1,6 +1,7 @@
 <?php
 
-use App\Http\Controllers\V1\AiModels\LlamaController;
+use App\Http\Controllers\V1\AiModels\AIChatController;
+use App\Http\Controllers\V1\AiModels\HistoryController;
 use App\Http\Controllers\V1\AiModels\PostSummarizeController;
 use App\Http\Controllers\V1\Auth\AuthController;
 use App\Http\Controllers\V1\Auth\ForgetPasswordController;
@@ -23,19 +24,15 @@ use App\Http\Controllers\V1\TagController;
 use App\Http\Controllers\V1\TagFollowController;
 use App\Http\Controllers\V1\UserController;
 use App\Http\Controllers\V1\UserStatusesController;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\V1\VerifyAltEmailController;
-use App\Http\Controllers\V1\AiModels\AIChatController;
-use App\Http\Controllers\V1\AiModels\AttachmentController;
-use App\Http\Controllers\V1\AiModels\HistoryController;
+use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
     Route::controller(SocialiteMediaController::class)->group(function () {
-        Route::get('auth/google/login', 'loginGoogle');
+        Route::post('auth/google/login', 'loginGoogle');
         Route::get('auth/google/callback', 'callbackGoogle');
-
-        Route::get('auth/github/login', 'loginGithub');
+        Route::post('auth/github/login', 'loginGithub');
         Route::get('auth/github/callback', 'callbackGithub');
     });
 
@@ -69,23 +66,22 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::delete('posts/{post}/force', 'forceDelete');
             Route::post('posts/{id}/restore', 'restore');
             Route::get('posts/recent', 'recentPosts');
+            Route::get('posts/top-views', 'topPostsViews');
             Route::get('posts/drafts', 'drafts');
             Route::get('posts/archives', 'archivesTrashed');
+            Route::get('posts/report/reasons', 'reasonsToReport');
             Route::get('posts/{post}/tags', 'postsTags');
             Route::get('posts/{post}/tags-list', 'postsTagsList');
             Route::get('posts/{post}/comments', 'postComments');
             Route::post('posts/{post}/report', 'reportPost');
-            Route::post('posts/report/', 'reportPost');
-            Route::get('posts/report/reasons', 'reasonsToReport');
-
-            Route::get('posts/top-views', 'topPostsViews');
+            Route::post('posts/{post}/restore', 'restore');
+            Route::delete('posts/{post}/force', 'forceDelete');
         });
         Route::apiResource('posts', PostController::class);
 
         Route::controller(PostViewController::class)->group(function () {
             Route::get('posts/viewed/recent', 'getRecentViewedPosts');
             Route::delete('posts/viewed/clear', 'clearViewedPosts');
-            //            Route::get('posts/viewing-stats', 'getUserViewCount');
         });
 
         // Users
@@ -99,14 +95,11 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('users/{user}/posts', 'userPosts');
             Route::get('users/{user}/comments', 'userComments');
             Route::get('users/{user}/tags', 'userTags');
-
             Route::get('users/{user}/followers', 'usersFollowers');
             Route::get('users/{user}/followers/count', 'usersFollowersCount');
-
             Route::get('users/{user}/following', 'usersFollowing');
-
-            Route::get('users/{id}/mutual-followers', 'getMutualFollowers');
-            Route::get('users/{id}/mutual-following', 'checkMutualFollowing');
+            Route::get('users/{user}/mutual-followers', 'getMutualFollowers');
+            Route::get('users/{user}/mutual-following', 'checkMutualFollowing');
         });
 
         Route::controller(SearchController::class)->group(function () {
@@ -121,7 +114,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::controller(CommentController::class)->group(function () {
             // Create & Reply
             Route::post('posts/{post}/comments', 'store');
-            Route::post('comments/{parentComment}/reply', 'reply');
+            Route::post('comments/{comment}/reply', 'reply');
 
             // Get comments by post/user
             Route::get('posts/{postId}/comments', 'getByPost');
@@ -173,7 +166,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('profile/upload/cover-image', 'uploadCoverImage');
             Route::get('profile/activity', 'activity');
             Route::get('profile/details', 'details');
-            Route::get('profile/visits-views', 'visits_views_analysis');
         });
 
         // Followers
@@ -205,7 +197,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
         // Notifications
         Route::controller(NotificationController::class)->group(function () {
-            Route::get('notifications', 'showNewCommentNotify');
+            Route::get('notifications/comments', 'showNewCommentNotify');
             Route::get('notifications/all', 'showAllNotifications');
             Route::get('notifications/reacts', 'showNewReactNotify');
 
@@ -244,21 +236,16 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         // Reading Lists
         Route::controller(ReadingListController::class)->group(function () {
             Route::get('reading-lists/lists/posts', 'index');
-
             Route::post('reading-lists', 'store');
             Route::get('reading-lists/{readingList}', 'show');
             Route::patch('reading-lists/{readingList}', 'update');
             Route::delete('reading-lists/{readingList}', 'destroy');
-            // Manage posts in reading list
             Route::post('reading-lists/{readingList}/add-post/{post}', 'addPostToReadingList');
             Route::delete('reading-lists/{readingList}/remove-post/{post}', 'removePostFromReadingList');
             Route::post('reading-lists/{readingList}/move-post/{post}', 'movePostToAnotherList');
-            // Manage notes for posts in reading list
             Route::post('reading-lists/{readingList}/add-note/{post}', 'addNoteToPostInReadingList');
             Route::delete('reading-lists/{readingList}/delete-note/{post}', 'deleteNoteInPostInReadingList');
-            // Duplicate reading list
             Route::post('reading-lists/{readingList}/duplicate', 'duplicateReadingList');
-
             Route::get('reading-lists/{readingList}/show-notes/{post}', 'showNotesInReadingList');
         });
 
@@ -269,18 +256,15 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('code/search-runtimes', 'searchInRuntimes');
             Route::get('code/languages', 'languages');
         });
-        // AI Models - Llama
 
         Route::controller(PostSummarizeController::class)->group(function () {
             Route::post('ai/summarize/post/{post}', 'summarizePost');
             Route::get('ai/summarize/post/languages', 'getSupportedLanguages');
-
             Route::post('ai/summarize/llama/post/{post}', 'summarizePostUsingLlama');
             Route::post('ai/translate/post/{post}', 'translatePost');
             Route::post('ai/analyze/post/{post}', 'analyzePost');
             Route::post('ai/question/post/{post}', 'answerQuestionAboutPost');
             Route::post('ai/generate/content', 'generateContent');
-
         });
 
         // Reports & Blocking
@@ -306,39 +290,32 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         });
 
         Route::prefix('ai-chat')->group(function () {
-
             Route::controller(AIChatController::class)->group(function () {
-                Route::post('/send', 'chat');
-                Route::get('/models', 'models');
-                Route::post('/attachments/upload', 'upload');
+                Route::post('send', 'chat');
+                Route::get('models', 'models');
+                Route::post('attachments/upload', 'upload');
             });
 
-            Route::prefix('history')->group(function () {
-                Route::controller(HistoryController::class)->group(function () {
-                    Route::get('/sessions', 'sessions');
-                    Route::post('/sessions/create', 'create');
-                    Route::get('/sessions/{sessionId}', 'show');
-                    Route::delete('/sessions/{sessionId}', 'delete');
-                    Route::post('/sessions/{sessionId}/pin', 'pin');
-                    Route::post('/sessions/{sessionId}/unpin', 'unpin');
-                    Route::post('/sessions/{sessionId}/close', 'close');
-                    Route::post('/sessions/{sessionId}/activate', 'activate');
-                    Route::put('/sessions/{sessionId}/title', 'updateTitle');
-                });
+            Route::prefix('history')->controller(HistoryController::class)->group(function () {
+                Route::get('sessions', 'sessions');
+                Route::post('sessions/create', 'create');
+                Route::get('sessions/{sessionId}', 'show');
+                Route::delete('sessions/{sessionId}', 'delete');
+                Route::post('sessions/{sessionId}/pin', 'pin');
+                Route::post('sessions/{sessionId}/unpin', 'unpin');
+                Route::post('sessions/{sessionId}/close', 'close');
+                Route::post('sessions/{sessionId}/activate', 'activate');
+                Route::put('sessions/{sessionId}/title', 'updateTitle');
             });
         });
     });
 });
 
-// Fallback route for undefined endpoints
+// Fallback & Welcome Routes
 Route::fallback(function () {
     return response()->json([
         'message' => 'Resource not found. The API endpoint does not exist.',
+        'documentation' => 'https://0yviq6a5i5.apidog.io/',
+        'vision' => 'API v1',
     ], 404);
-});
-
-Route::get('/', function () {
-    return response()->json([
-        'message' => 'Welcome to the API. Please refer to the documentation for usage details.',
-    ]);
 });
