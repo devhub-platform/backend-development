@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\V1;
 
+use App\Http\Requests\AddSocialAccountsRequest;
 use App\Http\Requests\ProfileRequests\AddAltEmailRequest;
 use App\Http\Requests\ProfileRequests\UpdatePasswordRequest;
 use App\Http\Requests\ProfileRequests\VerifyAltEmailRequest;
@@ -127,20 +128,13 @@ class SettingController
         }
     }
 
-    public function addSocialAccounts(Request $request)
+    public function addSocialAccounts(AddSocialAccountsRequest $request)
     {
-        $request->validate([
-            'linkedin_username' => 'sometimes|nullable|string|max:255',
-            'github_username' => 'sometimes|nullable|string|max:255',
-            'orcid_username'=> 'sometimes|nullable|string|max:255',
-        ], [
-            'linkedin_username.regex' => 'LinkedIn username format is invalid',
-            'github_username.regex' => 'GitHub username format is invalid',
-            'orcid_username.regex' => 'ORCID username format is invalid',
-        ]);
+        $validated = $request->validated();
 
         try {
             $user = Auth::user();
+
             if (!$user) {
                 return response()->json([
                     'message' => 'User not found',

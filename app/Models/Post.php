@@ -36,7 +36,7 @@ class Post extends Model implements HasReaction
     ];
 
     protected $casts = [
-        'views' => 'string',
+        'views' => 'integer',
     ];
 
 
@@ -65,9 +65,14 @@ class Post extends Model implements HasReaction
             ->withTimestamps();
     }
 
-    public function visits()
+    public function postViews(): HasMany
     {
-        return visits($this)->relation();
+        return $this->hasMany(PostView::class);
+    }
+
+    public function getUniqueViewersCountAttribute(): int
+    {
+        return $this->postViews()->distinct('user_id')->count('user_id');
     }
 
     public function savedBy()
