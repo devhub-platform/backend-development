@@ -54,7 +54,7 @@ class SummarizeLlamaService
      */
     public function analyze(string $content, string $analysisType = 'general'): \Illuminate\Http\JsonResponse
     {
-        $prompt = "Please analyze the following content for {$analysisType} insights:\n\n{$content}";
+        $prompt = "Please analyze the following content for {$analysisType} insights:\n\n{$content} .analysis in short";
         return $this->callLlamaAPI($prompt);
     }
 

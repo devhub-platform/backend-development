@@ -87,7 +87,7 @@ class PostSummarizeController
     {
         $request->validate([
             'topic' => 'required|string|max:500',
-            'type' => 'string|in:article,blog,poem,story,script|default=article',
+            'type' => 'string|in:article,blog,poem,story,script',
         ]);
 
         $topic = $request->input('topic');
