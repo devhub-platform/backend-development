@@ -211,13 +211,13 @@ class CommentController
         ]);
     }
 
-    public function reply(StoreCommentRequest $request, Comment $parentComment, ModerationService $moderationService)
+    public function reply(StoreCommentRequest $request,Post $post, Comment $parentComment, ModerationService $moderationService)
     {
         $this->authorize('create', Comment::class);
         $validated = $request->validated();
         $validated['user_id'] = auth()->id();
         $validated['parent_id'] = $parentComment->id;
-        $validated['post_id'] = $parentComment->post_id;
+        $validated['post_id'] = $post->id;
 
         $check_content = $moderationService->moderateContent($validated['content']);
 

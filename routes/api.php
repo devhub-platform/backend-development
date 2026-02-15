@@ -116,7 +116,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::controller(CommentController::class)->group(function () {
             // Create & Reply
             Route::post('posts/{post}/comments', 'store');
-            Route::post('comments/{comment}/reply', 'reply');
+            Route::post('posts/{post}/comments/{parentComment}/reply', 'reply');
 
             // Get comments by post/user
             Route::get('posts/{postId}/comments', 'getByPost');
@@ -139,14 +139,12 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
             // Soft delete & Restore
             Route::delete('comments/{id}/force', 'forceDelete');
-            Route::post('comments/{id}/restore', 'restore');
 
             // My comments
             Route::get('my/comments', 'myRecentComments');
-            Route::get('my/comments/trashed', 'myTrashedComments');
             Route::get('my/comments/stats', 'myCommentStats');
         });
-        Route::apiResource('comments', CommentController::class);
+//        Route::apiResource('comments', CommentController::class);
 
 
         Route::controller(TagController::class)->group(function () {
@@ -317,6 +315,6 @@ Route::fallback(function () {
     return response()->json([
         'message' => 'Resource not found , The API endpoint does not exist , visit document.',
         'documentation' => 'https://0yviq6a5i5.apidog.io/',
-        'vision' => 'API v1',
+        'version' => 'API v1 Devhub is a platform for developers to share knowledge, collaborate on projects, and connect with other developers. Our API allows you to access our platform programmatically, enabling you to integrate our features into your applications and services.',
     ], 404);
 });
