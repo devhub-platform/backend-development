@@ -125,9 +125,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             ->withTimestamps();
     }
 
-    /**
-     * Users who are following this user.
-     */
+
     public function followers()
     {
         return $this->belongsToMany(User::class, 'followers', 'following_id', 'follower_id')
@@ -167,7 +165,6 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         return $this->hasOne(UserStatus::class);
     }
 
-// check if following
     public function isFollowingTag(int $tagId)
     {
         return $this->followedTags()->where('tag_id', $tagId)->exists();
@@ -199,9 +196,6 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         )->withTimestamps();
     }
 
-    /**
-     * Get all posts viewed by this user
-     */
     public function viewedPosts(): BelongsToMany
     {
         return $this->belongsToMany(

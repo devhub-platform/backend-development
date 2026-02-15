@@ -18,8 +18,6 @@ class Comment extends Model implements HasReaction
         'post_id',
         'user_id',
         'content',
-        'created_at',
-        'updated_at',
         'parent_id',
         'is_pinned',
     ];
