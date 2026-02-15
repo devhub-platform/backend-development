@@ -29,7 +29,7 @@ class AttachmentController extends Controller
         }
 
         $request->validate([
-            'file' => 'required|file|mimes:pdf,txt,doc,docx|max:5120',
+            'file' => 'required|file|mimes:pdf,txt,doc,docx,png,jepg,gif|max:10240',
             'session_id' => 'nullable|exists:ai_chat_sessions,id'
         ]);
 
