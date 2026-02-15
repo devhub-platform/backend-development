@@ -28,9 +28,7 @@ class PostController
 
     public function __construct(
         private ImageUploadCloudinaryService $cloudinaryService
-    )
-    {
-    }
+    ) {}
 
     public function topPostsViews(): JsonResponse
     {
@@ -143,7 +141,8 @@ class PostController
 
         // Notify followers only for published posts
         if ($post->status !== 'draft') {
-            $followers = auth()->user()->followers;
+            $followers = auth()->user()->followers
+                ->filter(fn($follower) => $follower->isNotificationEnabled('new_post_from_following'));
 
             if ($followers->isNotEmpty()) {
                 Notification::send($followers, new NewPostNotification($post->load('user')));
@@ -156,15 +155,15 @@ class PostController
         ], 201);
     }
 
-//    public function generateCoverImage(GeminiImageService $geminiImage, Request $request)
-//    {
-//        $prompt = $request->input('prompt');
-//        $imageUrl = $geminiImage->generateImage($prompt);
-//
-//        return response()->json([
-//            'cover_image' => $imageUrl
-//        ]);
-//    }
+    //    public function generateCoverImage(GeminiImageService $geminiImage, Request $request)
+    //    {
+    //        $prompt = $request->input('prompt');
+    //        $imageUrl = $geminiImage->generateImage($prompt);
+    //
+    //        return response()->json([
+    //            'cover_image' => $imageUrl
+    //        ]);
+    //    }
 
 
     public function show(Post $post): JsonResponse

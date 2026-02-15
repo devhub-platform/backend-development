@@ -44,7 +44,10 @@ class ReactionController
             }
 
             $user->updateReaction($validated['type'], $post);
-            Notification::send($post->user, new ReactNotification($post, $validated['type']));
+            // Only notify if user has new_reaction notifications enabled
+            if ($post->user->isNotificationEnabled('new_reaction')) {
+                Notification::send($post->user, new ReactNotification($post, $validated['type']));
+            }
 
             return response()->json([
                 'message' => 'Reaction updated successfully.',
@@ -53,7 +56,10 @@ class ReactionController
         }
 
         $user->reaction($validated['type'], $post);
-        Notification::send($post->user, new ReactNotification($post, $validated['type']));
+        // Only notify if user has new_reaction notifications enabled
+        if ($post->user->isNotificationEnabled('new_reaction')) {
+            Notification::send($post->user, new ReactNotification($post, $validated['type']));
+        }
 
         return response()->json([
             'message' => 'Reaction added successfully.',
@@ -139,5 +145,4 @@ class ReactionController
             'total_reactions_on_posts' => $totalReactions,
         ]);
     }
-
 }
