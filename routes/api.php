@@ -26,6 +26,7 @@ use App\Http\Controllers\V1\UserController;
 use App\Http\Controllers\V1\UserStatusesController;
 use App\Http\Controllers\V1\VerifyAltEmailController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\V1\AiModels\AttachmentController;
 
 Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
@@ -59,7 +60,8 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::post('password/reset', 'resetPassword');
     });
 
-    Route::middleware(['auth:api', 'verified', 'throttle:25,1'])->group(function () {
+    //Route::middleware(['auth:api', 'verified', 'throttle:25,1'])->group(function () {
+    Route::middleware(['auth:api', 'throttle:25,1'])->group(function () {
 
         Route::controller(PostController::class)->group(function () {
             Route::get('user/posts', 'userPosts');
@@ -292,8 +294,8 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::controller(AIChatController::class)->group(function () {
                 Route::post('send', 'chat');
                 Route::get('models', 'models');
-                Route::post('attachments/upload', 'upload');
             });
+            Route::post('attachments/upload', [AttachmentController::class, 'upload']);
 
             Route::prefix('history')->controller(HistoryController::class)->group(function () {
                 Route::get('sessions', 'sessions');
@@ -313,7 +315,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 // Fallback & Welcome Routes
 Route::fallback(function () {
     return response()->json([
-        'message' => 'Resource not found. The API endpoint does not exist.',
+        'message' => 'Resource not found , The API endpoint does not exist , visit document.',
         'documentation' => 'https://0yviq6a5i5.apidog.io/',
         'vision' => 'API v1',
     ], 404);

@@ -66,13 +66,14 @@ class ForgetPasswordController
             return response()->json(['error' => 'Invalid OTP.'], 400);
         }
 
+        // Don't clear the OTP yet - keep it for password reset
+        // Just extend the expiration time to allow password reset
         $user->update([
-            'otp' => null,
-            'otp_expires_at' => null,
+            'otp_expires_at' => now()->addMinutes(self::OTP_EXPIRES_MINUTES),
         ]);
 
         Log::info('OTP verified for email: ' . $user->email);
-        return response()->json(['message' => 'OTP verified successfully.'], 200);
+        return response()->json(['message' => 'OTP verified successfully. You can now reset your password.'], 200);
     }
 
     public function resetPassword(HttpRequest $request)

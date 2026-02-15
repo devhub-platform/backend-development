@@ -65,7 +65,7 @@ class SocialiteMediaController
                 'username' => $username,
                 'website_url' => null,
                 'role' => 'user',
-                'bio' => $mediaUser->getNickname() ?? 'Bio not set yet.',
+                'bio' => $mediaUser->getNickname(),
                 'github_username' => $mediaUser->getNickname(),
                 'provider_id' => $mediaUser->getId(),
                 'password' => bcrypt(str()->random(16)),
@@ -74,6 +74,7 @@ class SocialiteMediaController
             ]
         );
 
+        JWTAuth::factory()->setTTL(60 * 24 * 30);
         $token = JWTAuth::fromUser($user);
 
         return response()->json([
