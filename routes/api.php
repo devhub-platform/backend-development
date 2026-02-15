@@ -204,7 +204,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('notifications/new-followers', 'showNewFollowersNotifications');
             Route::delete('notifications/followers/clear', 'clearAllNotificationFromFollowers');
 
-
             Route::get('notifications/post-created', 'newPostCreateFromFollower');
 
             Route::get('notifications/mention', 'showNewMentionNotifications');

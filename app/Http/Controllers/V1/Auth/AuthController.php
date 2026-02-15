@@ -71,7 +71,10 @@ class AuthController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
-            return response()->json(['message' => 'User registration failed'], 500);
+            return response()->json([
+                'message' => $e,
+                'errors' => ['server' => ['An unexpected error occurred. Please try again later.']]
+            ], 500);
         }
     }
 
