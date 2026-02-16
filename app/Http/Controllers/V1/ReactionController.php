@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\V1;
 
+use App\Http\Requests\ReactionRequest;
 use App\Models\Post;
 use App\Notifications\ReactNotification;
 use Illuminate\Http\Request;
@@ -12,19 +13,9 @@ class ReactionController
 {
     public int $numberOfReactions = 0;
 
-    public function reactToPost(Request $request, $postId)
+    public function reactToPost(ReactionRequest $request, $postId)
     {
-        $validated = $request->validate([
-            'type' => [
-                'required',
-                'string',
-                'max:50',
-                'in:like,sad,love,angry,wow,haha',
-            ],
-        ], [
-            'type.required' => 'Reaction type is required.',
-            'type.in' => 'Invalid reaction type. Allowed types are: like, sad, love, angry, wow, haha.',
-        ]);
+        $validated = $request->validated();
 
         $post = Post::with('user')->findOrFail($postId);
         $user = auth()->user();
@@ -44,7 +35,6 @@ class ReactionController
             }
 
             $user->updateReaction($validated['type'], $post);
-            // Only notify if user has new_reaction notifications enabled
             if ($post->user->isNotificationEnabled('new_reaction')) {
                 Notification::send($post->user, new ReactNotification($post, $validated['type']));
             }
@@ -56,7 +46,6 @@ class ReactionController
         }
 
         $user->reaction($validated['type'], $post);
-        // Only notify if user has new_reaction notifications enabled
         if ($post->user->isNotificationEnabled('new_reaction')) {
             Notification::send($post->user, new ReactNotification($post, $validated['type']));
         }

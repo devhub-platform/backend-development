@@ -49,7 +49,8 @@ class UserModelTest extends TestCase
             'alt_email_otp',
             'alt_email_otp_expires_at',
             'otp_expires_at',
-            'orcid_username'
+            'orcid_username',
+            'notification_preferences'
         ];
 
         $this->assertEquals($fillable, $user->getFillable());

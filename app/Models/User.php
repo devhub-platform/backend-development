@@ -249,4 +249,36 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         $preferences[$type] = $enabled;
         $this->update(['notification_preferences' => $preferences]);
     }
+
+    /**
+     * Get the user's reaction on a reactable model.
+     */
+    public function myReaction($reactable): ?\Binafy\LaravelReaction\Models\Reaction
+    {
+        $userForeignName = config('laravel-reaction.user.foreign_key', 'user_id');
+
+        return $reactable->reactions()
+            ->where($userForeignName, $this->getKey())
+            ->first();
+    }
+
+    /**
+     * Update the user's reaction on a reactable model.
+     */
+    public function updateReaction(string $type, $reactable): ?\Binafy\LaravelReaction\Models\Reaction
+    {
+        $userForeignName = config('laravel-reaction.user.foreign_key', 'user_id');
+
+        $reaction = $reactable->reactions()
+            ->where($userForeignName, $this->getKey())
+            ->first();
+
+        if ($reaction) {
+            $reaction->update(['type' => $type]);
+            return $reaction->fresh();
+        }
+
+        return null;
+    }
+
 }

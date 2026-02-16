@@ -169,7 +169,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
         // Followers
         Route::controller(FollowersController::class)->group(function () {
-            Route::get('users/{user}/following/count', 'followingCount');
+            Route::get('users/{user}/follow-stats/count', 'UserFollow');
             Route::post('users/{user}/follow', 'follow');
             Route::post('users/{user}/unfollow', 'unfollow');
             Route::get('followers/suggestions', 'suggestions');
@@ -275,6 +275,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('reports/report/{target}', 'report');
             Route::post('reports/unblock/{target}', 'unblock');
             Route::get('reports/blocked-users', 'blockList');
+            Route::get('reports/reasons', 'reason');
         });
 
         // Settings
