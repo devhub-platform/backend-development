@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 env:
-  ELASTIC_BEANSTALK_NAME: devhub-app
+  ELASTIC_BEANSTALK_NAME: devhub
   ELASTIC_BEANSTALK_ENV_NAME: devhub-env
   AWS_REGION: us-east-1
   S3_BUCKET: elasticbeanstalk-us-east-1-447051187420
