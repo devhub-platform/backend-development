@@ -57,21 +57,16 @@ class FollowersController
         ]);
     }
 
-    public function followingCount(User $user)
+    public function UserFollow(User $user)
     {
-        $count = $user->following()->count();
-
-        if ($count === 0) {
-            return response()->json([
-                'message' => 'This user is not following anyone yet.'
-            ]);
-        }
+        $count_following = $user->following()->count();
+        $count_followers = $user->followers()->count();
 
         return response()->json([
             'following_count' => $count,
+            'followers_count' => $count_followers,
         ]);
     }
-
     public function myFollowers()
     {
         $user = auth()->user();
