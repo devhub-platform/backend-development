@@ -42,6 +42,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::post('register', 'register');
 
         Route::middleware(['auth:api', 'verified'])->group(function () {
+//        Route::controller(AuthController::class)->group(function () {
             Route::post('logout', 'logout');
             Route::post('refresh', 'refreshToken');
             Route::get('me', 'user');
