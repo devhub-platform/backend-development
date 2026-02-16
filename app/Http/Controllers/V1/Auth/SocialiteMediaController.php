@@ -74,7 +74,7 @@ class SocialiteMediaController
             ]
         );
 
-        JWTAuth::factory()->setTTL(60 * 24 * 30);
+        JWTAuth::factory()->setTTL(60 * 24 * 7); // Set token to expire in 3 months
         $token = JWTAuth::fromUser($user);
 
         return response()->json([
