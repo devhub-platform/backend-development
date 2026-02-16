@@ -40,13 +40,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
     Route::controller(AuthController::class)->group(function () {
         Route::post('login', 'login');
         Route::post('register', 'register');
-
-        Route::middleware(['auth:api', 'verified'])->group(function () {
-//        Route::controller(AuthController::class)->group(function () {
-            Route::post('logout', 'logout');
-            Route::post('refresh', 'refreshToken');
-            Route::get('me', 'user');
-        });
     });
 
     Route::controller(VerifyEmailController::class)->group(function () {
@@ -61,8 +54,13 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::post('password/reset', 'resetPassword');
     });
 
-    //Route::middleware(['auth:api', 'verified', 'throttle:25,1'])->group(function () {
     Route::middleware(['auth:api', 'throttle:25,1'])->group(function () {
+
+        Route::controller(AuthController::class)->group(function () {
+            Route::post('logout', 'logout');
+            Route::post('refresh', 'refreshToken');
+            Route::get('me', 'user');
+        });
 
         Route::controller(PostController::class)->group(function () {
             Route::get('user/posts', 'userPosts');
