@@ -48,13 +48,9 @@ jobs:
 
       - name: Run PHPUnit Tests
         env:
-          DB_CONNECTION: mysql
-          DB_HOST: devhub-db-fci-d430.c.aivencloud.com
-          DB_PORT: 14376
-          DB_DATABASE: defaultdb
-          DB_USERNAME: avnadmin
-          DB_PASSWORD: AVNS_FfEuHNVpORrl-2dUTav
-          MYSQL_ATTR_SSL_CA: /etc/ssl/certs/ca-certificates.crt
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ":memory:"
         run: php artisan test --without-tty
 
   build:
