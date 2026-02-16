@@ -10,7 +10,7 @@ env:
   ELASTIC_BEANSTALK_NAME: devhub-app
   ELASTIC_BEANSTALK_ENV_NAME: devhub-env
   AWS_REGION: us-east-1
-  S3_BUCKET: elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }}
+  S3_BUCKET: elasticbeanstalk-us-east-1-447051187420
 
 jobs:
   test:
@@ -49,12 +49,13 @@ jobs:
       - name: Run PHPUnit Tests
         env:
           DB_CONNECTION: mysql
-          DB_HOST: ${{ secrets.DB_HOST }}
-          DB_PORT: ${{ secrets.DB_PORT }}
-          DB_DATABASE: ${{ secrets.DB_DATABASE }}
-          DB_USERNAME: ${{ secrets.DB_USERNAME }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-        run: php artisan test
+          DB_HOST: devhub-db-fci-d430.c.aivencloud.com
+          DB_PORT: 14376
+          DB_DATABASE: defaultdb
+          DB_USERNAME: avnadmin
+          DB_PASSWORD: AVNS_FfEuHNVpORrl-2dUTav
+          MYSQL_ATTR_SSL_CA: /etc/ssl/certs/ca-certificates.crt
+        run: php artisan test --without-tty
 
   build:
     runs-on: ubuntu-latest
@@ -120,34 +121,34 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ env.AWS_REGION }}
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-north-1
+          aws-access-key-id: AKIAWQFSTYTOMJSWHL4J
+          aws-secret-access-key: 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
 
       - name: Upload to S3
         run: |
-          aws s3 cp "${{ github.run_id }}.zip" "s3://${{ env.S3_BUCKET }}/artifact/devhub-app/${{ github.run_id }}.zip"
+          aws s3 cp "${{ github.run_id }}.zip" "s3://devhub-storage-s3/artifact/devhub-app/${{ github.run_id }}.zip"
 
       - name: Create Elastic Beanstalk Application Version
         run: |
           aws elasticbeanstalk create-application-version \
-            --application-name ${{ env.ELASTIC_BEANSTALK_NAME }} \
+            --application-name devhub \
             --version-label "${{ github.run_id }}" \
             --description "Deployment from GitHub Actions - Commit: ${{ github.sha }}" \
-            --source-bundle S3Bucket="${{ env.S3_BUCKET }}",S3Key="artifact/devhub-app/${{ github.run_id }}.zip"
+            --source-bundle S3Bucket="devhub-storage-s3",S3Key="artifact/devhub-app/${{ github.run_id }}.zip"
 
       - name: Deploy to Elastic Beanstalk
         run: |
           aws elasticbeanstalk update-environment \
-            --application-name ${{ env.ELASTIC_BEANSTALK_NAME }} \
-            --environment-name ${{ env.ELASTIC_BEANSTALK_ENV_NAME }} \
+            --application-name devhub \
+            --environment-name Devhub-env \
             --version-label "${{ github.run_id }}"
 
       - name: Wait for Environment Update
         run: |
           aws elasticbeanstalk wait environment-updated \
-            --application-name ${{ env.ELASTIC_BEANSTALK_NAME }} \
-            --environment-name ${{ env.ELASTIC_BEANSTALK_ENV_NAME }}
+            --application-name devhub \
+            --environment-name Devhub-env
 
       - name: Deployment Success
         run: echo "Successfully deployed to AWS Elastic Beanstalk!"
