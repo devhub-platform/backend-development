@@ -64,7 +64,7 @@ class CommentController
         $comment = Comment::create($validated);
 
         // Send notification to post author if any one comment in his post, if author comment in his own post do not notify
-        if ($post->user_id !== auth()->id()) {
+        if ($post->user_id !== auth()->id() && $post->user->isNotificationEnabled('new_comment')) {
             Notification::send($post->user, new NewCommentNotification($comment));
         }
 
@@ -211,7 +211,7 @@ class CommentController
         ]);
     }
 
-    public function reply(StoreCommentRequest $request,Post $post, Comment $parentComment, ModerationService $moderationService)
+    public function reply(StoreCommentRequest $request, Post $post, Comment $parentComment, ModerationService $moderationService)
     {
         $this->authorize('create', Comment::class);
         $validated = $request->validated();
@@ -234,7 +234,7 @@ class CommentController
         $comment = Comment::create($validated);
 
         // Notify the parent comment author
-        if ($parentComment->user_id !== auth()->id()) {
+        if ($parentComment->user_id !== auth()->id() && $parentComment->user->isNotificationEnabled('new_comment')) {
             Notification::send($parentComment->user, new NewCommentNotification($comment));
         }
 
@@ -354,9 +354,6 @@ class CommentController
         ]);
     }
 
-    /**
-     * Get all reactions on a comment
-     */
     public function getReactions(Comment $comment)
     {
         return response()->json([
@@ -366,9 +363,6 @@ class CommentController
         ]);
     }
 
-    /**
-     * Get comment count for a post
-     */
     public function countByPost($postId)
     {
         $count = Comment::where('post_id', $postId)->count();
@@ -382,27 +376,6 @@ class CommentController
         ]);
     }
 
-    /**
-     * Get my deleted comments
-     */
-    public function myTrashedComments()
-    {
-        $comments = Comment::onlyTrashed()
-            ->where('user_id', auth()->id())
-            ->with(['post', 'user'])
-            ->latest('deleted_at')
-            ->paginate(15);
-
-        return response()->json([
-            'comments' => CommentResource::collection($comments),
-            'meta' => [
-                'current_page' => $comments->currentPage(),
-                'last_page' => $comments->lastPage(),
-                'per_page' => $comments->perPage(),
-                'total' => $comments->total(),
-            ]
-        ]);
-    }
 
     public function myRecentComments(Request $request)
     {
@@ -458,7 +431,10 @@ class CommentController
             ->get();
 
         foreach ($mentionedUsers as $user) {
-            $user->notify(new MentionInCommentNotification($comment->load('post'), $mentionedBy));
+            // Only notify if user has mention notifications enabled
+            if ($user->isNotificationEnabled('mention')) {
+                $user->notify(new MentionInCommentNotification($comment->load('post'), $mentionedBy));
+            }
         }
     }
 }

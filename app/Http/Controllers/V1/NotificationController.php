@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\V1;
 
+use App\Models\User;
+use Illuminate\Http\Request;
+
 class NotificationController
 {
     public function showNewCommentNotify()
@@ -117,6 +120,66 @@ class NotificationController
             ]);
         return response()->json([
             'new_mention_notifications' => $notifications,
+        ]);
+    }
+
+    public function getNotificationPreferences()
+    {
+        $user = auth()->user();
+        return response()->json([
+            'notification_preferences' => $user->getNotificationPreferences(),
+        ]);
+    }
+
+    public function updateNotificationPreferences(Request $request)
+    {
+        $user = auth()->user();
+
+        $validTypes = array_keys(User::getDefaultNotificationPreferences());
+
+        $validated = $request->validate([
+            'preferences' => 'required|array',
+            'preferences.*' => 'boolean',
+        ]);
+
+        $currentPreferences = $user->getNotificationPreferences();
+
+        foreach ($validated['preferences'] as $type => $enabled) {
+            if (in_array($type, $validTypes)) {
+                $currentPreferences[$type] = (bool) $enabled;
+            }
+        }
+
+        $user->update(['notification_preferences' => $currentPreferences]);
+
+        return response()->json([
+            'message' => 'Notification preferences updated successfully',
+            'notification_preferences' => $user->fresh()->getNotificationPreferences(),
+        ]);
+    }
+
+    public function toggleNotificationPreference(Request $request, string $type)
+    {
+        $user = auth()->user();
+
+        $validTypes = array_keys(User::getDefaultNotificationPreferences());
+
+        if (!in_array($type, $validTypes)) {
+            return response()->json([
+                'message' => 'Invalid notification type',
+                'valid_types' => $validTypes,
+            ], 400);
+        }
+
+        $currentPreferences = $user->getNotificationPreferences();
+        $newValue = !($currentPreferences[$type] ?? true);
+
+        $user->updateNotificationPreference($type, $newValue);
+
+        return response()->json([
+            'message' => "Notification '{$type}' " . ($newValue ? 'enabled' : 'disabled'),
+            'type' => $type,
+            'enabled' => $newValue,
         ]);
     }
 }
