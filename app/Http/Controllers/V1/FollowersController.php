@@ -29,9 +29,7 @@ class FollowersController
 
         $authUser->following()->attach($user->id);
 
-        if ($user->isNotificationEnabled('new_follower')) {
-            Notification::send($user, new FollowNotification($authUser));
-        }
+        Notification::send($user, new FollowNotification($authUser));
         Log::info("User {$authUser->id} followed user {$user->id}");
 
         return response()->json([

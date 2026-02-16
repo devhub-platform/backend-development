@@ -75,19 +75,27 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'alt_email_otp',
         'alt_email_otp_expires_at',
         'otp_expires_at',
-        'orcid_username',
-        'notification_preferences'
+        'orcid_username'
     ];
 
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var list<string>
+     */
     protected $hidden = [
         'password',
         'remember_token',
         'provider_id',
         'alt_email_otp',
-        'alt_email_otp_expires_at',
-        'notification_preferences',
+        'alt_email_otp_expires_at'
     ];
 
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
     protected function casts(): array
     {
         return [
@@ -97,7 +105,6 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             'alt_email_otp_expires_at' => 'datetime',
             'otp_expires_at' => 'datetime',
             'skills' => 'array',
-            'notification_preferences' => 'array',
         ];
     }
 
@@ -216,37 +223,5 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     public function isBlockedWith(User $other): bool
     {
         return $this->hasBlocked($other) || $this->isBlockedBy($other);
-    }
-
-    public static function getDefaultNotificationPreferences(): array
-    {
-        return [
-            'new_follower' => true,
-            'new_comment' => true,
-            'new_reaction' => true,
-            'new_post_from_following' => true,
-            'mention' => true,
-        ];
-    }
-
-    public function getNotificationPreferences(): array
-    {
-        return array_merge(
-            self::getDefaultNotificationPreferences(),
-            $this->notification_preferences ?? []
-        );
-    }
-
-    public function isNotificationEnabled(string $type): bool
-    {
-        $preferences = $this->getNotificationPreferences();
-        return $preferences[$type] ?? true;
-    }
-
-    public function updateNotificationPreference(string $type, bool $enabled): void
-    {
-        $preferences = $this->getNotificationPreferences();
-        $preferences[$type] = $enabled;
-        $this->update(['notification_preferences' => $preferences]);
     }
 }
