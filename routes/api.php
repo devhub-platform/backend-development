@@ -125,6 +125,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
             // Replies & Thread
             Route::get('comments/{comment}/replies', 'getReplies');
+            Route::get('comments/{comment}/thread', 'getThread');
 
             // Pin/Unpin
             Route::post('comments/{comment}/pin', 'pin');
@@ -210,10 +211,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('notifications/mark-as-read', 'makeAllRead');
             Route::post('notifications/{notification}/mark-as-read', 'makeAsRead');
             Route::delete('notifications/clear', 'clearAllNotifications');
-
-            Route::get('notifications/preferences', 'getNotificationPreferences');
-            Route::put('notifications/preferences', 'updateNotificationPreferences');
-            Route::patch('notifications/preferences/{type}/toggle', 'toggleNotificationPreference');
         });
 
         // Tags Follow
