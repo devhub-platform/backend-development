@@ -1,5 +1,5 @@
-🚀 DevHub Community - Developer Platform
-=========================================
+DevHub Community - Developer Platform
+=====================================
 
 .. image:: https://img.shields.io/badge/Laravel-12-red.svg
     :alt: Laravel 12
@@ -18,9 +18,8 @@
 
 A modern, feature-rich social platform built for developers to share knowledge, collaborate, and grow together. Built with Laravel 12 and cutting-edge web technologies.
 
-🌐 **Production URL:** http://devhub.eu-north-1.elasticbeanstalk.com
-
-📚 **API Documentation:** https://0yviq6a5i5.apidog.io/
+| **Production URL:** http://devhub.eu-north-1.elasticbeanstalk.com
+| **API Documentation:** https://0yviq6a5i5.apidog.io/
 
 .. contents:: Table of Contents
    :depth: 3
@@ -28,11 +27,11 @@ A modern, feature-rich social platform built for developers to share knowledge, 
 
 ----
 
-✨ Features
-===========
+Features
+========
 
-👤 Authentication & Users
--------------------------
+Authentication & Users
+----------------------
 - JWT-based secure authentication with refresh tokens
 - Social login (Google, GitHub, Microsoft, Medium)
 - Email verification with OTP
@@ -41,8 +40,8 @@ A modern, feature-rich social platform built for developers to share knowledge, 
 - User status & availability indicators
 - Alternative email support
 
-📝 Content & Social
--------------------
+Content & Social
+----------------
 - Rich post creation with tags & categories
 - Nested comment threads with reactions
 - Reading lists with notes & organization
@@ -51,16 +50,16 @@ A modern, feature-rich social platform built for developers to share knowledge, 
 - Post views tracking
 - Saved posts/bookmarks
 
-🤖 AI-Powered Tools
--------------------
+AI-Powered Tools
+----------------
 - Built-in code editor with 50+ language support
 - AI chat assistant (LLama integration)
 - Post summarization & translation
 - Content analysis & generation
 - Question answering about posts
 
-🛡️ Moderation & Security
--------------------------
+Moderation & Security
+---------------------
 - Content reporting system
 - User blocking functionality
 - Rate limiting & throttling
@@ -68,8 +67,8 @@ A modern, feature-rich social platform built for developers to share knowledge, 
 
 ----
 
-🔧 Tech Stack
-=============
+Tech Stack
+==========
 
 +------------------+----------------------------------------+
 | Component        | Technology                             |
@@ -93,8 +92,8 @@ A modern, feature-rich social platform built for developers to share knowledge, 
 
 ----
 
-🚀 Quick Start
-==============
+Quick Start
+===========
 
 Prerequisites
 -------------
@@ -133,8 +132,8 @@ Your API will be available at ``http://localhost:8000/api/v1``
 
 ----
 
-⚙️ Configuration
-=================
+Configuration
+=============
 
 Create a ``.env`` file with the following key configurations:
 
@@ -169,8 +168,8 @@ Create a ``.env`` file with the following key configurations:
 
 ----
 
-📚 API Reference
-================
+API Reference
+=============
 
 Base URL
 --------
@@ -195,8 +194,8 @@ Rate Limits
 
 ----
 
-🔐 Authentication APIs
-======================
+Authentication APIs
+===================
 
 Public Endpoints (No Auth Required)
 -----------------------------------
@@ -286,8 +285,8 @@ Protected Auth Endpoints
 
 ----
 
-📝 Posts APIs
-=============
+Posts APIs
+==========
 
 CRUD Operations
 ---------------
@@ -377,8 +376,8 @@ Post Views
 
 ----
 
-💬 Comments APIs
-================
+Comments APIs
+=============
 
 Create & Reply
 --------------
@@ -449,7 +448,7 @@ My Comments
 
 ----
 
-❤️ Reactions APIs
+Reactions APIs
 =================
 
 Post Reactions
@@ -483,8 +482,8 @@ Post Reactions
 
 ----
 
-👥 Users APIs
-=============
+Users APIs
+==========
 
 User Discovery
 --------------
@@ -544,8 +543,8 @@ User Status
 
 ----
 
-👤 Profile APIs
-===============
+Profile APIs
+============
 
 +---------------------------------------------+--------+----------------------------------+
 | Endpoint                                    | Method | Description                      |
@@ -584,8 +583,8 @@ User Status
 
 ----
 
-🔔 Followers APIs
-=================
+Followers APIs
+==============
 
 +---------------------------------------------+--------+----------------------------------+
 | Endpoint                                    | Method | Description                      |
@@ -603,8 +602,8 @@ User Status
 
 ----
 
-🏷️ Tags APIs
-=============
+Tags APIs
+=========
 
 Tag Management
 --------------
@@ -645,8 +644,8 @@ Tag Following
 
 ----
 
-🔍 Search APIs
-==============
+Search APIs
+===========
 
 +---------------------------------------------+--------+----------------------------------+
 | Endpoint                                    | Method | Description                      |
@@ -670,7 +669,7 @@ Tag Following
 
 ----
 
-🔔 Notifications APIs
+Notifications APIs
 =====================
 
 Get Notifications
@@ -722,8 +721,8 @@ Notification Preferences
 
 ----
 
-📚 Reading Lists APIs
-=====================
+Reading Lists APIs
+==================
 
 +---------------------------------------------+--------+----------------------------------+
 | Endpoint                                    | Method | Description                      |
@@ -772,8 +771,8 @@ Notification Preferences
 
 ----
 
-📌 Saved Posts APIs
-===================
+Saved Posts APIs
+================
 
 +---------------------------------------------+--------+----------------------------------+
 | Endpoint                                    | Method | Description                      |
@@ -787,7 +786,7 @@ Notification Preferences
 
 ----
 
-💻 Code Editor APIs
+Code Editor APIs
 ===================
 
 +---------------------------------------------+--------+----------------------------------+
@@ -841,7 +840,7 @@ Python, JavaScript, TypeScript, Java, C, C++, C#, Go, Rust, Ruby, PHP, Swift, Ko
 
 ----
 
-🤖 AI APIs
+AI APIs
 ==========
 
 Post AI Features
@@ -892,7 +891,7 @@ Post AI Features
 
 ----
 
-💬 AI Chat APIs
+AI Chat APIs
 ===============
 
 Chat
@@ -945,8 +944,8 @@ Chat History
 
 ----
 
-🚦 User Status APIs
-===================
+User Status APIs
+================
 
 +---------------------------------------------+--------+----------------------------------+
 | Endpoint                                    | Method | Description                      |
@@ -972,13 +971,13 @@ Chat History
 
     {
         "status": "Working on a new project",
-        "emoji": "💻",
+        "emoji": ":computer:",
         "expires_at": "2026-02-18T12:00:00Z"
     }
 
 ----
 
-🚫 Reports & Blocking APIs
+Reports & Blocking APIs
 ==========================
 
 +---------------------------------------------+--------+----------------------------------+
@@ -1006,8 +1005,8 @@ Chat History
 
 ----
 
-⚙️ Settings APIs
-================
+Settings APIs
+=============
 
 Password & Account
 ------------------
@@ -1049,7 +1048,7 @@ Alternative Email
 
 ----
 
-❌ Error Handling
+Error Handling
 =================
 
 HTTP Status Codes
@@ -1097,7 +1096,7 @@ Error Response Format
 
 ----
 
-📁 Project Structure
+Project Structure
 ====================
 
 .. code-block:: text
@@ -1130,8 +1129,8 @@ Error Response Format
 
 ----
 
-🐳 Docker Deployment
-====================
+Docker Deployment
+=================
 
 Using Docker
 ------------
@@ -1169,7 +1168,7 @@ Docker Compose
 
 ----
 
-🧪 Testing
+Testing
 ==========
 
 .. code-block:: bash
@@ -1185,7 +1184,7 @@ Docker Compose
 
 ----
 
-🔍 Debugging
+Debugging
 ============
 
 **Laravel Telescope**
@@ -1196,8 +1195,8 @@ Docker Compose
 
 ----
 
-🤝 Contributing
-===============
+Contributing
+============
 
 We welcome contributions! Please follow these steps:
 
@@ -1209,14 +1208,14 @@ We welcome contributions! Please follow these steps:
 
 ----
 
-📄 License
-==========
+License
+=======
 
 This project is licensed under the MIT License - see the `LICENSE <LICENSE>`_ file for details.
 
 ----
 
-📞 Support
+Support
 ==========
 
 - **Production API:** http://devhub.eu-north-1.elasticbeanstalk.com/api/v1
@@ -1226,4 +1225,4 @@ This project is licensed under the MIT License - see the `LICENSE <LICENSE>`_ fi
 
 ----
 
-**Built with ❤️ for the developer community**
+**Built with love for the developer community**
