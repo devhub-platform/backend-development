@@ -9,6 +9,10 @@ All protected endpoints require JWT token in the Authorization header:
 
    Authorization: Bearer <your-jwt-token>
 
+.. note::
+
+   For detailed request/response examples for each endpoint, see :doc:`api-examples`.
+
 Authentication
 --------------
 

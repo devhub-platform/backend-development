@@ -49,3 +49,4 @@ Contents
    Home <self>
    usage
    api
+   api-examples
