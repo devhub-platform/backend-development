@@ -1,49 +1,57 @@
-API Reference
-=============
+DevHub API Reference
+====================
 
-.. contents:: Table of Contents
+.. contents:: Contents
    :depth: 2
    :local:
 
 Overview
 --------
 
-**Base URL:** ``http://devhub.eu-north-1.elasticbeanstalk.com/api/v1``
+**Production URL**
+   ``https://devhub.eu-north-1.elasticbeanstalk.com/api/v1``
 
-**Content-Type:** ``application/json``
+**Content-Type**
+   ``application/json``
 
-**Authentication:** JWT Bearer Token
+**Authentication**
+   JWT Bearer Token
 
 .. code-block:: text
 
-   Authorization: Bearer <your-jwt-token>
+   Authorization: Bearer <your_jwt_token>
 
-**Rate Limits:**
+**Rate Limiting**
 
-- Public endpoints: 15 requests/minute
-- Protected endpoints: 25 requests/minute
++---------------------+---------------------+
+| Endpoint Type       | Limit               |
++=====================+=====================+
+| Public              | 15 requests/minute  |
++---------------------+---------------------+
+| Authenticated       | 25 requests/minute  |
++---------------------+---------------------+
 
-.. note::
+.. tip::
 
-   For detailed request/response examples for each endpoint, see :doc:`api-examples`.
+   For detailed request/response examples, see :doc:`api-examples`.
 
 ----
 
 Authentication
 --------------
 
-Login
-~~~~~
+User Login
+~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /login``
-   * - **Auth Required**
-     - No
+   * - **URL**
+     - ``POST /api/v1/login``
+   * - **Authentication**
+     - Not required
    * - **Description**
-     - Authenticate user and receive JWT token
+     - Authenticate user and receive JWT access token
 
 **Request Body:**
 
@@ -51,10 +59,10 @@ Login
 
    {
        "email": "user@example.com",
-       "password": "your-password"
+       "password": "your_password"
    }
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -67,26 +75,26 @@ Login
                "name": "John Doe",
                "username": "johndoe",
                "email": "user@example.com",
-               "avatar": "https://cloudinary.com/avatar.jpg"
+               "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg"
            },
-           "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+           "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
            "token_type": "bearer",
            "expires_in": 3600
        }
    }
 
-Register
-~~~~~~~~
+User Registration
+~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /register``
-   * - **Auth Required**
-     - No
+   * - **URL**
+     - ``POST /api/v1/register``
+   * - **Authentication**
+     - Not required
    * - **Description**
-     - Create new user account
+     - Create a new user account
 
 **Request Body:**
 
@@ -100,7 +108,7 @@ Register
        "password_confirmation": "SecurePass123!"
    }
 
-**Response (201):**
+**Success Response (201 Created):**
 
 .. code-block:: json
 
@@ -114,46 +122,46 @@ Register
                "username": "johndoe",
                "email": "john@example.com"
            },
-           "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+           "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
        }
    }
 
-Social Login
-~~~~~~~~~~~~
+Social Authentication
+~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 50 10 40
    :header-rows: 1
 
-   * - Endpoint
+   * - URL
      - Method
      - Description
-   * - ``/auth/google/login``
+   * - ``/api/v1/auth/google/login``
      - POST
-     - Initiate Google OAuth
-   * - ``/auth/google/callback``
+     - Initiate Google OAuth flow
+   * - ``/api/v1/auth/google/callback``
      - GET
-     - Google OAuth callback
-   * - ``/auth/github/login``
+     - Handle Google OAuth callback
+   * - ``/api/v1/auth/github/login``
      - POST
-     - Initiate GitHub OAuth
-   * - ``/auth/github/callback``
+     - Initiate GitHub OAuth flow
+   * - ``/api/v1/auth/github/callback``
      - GET
-     - GitHub OAuth callback
+     - Handle GitHub OAuth callback
 
 Email Verification
 ~~~~~~~~~~~~~~~~~~
 
-Send OTP
-""""""""
+Send Verification OTP
+"""""""""""""""""""""
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /email/send-otp``
-   * - **Auth Required**
-     - No
+   * - **URL**
+     - ``POST /api/v1/email/send-otp``
+   * - **Authentication**
+     - Not required
 
 **Request Body:**
 
@@ -163,7 +171,7 @@ Send OTP
        "email": "user@example.com"
    }
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -172,16 +180,16 @@ Send OTP
        "message": "OTP sent successfully to your email"
    }
 
-Verify OTP
-""""""""""
+Verify Email OTP
+""""""""""""""""
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /email/verify-otp``
-   * - **Auth Required**
-     - No
+   * - **URL**
+     - ``POST /api/v1/email/verify-otp``
+   * - **Authentication**
+     - Not required
 
 **Request Body:**
 
@@ -192,7 +200,7 @@ Verify OTP
        "otp": "123456"
    }
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -201,18 +209,18 @@ Verify OTP
        "message": "Email verified successfully"
    }
 
-Check Verification Status
-"""""""""""""""""""""""""
+Check Email Verification Status
+"""""""""""""""""""""""""""""""
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``GET /email/is-verified``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``GET /api/v1/email/is-verified``
+   * - **Authentication**
+     - Required
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -224,19 +232,19 @@ Check Verification Status
        }
    }
 
-Password Reset
-~~~~~~~~~~~~~~
+Password Recovery
+~~~~~~~~~~~~~~~~~
 
-Forgot Password
-"""""""""""""""
+Request Password Reset
+""""""""""""""""""""""
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /password/forgot``
-   * - **Auth Required**
-     - No
+   * - **URL**
+     - ``POST /api/v1/password/forgot``
+   * - **Authentication**
+     - Not required
 
 **Request Body:**
 
@@ -246,7 +254,7 @@ Forgot Password
        "email": "user@example.com"
    }
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -255,16 +263,16 @@ Forgot Password
        "message": "Password reset OTP sent to your email"
    }
 
-Verify Reset OTP
-""""""""""""""""
+Verify Password Reset OTP
+"""""""""""""""""""""""""
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /password/verify-otp``
-   * - **Auth Required**
-     - No
+   * - **URL**
+     - ``POST /api/v1/password/verify-otp``
+   * - **Authentication**
+     - Not required
 
 **Request Body:**
 
@@ -275,16 +283,16 @@ Verify Reset OTP
        "otp": "123456"
    }
 
-Reset Password
-""""""""""""""
+Set New Password
+""""""""""""""""
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /password/reset``
-   * - **Auth Required**
-     - No
+   * - **URL**
+     - ``POST /api/v1/password/reset``
+   * - **Authentication**
+     - Not required
 
 **Request Body:**
 
@@ -297,7 +305,7 @@ Reset Password
        "password_confirmation": "NewSecurePass123!"
    }
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -306,21 +314,21 @@ Reset Password
        "message": "Password reset successfully"
    }
 
-Token Management
-~~~~~~~~~~~~~~~~
+Session Management
+~~~~~~~~~~~~~~~~~~
 
-Logout
-""""""
+User Logout
+"""""""""""
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /logout``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/logout``
+   * - **Authentication**
+     - Required
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -329,42 +337,42 @@ Logout
        "message": "Successfully logged out"
    }
 
-Refresh Token
-"""""""""""""
+Refresh Access Token
+""""""""""""""""""""
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /refresh``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/refresh``
+   * - **Authentication**
+     - Required
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
    {
        "success": true,
        "data": {
-           "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9-NEW...",
+           "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
            "token_type": "bearer",
            "expires_in": 3600
        }
    }
 
-Get Current User
-""""""""""""""""
+Get Current User Profile
+""""""""""""""""""""""""
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``GET /me``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``GET /api/v1/me``
+   * - **Authentication**
+     - Required
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -375,8 +383,8 @@ Get Current User
            "name": "John Doe",
            "username": "johndoe",
            "email": "user@example.com",
-           "avatar": "https://cloudinary.com/avatar.jpg",
-           "cover_image": "https://cloudinary.com/cover.jpg",
+           "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg",
+           "cover_image": "https://res.cloudinary.com/devhub/image/cover.jpg",
            "bio": "Full-stack developer",
            "location": "San Francisco, CA",
            "website": "https://johndoe.dev",
@@ -392,20 +400,20 @@ Get Current User
 Posts
 -----
 
-List Posts
-~~~~~~~~~~
+List All Posts
+~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``GET /posts``
-   * - **Auth Required**
-     - No
-   * - **Query Params**
-     - ``page``, ``per_page``
+   * - **URL**
+     - ``GET /api/v1/posts``
+   * - **Authentication**
+     - Not required
+   * - **Query Parameters**
+     - ``page`` (int), ``per_page`` (int, default: 15)
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -426,7 +434,7 @@ List Posts
                    "id": 1,
                    "name": "John Doe",
                    "username": "johndoe",
-                   "avatar": "https://cloudinary.com/avatar.jpg"
+                   "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg"
                },
                "tags": [
                    {"id": 1, "name": "laravel"},
@@ -442,16 +450,16 @@ List Posts
        }
    }
 
-Create Post
-~~~~~~~~~~~
+Create New Post
+~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /posts``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/posts``
+   * - **Authentication**
+     - Required
 
 **Request Body:**
 
@@ -464,7 +472,7 @@ Create Post
        "tags": ["javascript", "react"]
    }
 
-**Response (201):**
+**Success Response (201 Created):**
 
 .. code-block:: json
 
@@ -481,18 +489,18 @@ Create Post
        }
    }
 
-Get Post
-~~~~~~~~
+Get Single Post
+~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``GET /posts/{id}``
-   * - **Auth Required**
-     - No
+   * - **URL**
+     - ``GET /api/v1/posts/{id}``
+   * - **Authentication**
+     - Not required
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -513,7 +521,7 @@ Get Post
                "id": 1,
                "name": "John Doe",
                "username": "johndoe",
-               "avatar": "https://cloudinary.com/avatar.jpg"
+               "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg"
            },
            "tags": [
                {"id": 1, "name": "laravel", "slug": "laravel"},
@@ -522,16 +530,16 @@ Get Post
        }
    }
 
-Update Post
-~~~~~~~~~~~
+Update Existing Post
+~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``PUT /posts/{id}`` or ``PATCH /posts/{id}``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``PUT /api/v1/posts/{id}`` or ``PATCH /api/v1/posts/{id}``
+   * - **Authentication**
+     - Required
 
 **Request Body:**
 
@@ -543,7 +551,7 @@ Update Post
        "status": "published"
    }
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -558,20 +566,20 @@ Update Post
        }
    }
 
-Delete Post
-~~~~~~~~~~~
+Delete Post (Soft Delete)
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``DELETE /posts/{id}``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``DELETE /api/v1/posts/{id}``
+   * - **Authentication**
+     - Required
    * - **Description**
-     - Soft delete (moves to trash)
+     - Moves the post to trash (can be restored)
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -580,31 +588,31 @@ Delete Post
        "message": "Post deleted successfully"
    }
 
-Force Delete Post
-~~~~~~~~~~~~~~~~~
+Delete Post Permanently
+~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``DELETE /posts/{id}/force``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``DELETE /api/v1/posts/{id}/force``
+   * - **Authentication**
+     - Required
    * - **Description**
-     - Permanently delete
+     - Permanently removes the post (cannot be restored)
 
-Restore Post
-~~~~~~~~~~~~
+Restore Deleted Post
+~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /posts/{id}/restore``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/posts/{id}/restore``
+   * - **Authentication**
+     - Required
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -613,65 +621,65 @@ Restore Post
        "message": "Post restored successfully"
    }
 
-Post Queries
-~~~~~~~~~~~~
+Additional Post Endpoints
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 50 10 40
    :header-rows: 1
 
-   * - Endpoint
+   * - URL
      - Method
      - Description
-   * - ``/user/posts``
+   * - ``/api/v1/user/posts``
      - GET
      - Get current user's posts
-   * - ``/posts/recent``
+   * - ``/api/v1/posts/recent``
      - GET
      - Get recent posts
-   * - ``/posts/top-views``
+   * - ``/api/v1/posts/top-views``
      - GET
-     - Get top viewed posts
-   * - ``/posts/drafts``
+     - Get most viewed posts
+   * - ``/api/v1/posts/drafts``
      - GET
      - Get user's draft posts
-   * - ``/posts/archives``
+   * - ``/api/v1/posts/archives``
      - GET
      - Get archived/trashed posts
-   * - ``/posts/viewed/recent``
+   * - ``/api/v1/posts/viewed/recent``
      - GET
      - Get recently viewed posts
-   * - ``/posts/viewed/clear``
+   * - ``/api/v1/posts/viewed/clear``
      - DELETE
-     - Clear viewed history
+     - Clear viewing history
 
-Post Tags
-~~~~~~~~~
+Post Tags Endpoints
+~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 50 10 40
    :header-rows: 1
 
-   * - Endpoint
+   * - URL
      - Method
      - Description
-   * - ``/posts/{id}/tags``
+   * - ``/api/v1/posts/{id}/tags``
      - GET
-     - Get post tags (detailed)
-   * - ``/posts/{id}/tags-list``
+     - Get post tags with details
+   * - ``/api/v1/posts/{id}/tags-list``
      - GET
-     - Get post tags (list)
+     - Get post tags as simple list
 
-Report Post
-~~~~~~~~~~~
+Report a Post
+~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /posts/{id}/report``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/posts/{id}/report``
+   * - **Authentication**
+     - Required
 
 **Request Body:**
 
@@ -682,7 +690,7 @@ Report Post
        "description": "This post contains spam content"
    }
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -697,26 +705,26 @@ Get Report Reasons
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``GET /posts/report/reasons``
-   * - **Auth Required**
-     - No
+   * - **URL**
+     - ``GET /api/v1/posts/report/reasons``
+   * - **Authentication**
+     - Not required
 
 ----
 
 Comments
 --------
 
-Create Comment
-~~~~~~~~~~~~~~
+Create New Comment
+~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /posts/{postId}/comments``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/posts/{postId}/comments``
+   * - **Authentication**
+     - Required
 
 **Request Body:**
 
@@ -726,7 +734,7 @@ Create Comment
        "content": "Great article! Very helpful for beginners."
    }
 
-**Response (201):**
+**Success Response (201 Created):**
 
 .. code-block:: json
 
@@ -746,21 +754,21 @@ Create Comment
                "id": 5,
                "name": "Jane Smith",
                "username": "janesmith",
-               "avatar": "https://cloudinary.com/avatar.jpg"
+               "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg"
            }
        }
    }
 
-Reply to Comment
-~~~~~~~~~~~~~~~~
+Reply to a Comment
+~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /posts/{postId}/comments/{commentId}/reply``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/posts/{postId}/comments/{commentId}/reply``
+   * - **Authentication**
+     - Required
 
 **Request Body:**
 
@@ -770,18 +778,18 @@ Reply to Comment
        "content": "Thank you for your feedback!"
    }
 
-Get Comments
-~~~~~~~~~~~~
+Get Post Comments
+~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``GET /posts/{postId}/comments``
-   * - **Auth Required**
-     - No
+   * - **URL**
+     - ``GET /api/v1/posts/{postId}/comments``
+   * - **Authentication**
+     - Not required
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -798,7 +806,7 @@ Get Comments
                "user": {
                    "id": 5,
                    "name": "Jane Smith",
-                   "avatar": "https://cloudinary.com/avatar.jpg"
+                   "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg"
                },
                "replies": [
                    {
@@ -815,43 +823,43 @@ Get Comments
        }
    }
 
-Comment Endpoints
-~~~~~~~~~~~~~~~~~
+Additional Comment Endpoints
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 50 10 40
    :header-rows: 1
 
-   * - Endpoint
+   * - URL
      - Method
      - Description
-   * - ``/posts/{postId}/comments/count``
+   * - ``/api/v1/posts/{postId}/comments/count``
      - GET
-     - Get comment count
-   * - ``/users/{userId}/comments``
+     - Get comment count for post
+   * - ``/api/v1/users/{userId}/comments``
      - GET
-     - Get comments by user
-   * - ``/comments/{id}/replies``
+     - Get comments by specific user
+   * - ``/api/v1/comments/{id}/replies``
      - GET
-     - Get replies to comment
-   * - ``/comments/{id}/thread``
+     - Get all replies to a comment
+   * - ``/api/v1/comments/{id}/thread``
      - GET
-     - Get full thread
-   * - ``/comments/{id}/pin``
+     - Get full comment thread
+   * - ``/api/v1/comments/{id}/pin``
      - POST
-     - Pin comment
-   * - ``/comments/{id}/unpin``
+     - Pin a comment
+   * - ``/api/v1/comments/{id}/unpin``
      - POST
-     - Unpin comment
-   * - ``/comments/{id}/force``
+     - Unpin a comment
+   * - ``/api/v1/comments/{id}/force``
      - DELETE
-     - Delete permanently
-   * - ``/my/comments``
+     - Permanently delete comment
+   * - ``/api/v1/my/comments``
      - GET
-     - Get my comments
-   * - ``/my/comments/stats``
+     - Get my recent comments
+   * - ``/api/v1/my/comments/stats``
      - GET
-     - Get my stats
+     - Get my comment statistics
 
 Comment Reactions
 ~~~~~~~~~~~~~~~~~
@@ -860,37 +868,37 @@ Comment Reactions
    :widths: 50 10 40
    :header-rows: 1
 
-   * - Endpoint
+   * - URL
      - Method
      - Description
-   * - ``/comments/{id}/react``
+   * - ``/api/v1/comments/{id}/react``
      - POST
-     - React to comment
-   * - ``/comments/{id}/remove-react``
+     - Add reaction to comment
+   * - ``/api/v1/comments/{id}/remove-react``
      - DELETE
-     - Remove reaction
-   * - ``/comments/{id}/my-reaction``
+     - Remove reaction from comment
+   * - ``/api/v1/comments/{id}/my-reaction``
      - GET
-     - Get my reaction
-   * - ``/comments/{id}/reactions``
+     - Get my reaction on comment
+   * - ``/api/v1/comments/{id}/reactions``
      - GET
-     - Get all reactions
+     - Get all reactions on comment
 
 ----
 
 Reactions
 ---------
 
-React to Post
-~~~~~~~~~~~~~
+Add Reaction to Post
+~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /posts/{id}/react``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/posts/{id}/react``
+   * - **Authentication**
+     - Required
 
 **Request Body:**
 
@@ -900,9 +908,15 @@ React to Post
        "reaction": "love"
    }
 
-**Available Reactions:** ``like``, ``love``, ``clap``, ``insightful``, ``celebrate``
+**Available Reaction Types:**
 
-**Response (200):**
+- ``like`` - Standard like
+- ``love`` - Heart reaction
+- ``clap`` - Applause
+- ``insightful`` - Valuable content
+- ``celebrate`` - Celebration
+
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -915,18 +929,18 @@ React to Post
        }
    }
 
-Get Reaction Counts
-~~~~~~~~~~~~~~~~~~~
+Get Post Reaction Counts
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``GET /posts/{id}/reactions-count``
-   * - **Auth Required**
-     - No
+   * - **URL**
+     - ``GET /api/v1/posts/{id}/reactions-count``
+   * - **Authentication**
+     - Not required
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -942,26 +956,26 @@ Get Reaction Counts
        }
    }
 
-Reaction Endpoints
-~~~~~~~~~~~~~~~~~~
+Additional Reaction Endpoints
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 50 10 40
    :header-rows: 1
 
-   * - Endpoint
+   * - URL
      - Method
      - Description
-   * - ``/posts/{id}/remove-react``
+   * - ``/api/v1/posts/{id}/remove-react``
      - DELETE
-     - Remove reaction
-   * - ``/posts/{id}/my-reaction``
+     - Remove reaction from post
+   * - ``/api/v1/posts/{id}/my-reaction``
      - GET
-     - Get my reaction
-   * - ``/posts/{id}/reactors``
+     - Get my reaction on post
+   * - ``/api/v1/posts/{id}/reactors``
      - GET
-     - Get list of reactors
-   * - ``/user/posts/total-reactions``
+     - Get list of users who reacted
+   * - ``/api/v1/user/posts/total-reactions``
      - GET
      - Get total reactions on my posts
 
@@ -970,20 +984,20 @@ Reaction Endpoints
 Users
 -----
 
-List Users
-~~~~~~~~~~
+List All Users
+~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``GET /users``
-   * - **Auth Required**
-     - No
-   * - **Query Params**
-     - ``page``, ``per_page``
+   * - **URL**
+     - ``GET /api/v1/users``
+   * - **Authentication**
+     - Not required
+   * - **Query Parameters**
+     - ``page`` (int), ``per_page`` (int, default: 15)
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1007,18 +1021,18 @@ List Users
        }
    }
 
-Get User
-~~~~~~~~
+Get User by ID
+~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``GET /users/{id}``
-   * - **Auth Required**
-     - No
+   * - **URL**
+     - ``GET /api/v1/users/{id}``
+   * - **Authentication**
+     - Not required
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1029,8 +1043,8 @@ Get User
            "name": "John Doe",
            "username": "johndoe",
            "email": "john@example.com",
-           "avatar": "https://cloudinary.com/avatar.jpg",
-           "cover_image": "https://cloudinary.com/cover.jpg",
+           "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg",
+           "cover_image": "https://res.cloudinary.com/devhub/image/cover.jpg",
            "bio": "Full-stack developer passionate about Laravel",
            "location": "San Francisco, CA",
            "website": "https://johndoe.dev",
@@ -1045,70 +1059,70 @@ Get User
        }
    }
 
-User Endpoints
-~~~~~~~~~~~~~~
+Additional User Endpoints
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 50 10 40
    :header-rows: 1
 
-   * - Endpoint
+   * - URL
      - Method
      - Description
-   * - ``/users/recommended``
+   * - ``/api/v1/users/recommended``
      - GET
-     - Get recommended users
-   * - ``/users/{id}/similar-skills``
+     - Get recommended users to follow
+   * - ``/api/v1/users/{id}/similar-skills``
      - GET
      - Get users with similar skills
-   * - ``/users/{id}/posts``
+   * - ``/api/v1/users/{id}/posts``
      - GET
-     - Get user's posts
-   * - ``/users/{id}/comments``
+     - Get posts by user
+   * - ``/api/v1/users/{id}/comments``
      - GET
-     - Get user's comments
-   * - ``/users/{id}/tags``
+     - Get comments by user
+   * - ``/api/v1/users/{id}/tags``
      - GET
-     - Get user's followed tags
-   * - ``/users/{id}/followers``
+     - Get tags followed by user
+   * - ``/api/v1/users/{id}/followers``
      - GET
-     - Get user's followers
-   * - ``/users/{id}/followers/count``
+     - Get user's followers list
+   * - ``/api/v1/users/{id}/followers/count``
      - GET
-     - Get followers count
-   * - ``/users/{id}/following``
+     - Get follower count
+   * - ``/api/v1/users/{id}/following``
      - GET
      - Get users being followed
-   * - ``/users/{id}/mutual-followers``
+   * - ``/api/v1/users/{id}/mutual-followers``
      - GET
      - Get mutual followers
-   * - ``/users/{id}/mutual-following``
+   * - ``/api/v1/users/{id}/mutual-following``
      - GET
-     - Check mutual following
-   * - ``/users/{id}/follow-stats/count``
+     - Check if mutually following
+   * - ``/api/v1/users/{id}/follow-stats/count``
      - GET
      - Get follow statistics
-   * - ``/users/{username}/status``
+   * - ``/api/v1/users/{username}/status``
      - GET
-     - Get user's status
+     - Get user's current status
 
 ----
 
 Profile
 -------
 
-Get Profile
-~~~~~~~~~~~
+Get My Profile
+~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``GET /profile``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``GET /api/v1/profile``
+   * - **Authentication**
+     - Required
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1119,8 +1133,8 @@ Get Profile
            "name": "John Doe",
            "username": "johndoe",
            "email": "john@example.com",
-           "avatar": "https://cloudinary.com/avatar.jpg",
-           "cover_image": "https://cloudinary.com/cover.jpg",
+           "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg",
+           "cover_image": "https://res.cloudinary.com/devhub/image/cover.jpg",
            "bio": "Full-stack developer",
            "location": "San Francisco, CA",
            "website": "https://johndoe.dev",
@@ -1132,16 +1146,16 @@ Get Profile
        }
    }
 
-Update Profile
-~~~~~~~~~~~~~~
+Update My Profile
+~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``PATCH /profile``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``PATCH /api/v1/profile``
+   * - **Authentication**
+     - Required
 
 **Request Body:**
 
@@ -1156,7 +1170,7 @@ Update Profile
        "linkedin": "johndoe"
    }
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1171,16 +1185,16 @@ Update Profile
        }
    }
 
-Upload Avatar
-~~~~~~~~~~~~~
+Upload Profile Avatar
+~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /profile/upload/avatar``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/profile/upload/avatar``
+   * - **Authentication**
+     - Required
    * - **Content-Type**
      - ``multipart/form-data``
 
@@ -1198,20 +1212,20 @@ Upload Avatar
        "success": true,
        "message": "Avatar uploaded successfully",
        "data": {
-           "avatar": "https://cloudinary.com/new-avatar.jpg"
+           "avatar": "https://res.cloudinary.com/devhub/image/new-avatar.jpg"
        }
    }
 
-Upload Cover Image
-~~~~~~~~~~~~~~~~~~
+Upload Profile Cover Image
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /profile/upload/cover-image``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/profile/upload/cover-image``
+   * - **Authentication**
+     - Required
    * - **Content-Type**
      - ``multipart/form-data``
 
@@ -1221,49 +1235,49 @@ Upload Cover Image
 
    cover_image: [binary image file]
 
-Profile Endpoints
-~~~~~~~~~~~~~~~~~
+Additional Profile Endpoints
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 50 10 40
    :header-rows: 1
 
-   * - Endpoint
+   * - URL
      - Method
      - Description
-   * - ``/profile/details``
+   * - ``/api/v1/profile/details``
      - GET
-     - Get detailed profile info
-   * - ``/profile/activity``
+     - Get detailed profile information
+   * - ``/api/v1/profile/activity``
      - GET
-     - Get my activity stats
-   * - ``/profile/user/posts``
+     - Get my activity statistics
+   * - ``/api/v1/profile/user/posts``
      - GET
      - Get my posts
-   * - ``/profile/user/comments``
+   * - ``/api/v1/profile/user/comments``
      - GET
      - Get my comments
-   * - ``/profile/user/tags``
+   * - ``/api/v1/profile/user/tags``
      - GET
-     - Get my tags
+     - Get my followed tags
 
 ----
 
 Followers
 ---------
 
-Follow User
-~~~~~~~~~~~
+Follow a User
+~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /users/{id}/follow``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/users/{id}/follow``
+   * - **Authentication**
+     - Required
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1276,18 +1290,18 @@ Follow User
        }
    }
 
-Unfollow User
-~~~~~~~~~~~~~
+Unfollow a User
+~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /users/{id}/unfollow``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/users/{id}/unfollow``
+   * - **Authentication**
+     - Required
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1300,43 +1314,43 @@ Unfollow User
        }
    }
 
-Follower Endpoints
-~~~~~~~~~~~~~~~~~~
+Additional Follower Endpoints
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 50 10 40
    :header-rows: 1
 
-   * - Endpoint
+   * - URL
      - Method
      - Description
-   * - ``/followers/suggestions``
+   * - ``/api/v1/followers/suggestions``
      - GET
      - Get follow suggestions
-   * - ``/followers/my-followers``
+   * - ``/api/v1/followers/my-followers``
      - GET
-     - Get my followers
-   * - ``/followers/my-following``
+     - Get my followers list
+   * - ``/api/v1/followers/my-following``
      - GET
-     - Get who I'm following
+     - Get users I'm following
 
 ----
 
 Tags
 ----
 
-List Tags
-~~~~~~~~~
+List All Tags
+~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``GET /tags``
-   * - **Auth Required**
-     - No
+   * - **URL**
+     - ``GET /api/v1/tags``
+   * - **Authentication**
+     - Not required
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1353,16 +1367,16 @@ List Tags
        ]
    }
 
-Create Tag
-~~~~~~~~~~
+Create New Tag
+~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /tags``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/tags``
+   * - **Authentication**
+     - Required
 
 **Request Body:**
 
@@ -1372,7 +1386,7 @@ Create Tag
        "name": "typescript"
    }
 
-**Response (201):**
+**Success Response (201 Created):**
 
 .. code-block:: json
 
@@ -1386,32 +1400,32 @@ Create Tag
        }
    }
 
-Tag Endpoints
-~~~~~~~~~~~~~
+Additional Tag Endpoints
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 50 10 40
    :header-rows: 1
 
-   * - Endpoint
+   * - URL
      - Method
      - Description
-   * - ``/tags/popular``
+   * - ``/api/v1/tags/popular``
      - GET
-     - Get popular tags
-   * - ``/posts/{postId}/tags``
+     - Get popular/trending tags
+   * - ``/api/v1/posts/{postId}/tags``
      - POST
-     - Attach tags to post
-   * - ``/posts/{postId}/tags/{tagId}``
+     - Attach tags to a post
+   * - ``/api/v1/posts/{postId}/tags/{tagId}``
      - DELETE
-     - Detach tag from post
-   * - ``/tags/{id}/follow``
+     - Remove tag from post
+   * - ``/api/v1/tags/{id}/follow``
      - POST
      - Follow a tag
-   * - ``/tags/{id}/unfollow``
+   * - ``/api/v1/tags/{id}/unfollow``
      - DELETE
      - Unfollow a tag
-   * - ``/tags/{id}/followers``
+   * - ``/api/v1/tags/{id}/followers``
      - GET
      - Get tag followers
 
@@ -1426,16 +1440,20 @@ Search Posts
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``GET /search/posts``
-   * - **Auth Required**
-     - No
-   * - **Query Params**
-     - ``q``, ``page``, ``per_page``
+   * - **URL**
+     - ``GET /api/v1/search/posts``
+   * - **Authentication**
+     - Not required
+   * - **Query Parameters**
+     - ``q`` (string, required), ``page`` (int), ``per_page`` (int)
 
-**Example:** ``GET /search/posts?q=laravel&page=1&per_page=15``
+**Example Request:**
 
-**Response (200):**
+.. code-block:: http
+
+   GET /api/v1/search/posts?q=laravel&page=1&per_page=15
+
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1463,26 +1481,26 @@ Search Posts
        }
    }
 
-Search Endpoints
-~~~~~~~~~~~~~~~~
+Additional Search Endpoints
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 50 10 40
    :header-rows: 1
 
-   * - Endpoint
+   * - URL
      - Method
      - Description
-   * - ``/search/users``
+   * - ``/api/v1/search/users``
      - GET
-     - Search users by username
-   * - ``/search/tags``
+     - Search users by username or name
+   * - ``/api/v1/search/tags``
      - GET
-     - Search tags
-   * - ``/search/histories``
+     - Search tags by name
+   * - ``/api/v1/search/histories``
      - GET
-     - Get search history
-   * - ``/search/clear``
+     - Get recent search history
+   * - ``/api/v1/search/clear``
      - DELETE
      - Clear search history
 
@@ -1497,12 +1515,12 @@ Get All Notifications
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``GET /notifications/all``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``GET /api/v1/notifications/all``
+   * - **Authentication**
+     - Required
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1510,7 +1528,7 @@ Get All Notifications
        "success": true,
        "data": [
            {
-               "id": "uuid-notification-1",
+               "id": "550e8400-e29b-41d4-a716-446655440000",
                "type": "comment",
                "message": "Jane Smith commented on your post",
                "data": {
@@ -1519,7 +1537,7 @@ Get All Notifications
                    "user": {
                        "id": 5,
                        "name": "Jane Smith",
-                       "avatar": "https://cloudinary.com/avatar.jpg"
+                       "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg"
                    }
                },
                "read_at": null,
@@ -1532,52 +1550,52 @@ Get All Notifications
        }
    }
 
-Notification Endpoints
-~~~~~~~~~~~~~~~~~~~~~~
+Additional Notification Endpoints
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 50 10 40
    :header-rows: 1
 
-   * - Endpoint
+   * - URL
      - Method
      - Description
-   * - ``/notifications/comments``
+   * - ``/api/v1/notifications/comments``
      - GET
      - Get comment notifications
-   * - ``/notifications/reacts``
+   * - ``/api/v1/notifications/reacts``
      - GET
      - Get reaction notifications
-   * - ``/notifications/new-followers``
+   * - ``/api/v1/notifications/new-followers``
      - GET
-     - Get follower notifications
-   * - ``/notifications/post-created``
+     - Get new follower notifications
+   * - ``/api/v1/notifications/post-created``
      - GET
      - Get new post notifications
-   * - ``/notifications/mention``
+   * - ``/api/v1/notifications/mention``
      - GET
      - Get mention notifications
-   * - ``/notifications/mark-as-read``
+   * - ``/api/v1/notifications/mark-as-read``
      - POST
-     - Mark all as read
-   * - ``/notifications/{id}/mark-as-read``
+     - Mark all notifications as read
+   * - ``/api/v1/notifications/{id}/mark-as-read``
      - POST
-     - Mark single as read
-   * - ``/notifications/clear``
+     - Mark single notification as read
+   * - ``/api/v1/notifications/clear``
      - DELETE
      - Clear all notifications
-   * - ``/notifications/followers/clear``
+   * - ``/api/v1/notifications/followers/clear``
      - DELETE
      - Clear follower notifications
-   * - ``/notifications/preferences``
+   * - ``/api/v1/notifications/preferences``
      - GET
-     - Get preferences
-   * - ``/notifications/preferences``
+     - Get notification preferences
+   * - ``/api/v1/notifications/preferences``
      - PUT
-     - Update preferences
-   * - ``/notifications/preferences/{type}/toggle``
+     - Update notification preferences
+   * - ``/api/v1/notifications/preferences/{type}/toggle``
      - PATCH
-     - Toggle preference
+     - Toggle specific preference
 
 ----
 
@@ -1619,16 +1637,16 @@ Get Reading Lists
        ]
    }
 
-Create Reading List
-~~~~~~~~~~~~~~~~~~~
+Create New Reading List
+~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /reading-lists``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/reading-lists``
+   * - **Authentication**
+     - Required
 
 **Request Body:**
 
@@ -1639,7 +1657,7 @@ Create Reading List
        "description": "Collection of React articles"
    }
 
-**Response (201):**
+**Success Response (201 Created):**
 
 .. code-block:: json
 
@@ -1655,44 +1673,44 @@ Create Reading List
        }
    }
 
-Reading List Endpoints
-~~~~~~~~~~~~~~~~~~~~~~
+Additional Reading List Endpoints
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 50 10 40
    :header-rows: 1
 
-   * - Endpoint
+   * - URL
      - Method
      - Description
-   * - ``/reading-lists/{id}``
+   * - ``/api/v1/reading-lists/{id}``
      - GET
      - Get single reading list
-   * - ``/reading-lists/{id}``
+   * - ``/api/v1/reading-lists/{id}``
      - PATCH
      - Update reading list
-   * - ``/reading-lists/{id}``
+   * - ``/api/v1/reading-lists/{id}``
      - DELETE
      - Delete reading list
-   * - ``/reading-lists/{id}/add-post/{postId}``
+   * - ``/api/v1/reading-lists/{id}/add-post/{postId}``
      - POST
      - Add post to list
-   * - ``/reading-lists/{id}/remove-post/{postId}``
+   * - ``/api/v1/reading-lists/{id}/remove-post/{postId}``
      - DELETE
      - Remove post from list
-   * - ``/reading-lists/{id}/move-post/{postId}``
+   * - ``/api/v1/reading-lists/{id}/move-post/{postId}``
      - POST
      - Move post to another list
-   * - ``/reading-lists/{id}/add-note/{postId}``
+   * - ``/api/v1/reading-lists/{id}/add-note/{postId}``
      - POST
-     - Add note to post
-   * - ``/reading-lists/{id}/delete-note/{postId}``
+     - Add note to a post
+   * - ``/api/v1/reading-lists/{id}/delete-note/{postId}``
      - DELETE
-     - Delete note
-   * - ``/reading-lists/{id}/show-notes/{postId}``
+     - Delete note from post
+   * - ``/api/v1/reading-lists/{id}/show-notes/{postId}``
      - GET
-     - Show notes for post
-   * - ``/reading-lists/{id}/duplicate``
+     - Show notes for a post
+   * - ``/api/v1/reading-lists/{id}/duplicate``
      - POST
      - Duplicate reading list
 
@@ -1705,20 +1723,20 @@ Saved Posts
    :widths: 50 10 40
    :header-rows: 1
 
-   * - Endpoint
+   * - URL
      - Method
      - Description
-   * - ``/saved-posts``
+   * - ``/api/v1/saved-posts``
      - GET
      - Get all saved posts
-   * - ``/saved-posts/{postId}``
+   * - ``/api/v1/saved-posts/{postId}``
      - POST
-     - Save a post
-   * - ``/saved-posts/{postId}``
+     - Save a post to bookmarks
+   * - ``/api/v1/saved-posts/{postId}``
      - DELETE
-     - Unsave a post
+     - Remove post from bookmarks
 
-**GET /saved-posts Response:**
+**GET /api/v1/saved-posts Response:**
 
 .. code-block:: json
 
@@ -1750,18 +1768,18 @@ Saved Posts
 Code Editor
 -----------
 
-Get Runtimes
-~~~~~~~~~~~~
+Get Available Runtimes
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``GET /code/runtimes``
-   * - **Auth Required**
-     - No
+   * - **URL**
+     - ``GET /api/v1/code/runtimes``
+   * - **Authentication**
+     - Not required
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1788,10 +1806,10 @@ Execute Code
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /code/execute``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/code/execute``
+   * - **Authentication**
+     - Required
 
 **Request Body:**
 
@@ -1805,7 +1823,7 @@ Execute Code
        "timeout": 30
    }
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1827,8 +1845,8 @@ Execute Code
        }
    }
 
-Code Editor Endpoints
-~~~~~~~~~~~~~~~~~~~~~
+Additional Code Editor Endpoints
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 50 10 40
@@ -1839,10 +1857,10 @@ Code Editor Endpoints
      - Description
    * - ``/code/search-runtimes``
      - GET
-     - Search runtimes
-   * - ``/code/languages``
+     - Search runtimes by language
+   * - ``/api/v1/code/languages``
      - GET
-     - Get supported languages
+     - Get all supported languages
 
 **Supported Languages (50+):** Python, JavaScript, TypeScript, Java, C, C++, C#, Go, Rust, Ruby, PHP, Swift, Kotlin, Scala, R, Perl, Lua, Haskell, Elixir, and more.
 
@@ -1851,18 +1869,18 @@ Code Editor Endpoints
 AI Features
 -----------
 
-Summarize Post
-~~~~~~~~~~~~~~
+Summarize Post Content
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /ai/summarize/post/{postId}``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/ai/summarize/post/{postId}``
+   * - **Authentication**
+     - Required
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1876,16 +1894,16 @@ Summarize Post
        }
    }
 
-Translate Post
-~~~~~~~~~~~~~~
+Translate Post Content
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /ai/translate/post/{postId}``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/ai/translate/post/{postId}``
+   * - **Authentication**
+     - Required
 
 **Request Body:**
 
@@ -1895,7 +1913,7 @@ Translate Post
        "target_language": "es"
    }
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1909,18 +1927,18 @@ Translate Post
        }
    }
 
-Analyze Post
-~~~~~~~~~~~~
+Analyze Post Content
+~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /ai/analyze/post/{postId}``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/ai/analyze/post/{postId}``
+   * - **Authentication**
+     - Required
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1942,10 +1960,10 @@ Ask Question About Post
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /ai/question/post/{postId}``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/ai/question/post/{postId}``
+   * - **Authentication**
+     - Required
 
 **Request Body:**
 
@@ -1955,7 +1973,7 @@ Ask Question About Post
        "question": "What are the main benefits mentioned in this article?"
    }
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1968,16 +1986,16 @@ Ask Question About Post
        }
    }
 
-Generate Content
-~~~~~~~~~~~~~~~~
+Generate AI Content
+~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /ai/generate/content``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/ai/generate/content``
+   * - **Authentication**
+     - Required
 
 **Request Body:**
 
@@ -1989,38 +2007,38 @@ Generate Content
        "tone": "educational"
    }
 
-AI Endpoints
-~~~~~~~~~~~~
+Additional AI Endpoints
+~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 50 10 40
    :header-rows: 1
 
-   * - Endpoint
+   * - URL
      - Method
      - Description
-   * - ``/ai/summarize/llama/post/{postId}``
+   * - ``/api/v1/ai/summarize/llama/post/{postId}``
      - POST
-     - Summarize using LLama
-   * - ``/ai/summarize/post/languages``
+     - Summarize using LLama model
+   * - ``/api/v1/ai/summarize/post/languages``
      - GET
-     - Get supported languages
+     - Get supported translation languages
 
 ----
 
 AI Chat
 -------
 
-Send Message
-~~~~~~~~~~~~
+Send Chat Message
+~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /ai-chat/send``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/ai-chat/send``
+   * - **Authentication**
+     - Required
 
 **Request Body:**
 
@@ -2032,7 +2050,7 @@ Send Message
        "model": "llama"
    }
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2048,18 +2066,18 @@ Send Message
        }
    }
 
-Get AI Models
-~~~~~~~~~~~~~
+Get Available AI Models
+~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``GET /ai-chat/models``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``GET /api/v1/ai-chat/models``
+   * - **Authentication**
+     - Required
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2081,44 +2099,44 @@ Get AI Models
        ]
    }
 
-AI Chat Endpoints
-~~~~~~~~~~~~~~~~~
+Additional AI Chat Endpoints
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 50 10 40
    :header-rows: 1
 
-   * - Endpoint
+   * - URL
      - Method
      - Description
-   * - ``/ai-chat/attachments/upload``
+   * - ``/api/v1/ai-chat/attachments/upload``
      - POST
-     - Upload attachment
-   * - ``/ai-chat/history/sessions``
+     - Upload file attachment
+   * - ``/api/v1/ai-chat/history/sessions``
      - GET
-     - List all sessions
-   * - ``/ai-chat/history/sessions/create``
+     - List all chat sessions
+   * - ``/api/v1/ai-chat/history/sessions/create``
      - POST
-     - Create new session
-   * - ``/ai-chat/history/sessions/{id}``
+     - Create new chat session
+   * - ``/api/v1/ai-chat/history/sessions/{id}``
      - GET
-     - Get session details
-   * - ``/ai-chat/history/sessions/{id}``
+     - Get session details with messages
+   * - ``/api/v1/ai-chat/history/sessions/{id}``
      - DELETE
-     - Delete session
-   * - ``/ai-chat/history/sessions/{id}/pin``
+     - Delete chat session
+   * - ``/api/v1/ai-chat/history/sessions/{id}/pin``
      - POST
-     - Pin session
-   * - ``/ai-chat/history/sessions/{id}/unpin``
+     - Pin session to top
+   * - ``/api/v1/ai-chat/history/sessions/{id}/unpin``
      - POST
      - Unpin session
-   * - ``/ai-chat/history/sessions/{id}/close``
+   * - ``/api/v1/ai-chat/history/sessions/{id}/close``
      - POST
-     - Close session
-   * - ``/ai-chat/history/sessions/{id}/activate``
+     - Close/archive session
+   * - ``/api/v1/ai-chat/history/sessions/{id}/activate``
      - POST
-     - Activate session
-   * - ``/ai-chat/history/sessions/{id}/title``
+     - Reactivate closed session
+   * - ``/api/v1/ai-chat/history/sessions/{id}/title``
      - PUT
      - Update session title
 
@@ -2127,18 +2145,18 @@ AI Chat Endpoints
 User Status
 -----------
 
-Get My Status
-~~~~~~~~~~~~~
+Get My Current Status
+~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``GET /user/statuses``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``GET /api/v1/user/statuses``
+   * - **Authentication**
+     - Required
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2156,16 +2174,16 @@ Get My Status
        }
    }
 
-Create Status
-~~~~~~~~~~~~~
+Set New Status
+~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /user/statuses``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/user/statuses``
+   * - **Authentication**
+     - Required
 
 **Request Body:**
 
@@ -2177,49 +2195,49 @@ Create Status
        "expires_at": "2026-02-17T18:00:00Z"
    }
 
-Status Endpoints
-~~~~~~~~~~~~~~~~
+Additional Status Endpoints
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 50 10 40
    :header-rows: 1
 
-   * - Endpoint
+   * - URL
      - Method
      - Description
-   * - ``/user/statuses``
+   * - ``/api/v1/user/statuses``
      - PATCH
-     - Update status
-   * - ``/user/statuses``
+     - Update current status
+   * - ``/api/v1/user/statuses``
      - DELETE
-     - Delete status
-   * - ``/user/statuses/set-busy``
+     - Clear/delete status
+   * - ``/api/v1/user/statuses/set-busy``
      - POST
-     - Set busy status
-   * - ``/user/statuses/set-available``
+     - Set status to busy
+   * - ``/api/v1/user/statuses/set-available``
      - POST
-     - Set available status
-   * - ``/user/statuses/clear-expired``
+     - Set status to available
+   * - ``/api/v1/user/statuses/clear-expired``
      - POST
-     - Clear expired statuses
+     - Clear all expired statuses
 
 ----
 
 Reports & Blocking
 ------------------
 
-Block User
-~~~~~~~~~~
+Block a User
+~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /reports/block/{userId}``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/reports/block/{userId}``
+   * - **Authentication**
+     - Required
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2228,16 +2246,16 @@ Block User
        "message": "User blocked successfully"
    }
 
-Report User/Content
-~~~~~~~~~~~~~~~~~~~
+Report User or Content
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``POST /reports/report/{targetId}``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``POST /api/v1/reports/report/{targetId}``
+   * - **Authentication**
+     - Required
 
 **Request Body:**
 
@@ -2248,7 +2266,7 @@ Report User/Content
        "description": "This user has been sending inappropriate messages"
    }
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2256,46 +2274,46 @@ Report User/Content
        "success": true,
        "message": "Report submitted successfully",
        "data": {
-           "report_id": "rpt-123",
+           "report_id": "rpt-550e8400-e29b",
            "status": "pending"
        }
    }
 
-Reports Endpoints
-~~~~~~~~~~~~~~~~~
+Additional Reports Endpoints
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 50 10 40
    :header-rows: 1
 
-   * - Endpoint
+   * - URL
      - Method
      - Description
-   * - ``/reports/unblock/{userId}``
+   * - ``/api/v1/reports/unblock/{userId}``
      - POST
-     - Unblock user
-   * - ``/reports/blocked-users``
+     - Unblock a user
+   * - ``/api/v1/reports/blocked-users``
      - GET
-     - Get blocked users list
-   * - ``/reports/reasons``
+     - Get list of blocked users
+   * - ``/api/v1/reports/reasons``
      - GET
-     - Get report reasons
+     - Get available report reasons
 
 ----
 
 Settings
 --------
 
-Update Password
-~~~~~~~~~~~~~~~
+Update Account Password
+~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
 
-   * - **Endpoint**
-     - ``PATCH /settings/update-password``
-   * - **Auth Required**
-     - Yes
+   * - **URL**
+     - ``PATCH /api/v1/settings/update-password``
+   * - **Authentication**
+     - Required
 
 **Request Body:**
 
@@ -2307,7 +2325,7 @@ Update Password
        "password_confirmation": "NewSecurePass456!"
    }
 
-**Response (200):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2316,32 +2334,32 @@ Update Password
        "message": "Password updated successfully"
    }
 
-Settings Endpoints
-~~~~~~~~~~~~~~~~~~
+Additional Settings Endpoints
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 50 10 40
    :header-rows: 1
 
-   * - Endpoint
+   * - URL
      - Method
      - Description
-   * - ``/settings/social-accounts``
+   * - ``/api/v1/settings/social-accounts``
      - POST
-     - Add social accounts
-   * - ``/settings/soft/delete-account``
+     - Link social media accounts
+   * - ``/api/v1/settings/soft/delete-account``
      - DELETE
-     - Soft delete account
-   * - ``/settings/force/delete-account``
+     - Deactivate account (recoverable)
+   * - ``/api/v1/settings/force/delete-account``
      - DELETE
      - Permanently delete account
-   * - ``/settings/alt-email/send-otp``
+   * - ``/api/v1/settings/alt-email/send-otp``
      - POST
-     - Add alternative email
-   * - ``/settings/alt-email/verify-otp``
+     - Add alternative email address
+   * - ``/api/v1/settings/alt-email/verify-otp``
      - POST
      - Verify alternative email
-   * - ``/settings/alt-email/remove``
+   * - ``/api/v1/settings/alt-email/remove``
      - DELETE
      - Remove alternative email
 
@@ -2362,40 +2380,40 @@ HTTP Status Codes
      - Description
    * - 200
      - OK
-     - Request successful
+     - Request completed successfully
    * - 201
      - Created
      - Resource created successfully
    * - 400
      - Bad Request
-     - Invalid request format
+     - Invalid request format or parameters
    * - 401
      - Unauthorized
-     - Authentication required or failed
+     - Authentication required or token invalid
    * - 403
      - Forbidden
-     - Access denied
+     - Access denied to this resource
    * - 404
      - Not Found
-     - Resource not found
+     - Requested resource does not exist
    * - 409
      - Conflict
-     - Resource conflict
+     - Resource conflict (e.g., duplicate entry)
    * - 422
      - Unprocessable Entity
-     - Validation error
+     - Validation error in request data
    * - 429
      - Too Many Requests
      - Rate limit exceeded
    * - 500
      - Internal Server Error
-     - Server error
+     - Unexpected server error
    * - 504
      - Gateway Timeout
-     - Request timeout
+     - Request timed out
 
-Error Response Format
-~~~~~~~~~~~~~~~~~~~~~
+Standard Error Response Format
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: json
 
@@ -2408,7 +2426,7 @@ Error Response Format
        }
    }
 
-**Example - Validation Error (422):**
+**Example - Validation Error (422 Unprocessable Entity):**
 
 .. code-block:: json
 
@@ -2421,7 +2439,7 @@ Error Response Format
        }
    }
 
-**Example - Unauthorized (401):**
+**Example - Unauthorized (401 Unauthorized):**
 
 .. code-block:: json
 
@@ -2430,7 +2448,7 @@ Error Response Format
        "message": "Unauthenticated. Please login."
    }
 
-**Example - Rate Limit (429):**
+**Example - Rate Limit Exceeded (429 Too Many Requests):**
 
 .. code-block:: json
 

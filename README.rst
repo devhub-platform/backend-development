@@ -18,10 +18,11 @@ DevHub Community - Developer Platform
 
 A modern, feature-rich social platform built for developers to share knowledge, collaborate, and grow together. Built with Laravel 12 and cutting-edge web technologies.
 
-| **Production URL:** http://devhub.eu-north-1.elasticbeanstalk.com
+| **Production URL:** https://devhub.eu-north-1.elasticbeanstalk.com
+| **API Base URL:** https://devhub.eu-north-1.elasticbeanstalk.com/api/v1
 | **API Documentation:** https://0yviq6a5i5.apidog.io/
 
-.. contents:: Table of Contents
+.. contents:: Contents
    :depth: 3
    :local:
 
@@ -201,26 +202,26 @@ Rate Limits
 Authentication APIs
 ===================
 
-Public Endpoints (No Auth Required)
------------------------------------
+Public Endpoints (No Authentication Required)
+----------------------------------------------
 
-+----------------------------------+--------+----------------------------------+
-| Endpoint                         | Method | Description                      |
-+==================================+========+==================================+
-| ``/login``                       | POST   | User login                       |
-+----------------------------------+--------+----------------------------------+
-| ``/register``                    | POST   | User registration                |
-+----------------------------------+--------+----------------------------------+
-| ``/auth/google/login``           | POST   | Login with Google                |
-+----------------------------------+--------+----------------------------------+
-| ``/auth/google/callback``        | GET    | Google OAuth callback            |
-+----------------------------------+--------+----------------------------------+
-| ``/auth/github/login``           | POST   | Login with GitHub                |
-+----------------------------------+--------+----------------------------------+
-| ``/auth/github/callback``        | GET    | GitHub OAuth callback            |
-+----------------------------------+--------+--------------------------------+
++----------------------------------------+--------+----------------------------------+
+| URL                                    | Method | Description                      |
++========================================+========+==================================+
+| ``/api/v1/login``                      | POST   | User login                       |
++----------------------------------------+--------+----------------------------------+
+| ``/api/v1/register``                   | POST   | User registration                |
++----------------------------------------+--------+----------------------------------+
+| ``/api/v1/auth/google/login``          | POST   | Login with Google OAuth          |
++----------------------------------------+--------+----------------------------------+
+| ``/api/v1/auth/google/callback``       | GET    | Google OAuth callback            |
++----------------------------------------+--------+----------------------------------+
+| ``/api/v1/auth/github/login``          | POST   | Login with GitHub OAuth          |
++----------------------------------------+--------+----------------------------------+
+| ``/api/v1/auth/github/callback``       | GET    | GitHub OAuth callback            |
++----------------------------------------+--------+----------------------------------+
 
-**POST /login - User Login**
+**POST /api/v1/login - User Login**
 
 Request:
 
@@ -228,10 +229,10 @@ Request:
 
     {
         "email": "user@example.com",
-        "password": "your-password"
+        "password": "your_password"
     }
 
-Response (200 OK):
+Success Success Response (200 OK):
 
 .. code-block:: json
 
@@ -244,16 +245,16 @@ Response (200 OK):
                 "name": "John Doe",
                 "username": "johndoe",
                 "email": "user@example.com",
-                "avatar": "https://cloudinary.com/avatar.jpg",
+                "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg",
                 "email_verified_at": "2026-01-15T10:00:00Z"
             },
-            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
             "token_type": "bearer",
             "expires_in": 3600
         }
     }
 
-Response (401 Unauthorized):
+Error Error Response (401 Unauthorized):
 
 .. code-block:: json
 
@@ -262,7 +263,7 @@ Response (401 Unauthorized):
         "message": "Invalid credentials"
     }
 
-**POST /register - User Registration**
+**POST /api/v1/register - User Registration**
 
 Request:
 
@@ -276,7 +277,7 @@ Request:
         "password_confirmation": "SecurePass123!"
     }
 
-Response (201 Created):
+Success Success Response (201 Created):
 
 .. code-block:: json
 
@@ -290,11 +291,11 @@ Response (201 Created):
                 "username": "johndoe",
                 "email": "john@example.com"
             },
-            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
         }
     }
 
-Response (422 Validation Error):
+Error Error Response (422 Validation Error):
 
 .. code-block:: json
 
@@ -310,17 +311,17 @@ Response (422 Validation Error):
 Email Verification
 ------------------
 
-+----------------------------------+--------+----------------------------------+
-| Endpoint                         | Method | Description                      |
-+==================================+========+==================================+
-| ``/email/send-otp``              | POST   | Send verification OTP            |
-+----------------------------------+--------+----------------------------------+
-| ``/email/verify-otp``            | POST   | Verify email with OTP            |
-+----------------------------------+--------+----------------------------------+
-| ``/email/is-verified``           | GET    | Check verification status        |
-+----------------------------------+--------+----------------------------------+
++----------------------------------------+--------+----------------------------------+
+| URL                                    | Method | Description                      |
++========================================+========+==================================+
+| ``/api/v1/email/send-otp``             | POST   | Send verification OTP            |
++----------------------------------------+--------+----------------------------------+
+| ``/api/v1/email/verify-otp``           | POST   | Verify email with OTP            |
++----------------------------------------+--------+----------------------------------+
+| ``/api/v1/email/is-verified``          | GET    | Check verification status        |
++----------------------------------------+--------+----------------------------------+
 
-**POST /email/send-otp - Send Verification OTP**
+**POST /api/v1/email/send-otp - Send Verification OTP**
 
 Request:
 
@@ -330,7 +331,7 @@ Request:
         "email": "user@example.com"
     }
 
-Response (200 OK):
+Success Success Response (200 OK):
 
 .. code-block:: json
 
@@ -339,7 +340,7 @@ Response (200 OK):
         "message": "OTP sent successfully to your email"
     }
 
-**POST /email/verify-otp - Verify Email with OTP**
+**POST /api/v1/email/verify-otp - Verify Email with OTP**
 
 Request:
 
@@ -350,7 +351,7 @@ Request:
         "otp": "123456"
     }
 
-Response (200 OK):
+Success Success Response (200 OK):
 
 .. code-block:: json
 
@@ -359,9 +360,9 @@ Response (200 OK):
         "message": "Email verified successfully"
     }
 
-**GET /email/is-verified - Check Verification Status**
+**GET /api/v1/email/is-verified - Check Verification Status**
 
-Response (200 OK):
+Success Success Response (200 OK):
 
 .. code-block:: json
 
@@ -373,20 +374,20 @@ Response (200 OK):
         }
     }
 
-Password Reset
---------------
+Password Recovery
+-----------------
 
-+----------------------------------+--------+----------------------------------+
-| Endpoint                         | Method | Description                      |
-+==================================+========+==================================+
-| ``/password/forgot``             | POST   | Request password reset           |
-+----------------------------------+--------+----------------------------------+
-| ``/password/verify-otp``         | POST   | Verify reset OTP                 |
-+----------------------------------+--------+----------------------------------+
-| ``/password/reset``              | POST   | Reset password                   |
-+----------------------------------+--------+----------------------------------+
++----------------------------------------+--------+----------------------------------+
+| URL                                    | Method | Description                      |
++========================================+========+==================================+
+| ``/api/v1/password/forgot``            | POST   | Request password reset           |
++----------------------------------------+--------+----------------------------------+
+| ``/api/v1/password/verify-otp``        | POST   | Verify reset OTP                 |
++----------------------------------------+--------+----------------------------------+
+| ``/api/v1/password/reset``             | POST   | Set new password                 |
++----------------------------------------+--------+----------------------------------+
 
-**POST /password/forgot - Request Password Reset**
+**POST /api/v1/password/forgot - Request Password Reset**
 
 Request:
 
@@ -396,7 +397,7 @@ Request:
         "email": "user@example.com"
     }
 
-Response (200 OK):
+Success Success Response (200 OK):
 
 .. code-block:: json
 
@@ -405,7 +406,7 @@ Response (200 OK):
         "message": "Password reset OTP sent to your email"
     }
 
-**POST /password/verify-otp - Verify Reset OTP**
+**POST /api/v1/password/verify-otp - Verify Reset OTP**
 
 Request:
 
@@ -416,7 +417,7 @@ Request:
         "otp": "123456"
     }
 
-Response (200 OK):
+Success Success Response (200 OK):
 
 .. code-block:: json
 
@@ -428,7 +429,7 @@ Response (200 OK):
         }
     }
 
-**POST /password/reset - Reset Password**
+**POST /api/v1/password/reset - Set New Password**
 
 Request:
 
@@ -441,7 +442,7 @@ Request:
         "password_confirmation": "NewSecurePass123!"
     }
 
-Response (200 OK):
+Success Success Response (200 OK):
 
 .. code-block:: json
 
@@ -450,28 +451,28 @@ Response (200 OK):
         "message": "Password reset successfully"
     }
 
-Protected Auth Endpoints
-------------------------
+Protected Authentication Endpoints
+----------------------------------
 
-+----------------------------------+--------+----------------------------------+
-| Endpoint                         | Method | Description                      |
-+==================================+========+==================================+
-| ``/logout``                      | POST   | Logout user                      |
-+----------------------------------+--------+----------------------------------+
-| ``/refresh``                     | POST   | Refresh JWT token                |
-+----------------------------------+--------+----------------------------------+
-| ``/me``                          | GET    | Get current user info            |
-+----------------------------------+--------+----------------------------------+
++----------------------------------------+--------+----------------------------------+
+| URL                                    | Method | Description                      |
++========================================+========+==================================+
+| ``/api/v1/logout``                     | POST   | Logout current user              |
++----------------------------------------+--------+----------------------------------+
+| ``/api/v1/refresh``                    | POST   | Refresh JWT access token         |
++----------------------------------------+--------+----------------------------------+
+| ``/api/v1/me``                         | GET    | Get current user profile         |
++----------------------------------------+--------+----------------------------------+
 
-**POST /logout - Logout User**
+**POST /api/v1/logout - Logout Current User**
 
 Headers:
 
-.. code-block:: text
+.. code-block:: http
 
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-Response (200 OK):
+Success Success Response (200 OK):
 
 .. code-block:: json
 
@@ -480,36 +481,36 @@ Response (200 OK):
         "message": "Successfully logged out"
     }
 
-**POST /refresh - Refresh JWT Token**
+**POST /api/v1/refresh - Refresh JWT Access Token**
 
 Headers:
 
-.. code-block:: text
+.. code-block:: http
 
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-Response (200 OK):
+Success Success Response (200 OK):
 
 .. code-block:: json
 
     {
         "success": true,
         "data": {
-            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9-NEW-TOKEN...",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
             "token_type": "bearer",
             "expires_in": 3600
         }
     }
 
-**GET /me - Get Current User Info**
+**GET /api/v1/me - Get Current User Profile**
 
 Headers:
 
-.. code-block:: text
+.. code-block:: http
 
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-Response (200 OK):
+Success Success Response (200 OK):
 
 .. code-block:: json
 
@@ -520,8 +521,8 @@ Response (200 OK):
             "name": "John Doe",
             "username": "johndoe",
             "email": "user@example.com",
-            "avatar": "https://cloudinary.com/avatar.jpg",
-            "cover_image": "https://cloudinary.com/cover.jpg",
+            "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg",
+            "cover_image": "https://res.cloudinary.com/devhub/image/cover.jpg",
             "bio": "Full-stack developer",
             "location": "San Francisco, CA",
             "website": "https://johndoe.dev",
@@ -542,63 +543,63 @@ Posts APIs
 CRUD Operations
 ---------------
 
++----------------------------------------+--------+----------------------------------+
+| URL                                    | Method | Description                      |
++========================================+========+==================================+
+| ``/api/v1/posts``                      | GET    | List all posts (paginated)       |
++----------------------------------------+--------+----------------------------------+
+| ``/api/v1/posts``                       | POST   | Create new post                  |
 +----------------------------------+--------+----------------------------------+
-| Endpoint                         | Method | Description                      |
-+==================================+========+==================================+
-| ``/posts``                       | GET    | List all posts (paginated)       |
+| ``/api/v1/posts/{id}``                  | GET    | Get single post                  |
 +----------------------------------+--------+----------------------------------+
-| ``/posts``                       | POST   | Create new post                  |
+| ``/api/v1/posts/{id}``                  | PUT    | Update post                      |
 +----------------------------------+--------+----------------------------------+
-| ``/posts/{id}``                  | GET    | Get single post                  |
+| ``/api/v1/posts/{id}``                  | PATCH  | Partial update post              |
 +----------------------------------+--------+----------------------------------+
-| ``/posts/{id}``                  | PUT    | Update post                      |
+| ``/api/v1/posts/{id}``                  | DELETE | Soft delete post                 |
 +----------------------------------+--------+----------------------------------+
-| ``/posts/{id}``                  | PATCH  | Partial update post              |
+| ``/api/v1/posts/{id}/force``            | DELETE | Permanently delete post          |
 +----------------------------------+--------+----------------------------------+
-| ``/posts/{id}``                  | DELETE | Soft delete post                 |
-+----------------------------------+--------+----------------------------------+
-| ``/posts/{id}/force``            | DELETE | Permanently delete post          |
-+----------------------------------+--------+----------------------------------+
-| ``/posts/{id}/restore``          | POST   | Restore deleted post             |
+| ``/api/v1/posts/{id}/restore``          | POST   | Restore deleted post             |
 +----------------------------------+--------+----------------------------------+
 
 Post Queries
 ------------
 
 +----------------------------------+--------+----------------------------------+
-| Endpoint                         | Method | Description                      |
+| URL                         | Method | Description                      |
 +==================================+========+==================================+
-| ``/user/posts``                  | GET    | Get current user's posts         |
+| ``/api/v1/user/posts``                  | GET    | Get current user's posts         |
 +----------------------------------+--------+----------------------------------+
-| ``/posts/recent``                | GET    | Get recent posts                 |
+| ``/api/v1/posts/recent``                | GET    | Get recent posts                 |
 +----------------------------------+--------+----------------------------------+
-| ``/posts/top-views``             | GET    | Get top viewed posts             |
+| ``/api/v1/posts/top-views``             | GET    | Get top viewed posts             |
 +----------------------------------+--------+----------------------------------+
-| ``/posts/drafts``                | GET    | Get user's draft posts           |
+| ``/api/v1/posts/drafts``                | GET    | Get user's draft posts           |
 +----------------------------------+--------+----------------------------------+
-| ``/posts/archives``              | GET    | Get archived/trashed posts       |
+| ``/api/v1/posts/archives``              | GET    | Get archived/trashed posts       |
 +----------------------------------+--------+----------------------------------+
 
 Post Tags & Comments
 --------------------
 
 +----------------------------------+--------+----------------------------------+
-| Endpoint                         | Method | Description                      |
+| URL                         | Method | Description                      |
 +==================================+========+==================================+
-| ``/posts/{id}/tags``             | GET    | Get post tags (detailed)         |
+| ``/api/v1/posts/{id}/tags``             | GET    | Get post tags (detailed)         |
 +----------------------------------+--------+----------------------------------+
-| ``/posts/{id}/tags-list``        | GET    | Get post tags (list)             |
+| ``/api/v1/posts/{id}/tags-list``        | GET    | Get post tags (list)             |
 +----------------------------------+--------+----------------------------------+
-| ``/posts/{id}/comments``         | GET    | Get post comments                |
+| ``/api/v1/posts/{id}/comments``         | GET    | Get post comments                |
 +----------------------------------+--------+----------------------------------+
 
 Post Reporting
 --------------
 
 +----------------------------------+--------+----------------------------------+
-| Endpoint                         | Method | Description                      |
+| URL                         | Method | Description                      |
 +==================================+========+==================================+
-| ``/posts/{id}/report``           | POST   | Report a post                    |
+| ``/api/v1/posts/{id}/report``           | POST   | Report a post                    |
 +----------------------------------+--------+----------------------------------+
 | ``/posts/report/reasons``        | GET    | Get report reasons               |
 +----------------------------------+--------+----------------------------------+
@@ -607,11 +608,11 @@ Post Views
 ----------
 
 +----------------------------------+--------+----------------------------------+
-| Endpoint                         | Method | Description                      |
+| URL                         | Method | Description                      |
 +==================================+========+==================================+
-| ``/posts/viewed/recent``         | GET    | Get recently viewed posts        |
+| ``/api/v1/posts/viewed/recent``         | GET    | Get recently viewed posts        |
 +----------------------------------+--------+----------------------------------+
-| ``/posts/viewed/clear``          | DELETE | Clear viewed posts history       |
+| ``/api/v1/posts/viewed/clear``          | DELETE | Clear viewed posts history       |
 +----------------------------------+--------+----------------------------------+
 
 **Create Post Request:**
@@ -625,11 +626,11 @@ Post Views
         "tags": ["laravel", "php", "tutorial"]
     }
 
-**GET /posts - List All Posts**
+**GET /api/v1/posts - List All Posts**
 
 Query Parameters: ``?page=1&per_page=15``
 
-Response (200 OK):
+Success Response (200 OK):
 
 .. code-block:: json
 
@@ -647,67 +648,67 @@ Create & Reply
 --------------
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/posts/{postId}/comments``                | POST   | Create comment on post           |
+| ``/api/v1/posts/{postId}/comments``                | POST   | Create comment on post           |
 +---------------------------------------------+--------+----------------------------------+
-| ``/posts/{postId}/comments/{commentId}/reply`` | POST | Reply to a comment               |
+| ``/api/v1/posts/{postId}/comments/{commentId}/reply`` | POST | Reply to a comment               |
 +---------------------------------------------+--------+----------------------------------+
 
 Get Comments
 ------------
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/posts/{postId}/comments``                | GET    | Get comments for a post          |
+| ``/api/v1/posts/{postId}/comments``                | GET    | Get comments for a post          |
 +---------------------------------------------+--------+----------------------------------+
-| ``/posts/{postId}/comments/count``          | GET    | Get comment count for post       |
+| ``/api/v1/posts/{postId}/comments/count``          | GET    | Get comment count for post       |
 +---------------------------------------------+--------+----------------------------------+
-| ``/users/{userId}/comments``                | GET    | Get comments by user             |
+| ``/api/v1/users/{userId}/comments``                | GET    | Get comments by user             |
 +---------------------------------------------+--------+----------------------------------+
-| ``/comments/{id}/replies``                  | GET    | Get replies to a comment         |
+| ``/api/v1/comments/{id}/replies``                  | GET    | Get replies to a comment         |
 +---------------------------------------------+--------+----------------------------------+
-| ``/comments/{id}/thread``                   | GET    | Get full comment thread          |
+| ``/api/v1/comments/{id}/thread``                   | GET    | Get full comment thread          |
 +---------------------------------------------+--------+----------------------------------+
 
 Comment Actions
 ---------------
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/comments/{id}/pin``                      | POST   | Pin a comment                    |
+| ``/api/v1/comments/{id}/pin``                      | POST   | Pin a comment                    |
 +---------------------------------------------+--------+----------------------------------+
-| ``/comments/{id}/unpin``                    | POST   | Unpin a comment                  |
+| ``/api/v1/comments/{id}/unpin``                    | POST   | Unpin a comment                  |
 +---------------------------------------------+--------+----------------------------------+
-| ``/comments/{id}/force``                    | DELETE | Delete comment permanently       |
+| ``/api/v1/comments/{id}/force``                    | DELETE | Delete comment permanently       |
 +---------------------------------------------+--------+----------------------------------+
 
 Comment Reactions
 -----------------
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/comments/{id}/react``                    | POST   | React to a comment               |
+| ``/api/v1/comments/{id}/react``                    | POST   | React to a comment               |
 +---------------------------------------------+--------+----------------------------------+
-| ``/comments/{id}/remove-react``             | DELETE | Remove reaction from comment     |
+| ``/api/v1/comments/{id}/remove-react``             | DELETE | Remove reaction from comment     |
 +---------------------------------------------+--------+----------------------------------+
-| ``/comments/{id}/my-reaction``              | GET    | Get my reaction on comment       |
+| ``/api/v1/comments/{id}/my-reaction``              | GET    | Get my reaction on comment       |
 +---------------------------------------------+--------+----------------------------------+
-| ``/comments/{id}/reactions``                | GET    | Get all reactions on comment     |
+| ``/api/v1/comments/{id}/reactions``                | GET    | Get all reactions on comment     |
 +---------------------------------------------+--------+----------------------------------+
 
 My Comments
 -----------
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/my/comments``                            | GET    | Get my recent comments           |
+| ``/api/v1/my/comments``                            | GET    | Get my recent comments           |
 +---------------------------------------------+--------+----------------------------------+
-| ``/my/comments/stats``                      | GET    | Get my comment statistics        |
+| ``/api/v1/my/comments/stats``                      | GET    | Get my comment statistics        |
 +---------------------------------------------+--------+----------------------------------+
 
 ----
@@ -719,19 +720,19 @@ Post Reactions
 --------------
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/posts/{id}/react``                       | POST   | React to a post                  |
+| ``/api/v1/posts/{id}/react``                       | POST   | React to a post                  |
 +---------------------------------------------+--------+----------------------------------+
-| ``/posts/{id}/remove-react``                | DELETE | Remove reaction from post        |
+| ``/api/v1/posts/{id}/remove-react``                | DELETE | Remove reaction from post        |
 +---------------------------------------------+--------+----------------------------------+
-| ``/posts/{id}/my-reaction``                 | GET    | Get my reaction on post          |
+| ``/api/v1/posts/{id}/my-reaction``                 | GET    | Get my reaction on post          |
 +---------------------------------------------+--------+----------------------------------+
-| ``/posts/{id}/reactions-count``             | GET    | Get reaction counts              |
+| ``/api/v1/posts/{id}/reactions-count``             | GET    | Get reaction counts              |
 +---------------------------------------------+--------+----------------------------------+
-| ``/posts/{id}/reactors``                    | GET    | Get list of reactors             |
+| ``/api/v1/posts/{id}/reactors``                    | GET    | Get list of reactors             |
 +---------------------------------------------+--------+----------------------------------+
-| ``/user/posts/total-reactions``             | GET    | Get total reactions on my posts  |
+| ``/api/v1/user/posts/total-reactions``             | GET    | Get total reactions on my posts  |
 +---------------------------------------------+--------+----------------------------------+
 
 **React Request:**
@@ -753,56 +754,56 @@ User Discovery
 --------------
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/users``                                  | GET    | List all users                   |
+| ``/api/v1/users``                                  | GET    | List all users                   |
 +---------------------------------------------+--------+----------------------------------+
 | ``/users/recommended``                      | GET    | Get recommended users            |
 +---------------------------------------------+--------+----------------------------------+
-| ``/users/{id}``                             | GET    | Get user profile                 |
+| ``/api/v1/users/{id}``                             | GET    | Get user profile                 |
 +---------------------------------------------+--------+----------------------------------+
-| ``/users/{id}/similar-skills``              | GET    | Get users with similar skills    |
+| ``/api/v1/users/{id}/similar-skills``              | GET    | Get users with similar skills    |
 +---------------------------------------------+--------+----------------------------------+
 
 User Content
 ------------
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/users/{id}/posts``                       | GET    | Get user's posts                 |
+| ``/api/v1/users/{id}/posts``                       | GET    | Get user's posts                 |
 +---------------------------------------------+--------+----------------------------------+
-| ``/users/{id}/comments``                    | GET    | Get user's comments              |
+| ``/api/v1/users/{id}/comments``                    | GET    | Get user's comments              |
 +---------------------------------------------+--------+----------------------------------+
-| ``/users/{id}/tags``                        | GET    | Get user's followed tags         |
+| ``/api/v1/users/{id}/tags``                        | GET    | Get user's followed tags         |
 +---------------------------------------------+--------+----------------------------------+
 
 User Followers
 --------------
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/users/{id}/followers``                   | GET    | Get user's followers             |
+| ``/api/v1/users/{id}/followers``                   | GET    | Get user's followers             |
 +---------------------------------------------+--------+----------------------------------+
-| ``/users/{id}/followers/count``             | GET    | Get followers count              |
+| ``/api/v1/users/{id}/followers/count``             | GET    | Get followers count              |
 +---------------------------------------------+--------+----------------------------------+
-| ``/users/{id}/following``                   | GET    | Get users being followed         |
+| ``/api/v1/users/{id}/following``                   | GET    | Get users being followed         |
 +---------------------------------------------+--------+----------------------------------+
-| ``/users/{id}/mutual-followers``            | GET    | Get mutual followers             |
+| ``/api/v1/users/{id}/mutual-followers``            | GET    | Get mutual followers             |
 +---------------------------------------------+--------+----------------------------------+
-| ``/users/{id}/mutual-following``            | GET    | Check mutual following           |
+| ``/api/v1/users/{id}/mutual-following``            | GET    | Check mutual following           |
 +---------------------------------------------+--------+----------------------------------+
-| ``/users/{id}/follow-stats/count``          | GET    | Get follow statistics            |
+| ``/api/v1/users/{id}/follow-stats/count``          | GET    | Get follow statistics            |
 +---------------------------------------------+--------+----------------------------------+
 
 User Status
 -----------
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/users/{username}/status``                | GET    | Get user's status by username    |
+| ``/api/v1/users/{username}/status``                | GET    | Get user's status by username    |
 +---------------------------------------------+--------+----------------------------------+
 
 ----
@@ -811,25 +812,25 @@ Profile APIs
 ============
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/profile``                                | GET    | Get my profile                   |
+| ``/api/v1/profile``                                | GET    | Get my profile                   |
 +---------------------------------------------+--------+----------------------------------+
-| ``/profile``                                | PATCH  | Update my profile                |
+| ``/api/v1/profile``                                | PATCH  | Update my profile                |
 +---------------------------------------------+--------+----------------------------------+
-| ``/profile/details``                        | GET    | Get detailed profile info        |
+| ``/api/v1/profile/details``                        | GET    | Get detailed profile info        |
 +---------------------------------------------+--------+----------------------------------+
-| ``/profile/activity``                       | GET    | Get my activity stats            |
+| ``/api/v1/profile/activity``                       | GET    | Get my activity stats            |
 +---------------------------------------------+--------+----------------------------------+
-| ``/profile/user/posts``                     | GET    | Get my posts                     |
+| ``/api/v1/profile/user/posts``                     | GET    | Get my posts                     |
 +---------------------------------------------+--------+----------------------------------+
-| ``/profile/user/comments``                  | GET    | Get my comments                  |
+| ``/api/v1/profile/user/comments``                  | GET    | Get my comments                  |
 +---------------------------------------------+--------+----------------------------------+
-| ``/profile/user/tags``                      | GET    | Get my tags                      |
+| ``/api/v1/profile/user/tags``                      | GET    | Get my tags                      |
 +---------------------------------------------+--------+----------------------------------+
-| ``/profile/upload/avatar``                  | POST   | Upload avatar image              |
+| ``/api/v1/profile/upload/avatar``                  | POST   | Upload avatar image              |
 +---------------------------------------------+--------+----------------------------------+
-| ``/profile/upload/cover-image``             | POST   | Upload cover image               |
+| ``/api/v1/profile/upload/cover-image``             | POST   | Upload cover image               |
 +---------------------------------------------+--------+----------------------------------+
 
 **Update Profile Request:**
@@ -851,17 +852,17 @@ Followers APIs
 ==============
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/users/{id}/follow``                      | POST   | Follow a user                    |
+| ``/api/v1/users/{id}/follow``                      | POST   | Follow a user                    |
 +---------------------------------------------+--------+----------------------------------+
-| ``/users/{id}/unfollow``                    | POST   | Unfollow a user                  |
+| ``/api/v1/users/{id}/unfollow``                    | POST   | Unfollow a user                  |
 +---------------------------------------------+--------+----------------------------------+
-| ``/followers/suggestions``                  | GET    | Get follow suggestions           |
+| ``/api/v1/followers/suggestions``                  | GET    | Get follow suggestions           |
 +---------------------------------------------+--------+----------------------------------+
-| ``/followers/my-followers``                 | GET    | Get my followers                 |
+| ``/api/v1/followers/my-followers``                 | GET    | Get my followers                 |
 +---------------------------------------------+--------+----------------------------------+
-| ``/followers/my-following``                 | GET    | Get who I'm following            |
+| ``/api/v1/followers/my-following``                 | GET    | Get who I'm following            |
 +---------------------------------------------+--------+----------------------------------+
 
 ----
@@ -873,11 +874,11 @@ Tag Management
 --------------
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/tags``                                   | GET    | Get all tags                     |
+| ``/api/v1/tags``                                   | GET    | Get all tags                     |
 +---------------------------------------------+--------+----------------------------------+
-| ``/tags``                                   | POST   | Create new tag                   |
+| ``/api/v1/tags``                                   | POST   | Create new tag                   |
 +---------------------------------------------+--------+----------------------------------+
 | ``/tags/popular``                           | GET    | Get popular tags                 |
 +---------------------------------------------+--------+----------------------------------+
@@ -886,24 +887,24 @@ Post Tags
 ---------
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/posts/{postId}/tags``                    | POST   | Attach tags to post              |
+| ``/api/v1/posts/{postId}/tags``                    | POST   | Attach tags to post              |
 +---------------------------------------------+--------+----------------------------------+
-| ``/posts/{postId}/tags/{tagId}``            | DELETE | Detach tag from post             |
+| ``/api/v1/posts/{postId}/tags/{tagId}``            | DELETE | Detach tag from post             |
 +---------------------------------------------+--------+----------------------------------+
 
 Tag Following
 -------------
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/tags/{id}/follow``                       | POST   | Follow a tag                     |
+| ``/api/v1/tags/{id}/follow``                       | POST   | Follow a tag                     |
 +---------------------------------------------+--------+----------------------------------+
-| ``/tags/{id}/unfollow``                     | DELETE | Unfollow a tag                   |
+| ``/api/v1/tags/{id}/unfollow``                     | DELETE | Unfollow a tag                   |
 +---------------------------------------------+--------+----------------------------------+
-| ``/tags/{id}/followers``                    | GET    | Get tag followers                |
+| ``/api/v1/tags/{id}/followers``                    | GET    | Get tag followers                |
 +---------------------------------------------+--------+----------------------------------+
 
 ----
@@ -912,17 +913,17 @@ Search APIs
 ===========
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/search/posts``                           | GET    | Search posts                     |
+| ``/api/v1/search/posts``                           | GET    | Search posts                     |
 +---------------------------------------------+--------+----------------------------------+
-| ``/search/users``                           | GET    | Search users by username         |
+| ``/api/v1/search/users``                           | GET    | Search users by username         |
 +---------------------------------------------+--------+----------------------------------+
-| ``/search/tags``                            | GET    | Search tags                      |
+| ``/api/v1/search/tags``                            | GET    | Search tags                      |
 +---------------------------------------------+--------+----------------------------------+
-| ``/search/histories``                       | GET    | Get search history               |
+| ``/api/v1/search/histories``                       | GET    | Get search history               |
 +---------------------------------------------+--------+----------------------------------+
-| ``/search/clear``                           | DELETE | Clear search history             |
+| ``/api/v1/search/clear``                           | DELETE | Clear search history             |
 +---------------------------------------------+--------+----------------------------------+
 
 **Search Query Parameters:**
@@ -940,47 +941,47 @@ Get Notifications
 -----------------
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/notifications/all``                      | GET    | Get all notifications            |
+| ``/api/v1/notifications/all``                      | GET    | Get all notifications            |
 +---------------------------------------------+--------+----------------------------------+
-| ``/notifications/comments``                 | GET    | Get comment notifications        |
+| ``/api/v1/notifications/comments``                 | GET    | Get comment notifications        |
 +---------------------------------------------+--------+----------------------------------+
-| ``/notifications/reacts``                   | GET    | Get reaction notifications       |
+| ``/api/v1/notifications/reacts``                   | GET    | Get reaction notifications       |
 +---------------------------------------------+--------+----------------------------------+
-| ``/notifications/new-followers``            | GET    | Get new follower notifications   |
+| ``/api/v1/notifications/new-followers``            | GET    | Get new follower notifications   |
 +---------------------------------------------+--------+----------------------------------+
-| ``/notifications/post-created``             | GET    | Get new post notifications       |
+| ``/api/v1/notifications/post-created``             | GET    | Get new post notifications       |
 +---------------------------------------------+--------+----------------------------------+
-| ``/notifications/mention``                  | GET    | Get mention notifications        |
+| ``/api/v1/notifications/mention``                  | GET    | Get mention notifications        |
 +---------------------------------------------+--------+----------------------------------+
 
 Notification Actions
 --------------------
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/notifications/mark-as-read``             | POST   | Mark all as read                 |
+| ``/api/v1/notifications/mark-as-read``             | POST   | Mark all as read                 |
 +---------------------------------------------+--------+----------------------------------+
-| ``/notifications/{id}/mark-as-read``        | POST   | Mark single as read              |
+| ``/api/v1/notifications/{id}/mark-as-read``        | POST   | Mark single as read              |
 +---------------------------------------------+--------+----------------------------------+
-| ``/notifications/clear``                    | DELETE | Clear all notifications          |
+| ``/api/v1/notifications/clear``                    | DELETE | Clear all notifications          |
 +---------------------------------------------+--------+----------------------------------+
-| ``/notifications/followers/clear``          | DELETE | Clear follower notifications     |
+| ``/api/v1/notifications/followers/clear``          | DELETE | Clear follower notifications     |
 +---------------------------------------------+--------+----------------------------------+
 
 Notification Preferences
 ------------------------
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/notifications/preferences``              | GET    | Get notification preferences     |
+| ``/api/v1/notifications/preferences``              | GET    | Get notification preferences     |
 +---------------------------------------------+--------+----------------------------------+
-| ``/notifications/preferences``              | PUT    | Update all preferences           |
+| ``/api/v1/notifications/preferences``              | PUT    | Update all preferences           |
 +---------------------------------------------+--------+----------------------------------+
-| ``/notifications/preferences/{type}/toggle``| PATCH  | Toggle specific preference       |
+| ``/api/v1/notifications/preferences/{type}/toggle``| PATCH  | Toggle specific preference       |
 +---------------------------------------------+--------+----------------------------------+
 
 ----
@@ -989,31 +990,31 @@ Reading Lists APIs
 ==================
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/reading-lists/lists/posts``              | GET    | Get all reading lists            |
+| ``/api/v1/reading-lists/lists/posts``              | GET    | Get all reading lists            |
 +---------------------------------------------+--------+----------------------------------+
-| ``/reading-lists``                          | POST   | Create reading list              |
+| ``/api/v1/reading-lists``                          | POST   | Create reading list              |
 +---------------------------------------------+--------+----------------------------------+
-| ``/reading-lists/{id}``                     | GET    | Get single reading list          |
+| ``/api/v1/reading-lists/{id}``                     | GET    | Get single reading list          |
 +---------------------------------------------+--------+----------------------------------+
-| ``/reading-lists/{id}``                     | PATCH  | Update reading list              |
+| ``/api/v1/reading-lists/{id}``                     | PATCH  | Update reading list              |
 +---------------------------------------------+--------+----------------------------------+
-| ``/reading-lists/{id}``                     | DELETE | Delete reading list              |
+| ``/api/v1/reading-lists/{id}``                     | DELETE | Delete reading list              |
 +---------------------------------------------+--------+----------------------------------+
-| ``/reading-lists/{id}/add-post/{postId}``   | POST   | Add post to list                 |
+| ``/api/v1/reading-lists/{id}/add-post/{postId}``   | POST   | Add post to list                 |
 +---------------------------------------------+--------+----------------------------------+
-| ``/reading-lists/{id}/remove-post/{postId}``| DELETE | Remove post from list            |
+| ``/api/v1/reading-lists/{id}/remove-post/{postId}``| DELETE | Remove post from list            |
 +---------------------------------------------+--------+----------------------------------+
-| ``/reading-lists/{id}/move-post/{postId}``  | POST   | Move post to another list        |
+| ``/api/v1/reading-lists/{id}/move-post/{postId}``  | POST   | Move post to another list        |
 +---------------------------------------------+--------+----------------------------------+
-| ``/reading-lists/{id}/add-note/{postId}``   | POST   | Add note to post in list         |
+| ``/api/v1/reading-lists/{id}/add-note/{postId}``   | POST   | Add note to post in list         |
 +---------------------------------------------+--------+----------------------------------+
-| ``/reading-lists/{id}/delete-note/{postId}``| DELETE | Delete note from post            |
+| ``/api/v1/reading-lists/{id}/delete-note/{postId}``| DELETE | Delete note from post            |
 +---------------------------------------------+--------+----------------------------------+
-| ``/reading-lists/{id}/show-notes/{postId}`` | GET    | Show notes for post              |
+| ``/api/v1/reading-lists/{id}/show-notes/{postId}`` | GET    | Show notes for post              |
 +---------------------------------------------+--------+----------------------------------+
-| ``/reading-lists/{id}/duplicate``           | POST   | Duplicate reading list           |
+| ``/api/v1/reading-lists/{id}/duplicate``           | POST   | Duplicate reading list           |
 +---------------------------------------------+--------+----------------------------------+
 
 **Create Reading List:**
@@ -1039,13 +1040,13 @@ Saved Posts APIs
 ================
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/saved-posts``                            | GET    | Get all saved posts              |
+| ``/api/v1/saved-posts``                            | GET    | Get all saved posts              |
 +---------------------------------------------+--------+----------------------------------+
-| ``/saved-posts/{postId}``                   | POST   | Save a post                      |
+| ``/api/v1/saved-posts/{postId}``                   | POST   | Save a post                      |
 +---------------------------------------------+--------+----------------------------------+
-| ``/saved-posts/{postId}``                   | DELETE | Unsave a post                    |
+| ``/api/v1/saved-posts/{postId}``                   | DELETE | Unsave a post                    |
 +---------------------------------------------+--------+----------------------------------+
 
 ----
@@ -1054,15 +1055,15 @@ Code Editor APIs
 ===================
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/code/runtimes``                          | GET    | Get available runtimes           |
+| ``/api/v1/code/runtimes``                          | GET    | Get available runtimes           |
 +---------------------------------------------+--------+----------------------------------+
-| ``/code/execute``                           | POST   | Execute code                     |
+| ``/api/v1/code/execute``                           | POST   | Execute code                     |
 +---------------------------------------------+--------+----------------------------------+
-| ``/code/search-runtimes``                   | GET    | Search runtimes                  |
+| ``/api/v1/code/search-runtimes``                   | GET    | Search runtimes                  |
 +---------------------------------------------+--------+----------------------------------+
-| ``/code/languages``                         | GET    | Get supported languages          |
+| ``/api/v1/code/languages``                         | GET    | Get supported languages          |
 +---------------------------------------------+--------+----------------------------------+
 
 **Execute Code Request:**
@@ -1111,21 +1112,21 @@ Post AI Features
 ----------------
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/ai/summarize/post/{postId}``             | POST   | Summarize a post                 |
+| ``/api/v1/ai/summarize/post/{postId}``             | POST   | Summarize a post                 |
 +---------------------------------------------+--------+----------------------------------+
-| ``/ai/summarize/llama/post/{postId}``       | POST   | Summarize using LLama            |
+| ``/api/v1/ai/summarize/llama/post/{postId}``       | POST   | Summarize using LLama            |
 +---------------------------------------------+--------+----------------------------------+
-| ``/ai/translate/post/{postId}``             | POST   | Translate a post                 |
+| ``/api/v1/ai/translate/post/{postId}``             | POST   | Translate a post                 |
 +---------------------------------------------+--------+----------------------------------+
-| ``/ai/analyze/post/{postId}``               | POST   | Analyze post content             |
+| ``/api/v1/ai/analyze/post/{postId}``               | POST   | Analyze post content             |
 +---------------------------------------------+--------+----------------------------------+
-| ``/ai/question/post/{postId}``              | POST   | Ask question about post          |
+| ``/api/v1/ai/question/post/{postId}``              | POST   | Ask question about post          |
 +---------------------------------------------+--------+----------------------------------+
-| ``/ai/generate/content``                    | POST   | Generate content                 |
+| ``/api/v1/ai/generate/content``                    | POST   | Generate content                 |
 +---------------------------------------------+--------+----------------------------------+
-| ``/ai/summarize/post/languages``            | GET    | Get supported languages          |
+| ``/api/v1/ai/summarize/post/languages``            | GET    | Get supported languages          |
 +---------------------------------------------+--------+----------------------------------+
 
 **Translate Request:**
@@ -1162,38 +1163,38 @@ Chat
 ----
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/ai-chat/send``                           | POST   | Send chat message                |
+| ``/api/v1/ai-chat/send``                           | POST   | Send chat message                |
 +---------------------------------------------+--------+----------------------------------+
-| ``/ai-chat/models``                         | GET    | Get available AI models          |
+| ``/api/v1/ai-chat/models``                         | GET    | Get available AI models          |
 +---------------------------------------------+--------+----------------------------------+
-| ``/ai-chat/attachments/upload``             | POST   | Upload attachment                |
+| ``/api/v1/ai-chat/attachments/upload``             | POST   | Upload attachment                |
 +---------------------------------------------+--------+----------------------------------+
 
 Chat History
 ------------
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/ai-chat/history/sessions``               | GET    | List all sessions                |
+| ``/api/v1/ai-chat/history/sessions``               | GET    | List all sessions                |
 +---------------------------------------------+--------+----------------------------------+
-| ``/ai-chat/history/sessions/create``        | POST   | Create new session               |
+| ``/api/v1/ai-chat/history/sessions/create``        | POST   | Create new session               |
 +---------------------------------------------+--------+----------------------------------+
-| ``/ai-chat/history/sessions/{id}``          | GET    | Get session details              |
+| ``/api/v1/ai-chat/history/sessions/{id}``          | GET    | Get session details              |
 +---------------------------------------------+--------+----------------------------------+
-| ``/ai-chat/history/sessions/{id}``          | DELETE | Delete session                   |
+| ``/api/v1/ai-chat/history/sessions/{id}``          | DELETE | Delete session                   |
 +---------------------------------------------+--------+----------------------------------+
-| ``/ai-chat/history/sessions/{id}/pin``      | POST   | Pin session                      |
+| ``/api/v1/ai-chat/history/sessions/{id}/pin``      | POST   | Pin session                      |
 +---------------------------------------------+--------+----------------------------------+
-| ``/ai-chat/history/sessions/{id}/unpin``    | POST   | Unpin session                    |
+| ``/api/v1/ai-chat/history/sessions/{id}/unpin``    | POST   | Unpin session                    |
 +---------------------------------------------+--------+----------------------------------+
-| ``/ai-chat/history/sessions/{id}/close``    | POST   | Close session                    |
+| ``/api/v1/ai-chat/history/sessions/{id}/close``    | POST   | Close session                    |
 +---------------------------------------------+--------+----------------------------------+
-| ``/ai-chat/history/sessions/{id}/activate`` | POST   | Activate session                 |
+| ``/api/v1/ai-chat/history/sessions/{id}/activate`` | POST   | Activate session                 |
 +---------------------------------------------+--------+----------------------------------+
-| ``/ai-chat/history/sessions/{id}/title``    | PUT    | Update session title             |
+| ``/api/v1/ai-chat/history/sessions/{id}/title``    | PUT    | Update session title             |
 +---------------------------------------------+--------+----------------------------------+
 
 **Chat Request:**
@@ -1212,21 +1213,21 @@ User Status APIs
 ================
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/user/statuses``                          | GET    | Get my statuses                  |
+| ``/api/v1/user/statuses``                          | GET    | Get my statuses                  |
 +---------------------------------------------+--------+----------------------------------+
-| ``/user/statuses``                          | POST   | Create status                    |
+| ``/api/v1/user/statuses``                          | POST   | Create status                    |
 +---------------------------------------------+--------+----------------------------------+
-| ``/user/statuses``                          | PATCH  | Update status                    |
+| ``/api/v1/user/statuses``                          | PATCH  | Update status                    |
 +---------------------------------------------+--------+----------------------------------+
-| ``/user/statuses``                          | DELETE | Delete status                    |
+| ``/api/v1/user/statuses``                          | DELETE | Delete status                    |
 +---------------------------------------------+--------+----------------------------------+
-| ``/user/statuses/set-busy``                 | POST   | Set busy status                  |
+| ``/api/v1/user/statuses/set-busy``                 | POST   | Set busy status                  |
 +---------------------------------------------+--------+----------------------------------+
-| ``/user/statuses/set-available``            | POST   | Set available status             |
+| ``/api/v1/user/statuses/set-available``            | POST   | Set available status             |
 +---------------------------------------------+--------+----------------------------------+
-| ``/user/statuses/clear-expired``            | POST   | Clear expired statuses           |
+| ``/api/v1/user/statuses/clear-expired``            | POST   | Clear expired statuses           |
 +---------------------------------------------+--------+----------------------------------+
 
 **Create Status Request:**
@@ -1245,17 +1246,17 @@ Reports & Blocking APIs
 ==========================
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/reports/block/{userId}``                 | POST   | Block a user                     |
+| ``/api/v1/reports/block/{userId}``                 | POST   | Block a user                     |
 +---------------------------------------------+--------+----------------------------------+
-| ``/reports/unblock/{userId}``               | POST   | Unblock a user                   |
+| ``/api/v1/reports/unblock/{userId}``               | POST   | Unblock a user                   |
 +---------------------------------------------+--------+----------------------------------+
-| ``/reports/report/{targetId}``              | POST   | Report user/content              |
+| ``/api/v1/reports/report/{targetId}``              | POST   | Report user/content              |
 +---------------------------------------------+--------+----------------------------------+
-| ``/reports/blocked-users``                  | GET    | Get blocked users list           |
+| ``/api/v1/reports/blocked-users``                  | GET    | Get blocked users list           |
 +---------------------------------------------+--------+----------------------------------+
-| ``/reports/reasons``                        | GET    | Get report reasons               |
+| ``/api/v1/reports/reasons``                        | GET    | Get report reasons               |
 +---------------------------------------------+--------+----------------------------------+
 
 **Report Request:**
@@ -1276,28 +1277,28 @@ Password & Account
 ------------------
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/settings/update-password``               | PATCH  | Update password                  |
+| ``/api/v1/settings/update-password``               | PATCH  | Update password                  |
 +---------------------------------------------+--------+----------------------------------+
-| ``/settings/social-accounts``               | POST   | Add social accounts              |
+| ``/api/v1/settings/social-accounts``               | POST   | Add social accounts              |
 +---------------------------------------------+--------+----------------------------------+
-| ``/settings/soft/delete-account``           | DELETE | Soft delete account              |
+| ``/api/v1/settings/soft/delete-account``           | DELETE | Soft delete account              |
 +---------------------------------------------+--------+----------------------------------+
-| ``/settings/force/delete-account``          | DELETE | Permanently delete account       |
+| ``/api/v1/settings/force/delete-account``          | DELETE | Permanently delete account       |
 +---------------------------------------------+--------+----------------------------------+
 
 Alternative Email
 -----------------
 
 +---------------------------------------------+--------+----------------------------------+
-| Endpoint                                    | Method | Description                      |
+| URL                                    | Method | Description                      |
 +=============================================+========+==================================+
-| ``/settings/alt-email/send-otp``            | POST   | Add alternative email            |
+| ``/api/v1/settings/alt-email/send-otp``            | POST   | Add alternative email            |
 +---------------------------------------------+--------+----------------------------------+
-| ``/settings/alt-email/verify-otp``          | POST   | Verify alternative email         |
+| ``/api/v1/settings/alt-email/verify-otp``          | POST   | Verify alternative email         |
 +---------------------------------------------+--------+----------------------------------+
-| ``/settings/alt-email/remove``              | DELETE | Remove alternative email         |
+| ``/api/v1/settings/alt-email/remove``              | DELETE | Remove alternative email         |
 +---------------------------------------------+--------+----------------------------------+
 
 **Update Password Request:**
@@ -1310,7 +1311,7 @@ Alternative Email
         "password_confirmation": "new-password"
     }
 
-**PATCH /settings/update-password - Update Password**
+**PATCH /api/v1/settings/update-password - Update Password**
 
 Request:
 
@@ -1322,7 +1323,7 @@ Request:
         "password_confirmation": "NewSecurePass456!"
     }
 
-Response (200 OK):
+Success Response (200 OK):
 
 .. code-block:: json
 
@@ -1331,7 +1332,7 @@ Response (200 OK):
         "message": "Password updated successfully"
     }
 
-Response (422 Validation Error):
+Error Response (422 Validation Error):
 
 .. code-block:: json
 
@@ -1343,7 +1344,7 @@ Response (422 Validation Error):
         }
     }
 
-**POST /settings/social-accounts - Add Social Accounts**
+**POST /api/v1/settings/social-accounts - Add Social Accounts**
 
 Request:
 
@@ -1355,7 +1356,7 @@ Request:
         "twitter": "johndoe_dev"
     }
 
-Response (200 OK):
+Success Response (200 OK):
 
 .. code-block:: json
 
@@ -1364,7 +1365,7 @@ Response (200 OK):
         "message": "Social accounts updated successfully"
     }
 
-**POST /settings/alt-email/send-otp - Add Alternative Email**
+**POST /api/v1/settings/alt-email/send-otp - Add Alternative Email**
 
 Request:
 
@@ -1374,7 +1375,7 @@ Request:
         "alt_email": "john.backup@example.com"
     }
 
-Response (200 OK):
+Success Response (200 OK):
 
 .. code-block:: json
 
@@ -1383,7 +1384,7 @@ Response (200 OK):
         "message": "OTP sent to alternative email"
     }
 
-**POST /settings/alt-email/verify-otp - Verify Alternative Email**
+**POST /api/v1/settings/alt-email/verify-otp - Verify Alternative Email**
 
 Request:
 
@@ -1394,7 +1395,7 @@ Request:
         "otp": "123456"
     }
 
-Response (200 OK):
+Success Response (200 OK):
 
 .. code-block:: json
 
@@ -1403,9 +1404,9 @@ Response (200 OK):
         "message": "Alternative email verified successfully"
     }
 
-**DELETE /settings/soft/delete-account - Soft Delete Account**
+**DELETE /api/v1/settings/soft/delete-account - Soft Delete Account**
 
-Response (200 OK):
+Success Response (200 OK):
 
 .. code-block:: json
 
@@ -1414,7 +1415,7 @@ Response (200 OK):
         "message": "Account deactivated. You can reactivate within 30 days."
     }
 
-**DELETE /settings/force/delete-account - Permanently Delete Account**
+**DELETE /api/v1/settings/force/delete-account - Permanently Delete Account**
 
 Request:
 
@@ -1425,7 +1426,7 @@ Request:
         "confirmation": "DELETE"
     }
 
-Response (200 OK):
+Success Response (200 OK):
 
 .. code-block:: json
 
