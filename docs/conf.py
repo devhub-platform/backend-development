@@ -17,10 +17,10 @@
 
 # -- Project information -----------------------------------------------------
 
-project = "Basic Sphinx Example Project"
-copyright = "2022, Read the Docs core team"
-author = "Read the Docs core team"
-
+project = "DevHub Community"
+copyright = "2026, DevHub Team"
+author = "DevHub Team"
+release = "1.0.0"
 
 # -- General configuration ---------------------------------------------------
 # -- General configuration
@@ -28,8 +28,6 @@ author = "Read the Docs core team"
 extensions = [
     "sphinx.ext.duration",
     "sphinx.ext.doctest",
-    "sphinx.ext.autodoc",
-    "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
 ]
 
@@ -61,3 +59,13 @@ html_theme = "sphinx_rtd_theme"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+
+# -- Options for HTML theme --------------------------------------------------
+
+html_theme_options = {
+    "navigation_depth": 4,
+    "collapse_navigation": False,
+    "sticky_navigation": True,
+    "includehidden": True,
+    "titles_only": False,
+}
