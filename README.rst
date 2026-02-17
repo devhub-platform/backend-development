@@ -18,9 +18,9 @@ DevHub Community - Developer Platform
 
 A modern, feature-rich social platform built for developers to share knowledge, collaborate, and grow together. Built with Laravel 12 and cutting-edge web technologies.
 
+| **API Documentation:** https://0yviq6a5i5.apidog.io
 | **Production URL:** https://devhub.eu-north-1.elasticbeanstalk.com
 | **API Base URL:** https://devhub.eu-north-1.elasticbeanstalk.com/api/v1
-| **API Documentation:** https://0yviq6a5i5.apidog.io/
 
 .. contents:: Contents
    :depth: 3
