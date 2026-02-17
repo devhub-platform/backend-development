@@ -111,12 +111,18 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::delete('search/clear', 'clearSearchHistory');
         });
 
-        // Comments
-        Route::controller(CommentController::class)->group(function () {
-            // Create & Reply
+        // Comments (protected from blocked users)
+        Route::middleware('blocked.user')->controller(CommentController::class)->group(function () {
+
             Route::post('posts/{post}/comments', 'store');
             Route::post('posts/{post}/comments/{parentComment}/reply', 'reply');
 
+            Route::post('comments/{comment}/react', 'react');
+            Route::delete('comments/{comment}/remove-react', 'removeReaction');
+        });
+
+        // Comments (public reads - no blocked.user middleware needed)
+        Route::controller(CommentController::class)->group(function () {
             // Get comments by post/user
             Route::get('posts/{postId}/comments', 'getByPost');
             Route::get('posts/{postId}/comments/count', 'countByPost');
@@ -130,9 +136,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('comments/{comment}/pin', 'pin');
             Route::post('comments/{comment}/unpin', 'unpin');
 
-            // Reactions
-            Route::post('comments/{comment}/react', 'react');
-            Route::delete('comments/{comment}/remove-react', 'removeReaction');
+            // Get Reactions info
             Route::get('comments/{comment}/my-reaction', 'myReaction');
             Route::get('comments/{comment}/reactions', 'getReactions');
 
@@ -167,21 +171,27 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('profile/details', 'details');
         });
 
-        // Followers
-        Route::controller(FollowersController::class)->group(function () {
-            Route::get('users/{user}/follow-stats/count', 'UserFollowStats');
+        Route::middleware('blocked.user')->controller(FollowersController::class)->group(function () {
             Route::post('users/{user}/follow', 'follow');
             Route::post('users/{user}/unfollow', 'unfollow');
+        });
+
+        // Followers (public reads)
+        Route::controller(FollowersController::class)->group(function () {
+            Route::get('users/{user}/follow-stats/count', 'UserFollowStats');
             Route::get('followers/suggestions', 'suggestions');
             Route::get('followers/my-followers', 'myFollowers');
             Route::get('followers/my-following', 'myFollowing');
         });
 
-        // Reactions
-        Route::controller(ReactionController::class)->group(function () {
-            Route::get('user/posts/total-reactions', 'getTotalReactionsOnPosts');
+        // Reactions (protected from blocked users)
+        Route::middleware('blocked.user')->controller(ReactionController::class)->group(function () {
             Route::post('posts/{post}/react', 'reactToPost');
             Route::delete('posts/{post}/remove-react', 'removeReaction');
+        });
+
+        Route::controller(ReactionController::class)->group(function () {
+            Route::get('user/posts/total-reactions', 'getTotalReactionsOnPosts');
             Route::get('posts/{post}/reactors', 'getReactors');
             Route::get('posts/{post}/my-reaction', 'myReaction');
             Route::get('posts/{post}/reactions-count', 'reactionCounts');
@@ -242,12 +252,15 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('reading-lists/{readingList}', 'show');
             Route::patch('reading-lists/{readingList}', 'update');
             Route::delete('reading-lists/{readingList}', 'destroy');
-            Route::post('reading-lists/{readingList}/add-post/{post}', 'addPostToReadingList');
             Route::delete('reading-lists/{readingList}/remove-post/{post}', 'removePostFromReadingList');
+            Route::post('reading-lists/{readingList}/duplicate', 'duplicateReadingList');
+        });
+
+        Route::middleware('blocked.user')->controller(ReadingListController::class)->group(function () {
+            Route::post('reading-lists/{readingList}/add-post/{post}', 'addPostToReadingList');
             Route::post('reading-lists/{readingList}/move-post/{post}', 'movePostToAnotherList');
             Route::post('reading-lists/{readingList}/add-note/{post}', 'addNoteToPostInReadingList');
             Route::delete('reading-lists/{readingList}/delete-note/{post}', 'deleteNoteInPostInReadingList');
-            Route::post('reading-lists/{readingList}/duplicate', 'duplicateReadingList');
             Route::get('reading-lists/{readingList}/show-notes/{post}', 'showNotesInReadingList');
         });
 
@@ -317,7 +330,8 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 // Fallback & Welcome Routes
 Route::fallback(function () {
     return response()->json([
-        'message' => 'Resource not found , The API endpoint does not exist , visit document.',
+        'Hey there!' => 'Ramadan Mubarak!!',
+        'message' => 'Resource not found , The API endpoint does not exist',
         'documentation' => 'https://0yviq6a5i5.apidog.io/',
         'version' => 'API v1 Devhub is a platform for developers to share knowledge, collaborate on projects, and connect with other developers. Our API allows you to access our platform programmatically, enabling you to integrate our features into your applications and services.',
     ], 404);
