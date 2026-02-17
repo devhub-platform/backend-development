@@ -76,9 +76,9 @@ Authentication
 
 DevHub uses JWT (JSON Web Token) authentication. Include the token in the Authorization header:
 
-.. code-block:: text
+.. code-block:: http
 
-   Authorization: Bearer <your-jwt-token>
+   Authorization: Bearer <your_jwt_token>
 
 Login Example
 ~~~~~~~~~~~~~
@@ -98,7 +98,7 @@ Response:
      "message": "Login successful",
      "data": {
        "user": {"id": 1, "name": "John Doe"},
-       "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+       "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
        "token_type": "bearer",
        "expires_in": 3600
      }
@@ -109,8 +109,13 @@ Rate Limiting
 
 API requests are rate-limited to prevent abuse:
 
-- **Public endpoints:** 15 requests/minute
-- **Protected endpoints:** 25 requests/minute
++----------------------+---------------------+
+| Endpoint Type        | Limit               |
++======================+=====================+
+| Public endpoints     | 15 requests/minute  |
++----------------------+---------------------+
+| Protected endpoints  | 25 requests/minute  |
++----------------------+---------------------+
 
 Docker Deployment
 -----------------

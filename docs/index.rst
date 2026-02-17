@@ -3,12 +3,12 @@ DevHub Community Documentation
 
 **DevHub** is a modern, feature-rich social platform built for developers to share knowledge, collaborate, and grow together. Built with Laravel 12 and cutting-edge web technologies.
 
-| **Production URL:** http://devhub.eu-north-1.elasticbeanstalk.com
-| **API Base URL:** http://devhub.eu-north-1.elasticbeanstalk.com/api/v1
+| **Production URL:** https://devhub.eu-north-1.elasticbeanstalk.com
+| **API Base URL:** https://devhub.eu-north-1.elasticbeanstalk.com/api/v1
 
 Check out the :doc:`usage` section for getting started, and :doc:`api` for the complete API reference.
 
-.. note::
+.. tip::
 
    This project is under active development. For the latest updates, check the GitHub repository.
 

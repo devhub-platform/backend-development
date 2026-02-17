@@ -4,9 +4,9 @@ API Examples
 This section provides detailed request and response examples for all API endpoints.
 Use these examples to understand the expected format for API calls.
 
-Base URL: ``http://devhub.eu-north-1.elasticbeanstalk.com/api/v1``
+Base URL: ``https://devhub.eu-north-1.elasticbeanstalk.com/api/v1``
 
-.. contents:: Table of Contents
+.. contents:: Contents
    :depth: 2
    :local:
 
@@ -28,10 +28,10 @@ POST /login
 
     {
         "email": "user@example.com",
-        "password": "your-password"
+        "password": "your_password"
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -44,16 +44,16 @@ POST /login
                 "name": "John Doe",
                 "username": "johndoe",
                 "email": "user@example.com",
-                "avatar": "https://cloudinary.com/avatar.jpg",
+                "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg",
                 "email_verified_at": "2026-01-15T10:00:00Z"
             },
-            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
             "token_type": "bearer",
             "expires_in": 3600
         }
     }
 
-**Response (401 Unauthorized):**
+**Error Response (401 Unauthorized):**
 
 .. code-block:: json
 
@@ -81,7 +81,7 @@ POST /register
         "password_confirmation": "SecurePass123!"
     }
 
-**Response (201 Created):**
+**Success Response (201 Created):**
 
 .. code-block:: json
 
@@ -95,11 +95,11 @@ POST /register
                 "username": "johndoe",
                 "email": "john@example.com"
             },
-            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
         }
     }
 
-**Response (422 Validation Error):**
+**Error Response (422 Validation Error):**
 
 .. code-block:: json
 
@@ -127,7 +127,7 @@ POST /email/send-otp
         "email": "user@example.com"
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -152,7 +152,7 @@ POST /email/verify-otp
         "otp": "123456"
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -176,7 +176,7 @@ POST /password/forgot
         "email": "user@example.com"
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -203,7 +203,7 @@ POST /password/reset
         "password_confirmation": "NewSecurePass123!"
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -221,9 +221,9 @@ POST /logout
 
     POST /api/v1/logout HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -241,16 +241,16 @@ POST /refresh
 
     POST /api/v1/refresh HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
     {
         "success": true,
         "data": {
-            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9-NEW-TOKEN...",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9-NEW-TOKEN...",
             "token_type": "bearer",
             "expires_in": 3600
         }
@@ -265,9 +265,9 @@ GET /me
 
     GET /api/v1/me HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -278,8 +278,8 @@ GET /me
             "name": "John Doe",
             "username": "johndoe",
             "email": "user@example.com",
-            "avatar": "https://cloudinary.com/avatar.jpg",
-            "cover_image": "https://cloudinary.com/cover.jpg",
+            "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg",
+            "cover_image": "https://res.cloudinary.com/devhub/image/cover.jpg",
             "bio": "Full-stack developer",
             "location": "San Francisco, CA",
             "website": "https://johndoe.dev",
@@ -304,9 +304,9 @@ GET /posts
 
     GET /api/v1/posts?page=1&per_page=15 HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -327,7 +327,7 @@ GET /posts
                     "id": 1,
                     "name": "John Doe",
                     "username": "johndoe",
-                    "avatar": "https://cloudinary.com/avatar.jpg"
+                    "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg"
                 },
                 "tags": [
                     {"id": 1, "name": "laravel"},
@@ -352,7 +352,7 @@ POST /posts
 
     POST /api/v1/posts HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
@@ -362,7 +362,7 @@ POST /posts
         "tags": ["javascript", "react"]
     }
 
-**Response (201 Created):**
+**Success Response (201 Created):**
 
 .. code-block:: json
 
@@ -388,9 +388,9 @@ GET /posts/{id}
 
     GET /api/v1/posts/1 HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -411,7 +411,7 @@ GET /posts/{id}
                 "id": 1,
                 "name": "John Doe",
                 "username": "johndoe",
-                "avatar": "https://cloudinary.com/avatar.jpg"
+                "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg"
             },
             "tags": [
                 {"id": 1, "name": "laravel", "slug": "laravel"},
@@ -429,7 +429,7 @@ PUT /posts/{id}
 
     PUT /api/v1/posts/1 HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
@@ -438,7 +438,7 @@ PUT /posts/{id}
         "status": "published"
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -462,9 +462,9 @@ DELETE /posts/{id}
 
     DELETE /api/v1/posts/1 HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -482,9 +482,9 @@ POST /posts/{id}/restore
 
     POST /api/v1/posts/1/restore HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -502,7 +502,7 @@ POST /posts/{id}/report
 
     POST /api/v1/posts/1/report HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
@@ -510,7 +510,7 @@ POST /posts/{id}/report
         "description": "This post contains spam content"
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -533,14 +533,14 @@ POST /posts/{postId}/comments
 
     POST /api/v1/posts/1/comments HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
         "content": "Great article! Very helpful for beginners."
     }
 
-**Response (201 Created):**
+**Success Response (201 Created):**
 
 .. code-block:: json
 
@@ -560,7 +560,7 @@ POST /posts/{postId}/comments
                 "id": 5,
                 "name": "Jane Smith",
                 "username": "janesmith",
-                "avatar": "https://cloudinary.com/avatar.jpg"
+                "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg"
             }
         }
     }
@@ -574,14 +574,14 @@ POST /posts/{postId}/comments/{commentId}/reply
 
     POST /api/v1/posts/1/comments/45/reply HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
         "content": "Thank you for your feedback!"
     }
 
-**Response (201 Created):**
+**Success Response (201 Created):**
 
 .. code-block:: json
 
@@ -608,9 +608,9 @@ GET /posts/{postId}/comments
 
     GET /api/v1/posts/1/comments HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -627,7 +627,7 @@ GET /posts/{postId}/comments
                 "user": {
                     "id": 5,
                     "name": "Jane Smith",
-                    "avatar": "https://cloudinary.com/avatar.jpg"
+                    "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg"
                 },
                 "replies": [
                     {
@@ -653,14 +653,14 @@ POST /comments/{id}/react
 
     POST /api/v1/comments/45/react HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
         "reaction": "like"
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -682,9 +682,9 @@ POST /comments/{id}/pin
 
     POST /api/v1/comments/45/pin HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -707,14 +707,14 @@ POST /posts/{id}/react
 
     POST /api/v1/posts/1/react HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
         "reaction": "love"
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -738,9 +738,9 @@ GET /posts/{id}/reactions-count
 
     GET /api/v1/posts/1/reactions-count HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -765,9 +765,9 @@ GET /posts/{id}/reactors
 
     GET /api/v1/posts/1/reactors HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -779,7 +779,7 @@ GET /posts/{id}/reactors
                     "id": 5,
                     "name": "Jane Smith",
                     "username": "janesmith",
-                    "avatar": "https://cloudinary.com/avatar.jpg"
+                    "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg"
                 },
                 "reaction": "love",
                 "reacted_at": "2026-02-17T14:00:00Z"
@@ -796,9 +796,9 @@ DELETE /posts/{id}/remove-react
 
     DELETE /api/v1/posts/1/remove-react HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -821,9 +821,9 @@ GET /users
 
     GET /api/v1/users?page=1&per_page=15 HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -834,7 +834,7 @@ GET /users
                 "id": 1,
                 "name": "John Doe",
                 "username": "johndoe",
-                "avatar": "https://cloudinary.com/avatar.jpg",
+                "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg",
                 "bio": "Full-stack developer",
                 "followers_count": 150,
                 "following_count": 75,
@@ -856,9 +856,9 @@ GET /users/{id}
 
     GET /api/v1/users/1 HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -869,8 +869,8 @@ GET /users/{id}
             "name": "John Doe",
             "username": "johndoe",
             "email": "john@example.com",
-            "avatar": "https://cloudinary.com/avatar.jpg",
-            "cover_image": "https://cloudinary.com/cover.jpg",
+            "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg",
+            "cover_image": "https://res.cloudinary.com/devhub/image/cover.jpg",
             "bio": "Full-stack developer passionate about Laravel",
             "location": "San Francisco, CA",
             "website": "https://johndoe.dev",
@@ -894,9 +894,9 @@ GET /users/recommended
 
     GET /api/v1/users/recommended HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -907,7 +907,7 @@ GET /users/recommended
                 "id": 5,
                 "name": "Jane Smith",
                 "username": "janesmith",
-                "avatar": "https://cloudinary.com/avatar.jpg",
+                "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg",
                 "bio": "React Developer",
                 "mutual_followers": 3,
                 "reason": "Similar skills"
@@ -929,9 +929,9 @@ GET /profile
 
     GET /api/v1/profile HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -942,8 +942,8 @@ GET /profile
             "name": "John Doe",
             "username": "johndoe",
             "email": "john@example.com",
-            "avatar": "https://cloudinary.com/avatar.jpg",
-            "cover_image": "https://cloudinary.com/cover.jpg",
+            "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg",
+            "cover_image": "https://res.cloudinary.com/devhub/image/cover.jpg",
             "bio": "Full-stack developer",
             "location": "San Francisco, CA",
             "website": "https://johndoe.dev",
@@ -964,7 +964,7 @@ PATCH /profile
 
     PATCH /api/v1/profile HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
@@ -973,7 +973,7 @@ PATCH /profile
         "location": "New York, NY"
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -997,12 +997,12 @@ POST /profile/upload/avatar
 
     POST /api/v1/profile/upload/avatar HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: multipart/form-data
 
     avatar: [binary image file]
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1010,7 +1010,7 @@ POST /profile/upload/avatar
         "success": true,
         "message": "Avatar uploaded successfully",
         "data": {
-            "avatar": "https://cloudinary.com/new-avatar.jpg"
+            "avatar": "https://res.cloudinary.com/devhub/image/new-avatar.jpg"
         }
     }
 
@@ -1023,12 +1023,12 @@ POST /profile/upload/cover-image
 
     POST /api/v1/profile/upload/cover-image HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: multipart/form-data
 
     cover_image: [binary image file]
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1036,7 +1036,7 @@ POST /profile/upload/cover-image
         "success": true,
         "message": "Cover image uploaded successfully",
         "data": {
-            "cover_image": "https://cloudinary.com/new-cover.jpg"
+            "cover_image": "https://res.cloudinary.com/devhub/image/new-cover.jpg"
         }
     }
 
@@ -1049,9 +1049,9 @@ GET /profile/activity
 
     GET /api/v1/profile/activity HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1082,9 +1082,9 @@ POST /users/{id}/follow
 
     POST /api/v1/users/5/follow HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1106,9 +1106,9 @@ POST /users/{id}/unfollow
 
     POST /api/v1/users/5/unfollow HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1130,9 +1130,9 @@ GET /followers/suggestions
 
     GET /api/v1/followers/suggestions HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1143,7 +1143,7 @@ GET /followers/suggestions
                 "id": 10,
                 "name": "Alex Johnson",
                 "username": "alexj",
-                "avatar": "https://cloudinary.com/avatar.jpg",
+                "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg",
                 "bio": "Backend Developer",
                 "mutual_followers_count": 5,
                 "reason": "Followed by people you follow"
@@ -1160,9 +1160,9 @@ GET /followers/my-followers
 
     GET /api/v1/followers/my-followers HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1173,7 +1173,7 @@ GET /followers/my-followers
                 "id": 5,
                 "name": "Jane Smith",
                 "username": "janesmith",
-                "avatar": "https://cloudinary.com/avatar.jpg",
+                "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg",
                 "bio": "React Developer",
                 "is_following_back": true,
                 "followed_at": "2026-02-01T10:00:00Z"
@@ -1198,9 +1198,9 @@ GET /tags
 
     GET /api/v1/tags HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1233,9 +1233,9 @@ GET /tags/popular
 
     GET /api/v1/tags/popular HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1266,14 +1266,14 @@ POST /tags
 
     POST /api/v1/tags HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
         "name": "typescript"
     }
 
-**Response (201 Created):**
+**Success Response (201 Created):**
 
 .. code-block:: json
 
@@ -1296,14 +1296,14 @@ POST /posts/{postId}/tags
 
     POST /api/v1/posts/1/tags HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
         "tags": ["laravel", "php", "api"]
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1328,9 +1328,9 @@ POST /tags/{id}/follow
 
     POST /api/v1/tags/1/follow HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1353,9 +1353,9 @@ GET /search/posts
 
     GET /api/v1/search/posts?q=laravel&page=1&per_page=15 HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1392,9 +1392,9 @@ GET /search/users
 
     GET /api/v1/search/users?q=john HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1405,7 +1405,7 @@ GET /search/users
                 "id": 1,
                 "name": "John Doe",
                 "username": "johndoe",
-                "avatar": "https://cloudinary.com/avatar.jpg",
+                "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg",
                 "bio": "Full-stack developer"
             }
         ]
@@ -1420,9 +1420,9 @@ GET /search/tags
 
     GET /api/v1/search/tags?q=java HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1443,9 +1443,9 @@ GET /search/histories
 
     GET /api/v1/search/histories HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1481,9 +1481,9 @@ GET /notifications/all
 
     GET /api/v1/notifications/all HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1500,7 +1500,7 @@ GET /notifications/all
                     "user": {
                         "id": 5,
                         "name": "Jane Smith",
-                        "avatar": "https://cloudinary.com/avatar.jpg"
+                        "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg"
                     }
                 },
                 "read_at": null,
@@ -1514,7 +1514,7 @@ GET /notifications/all
                     "user": {
                         "id": 10,
                         "name": "Alex Johnson",
-                        "avatar": "https://cloudinary.com/avatar.jpg"
+                        "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg"
                     }
                 },
                 "read_at": "2026-02-17T14:00:00Z",
@@ -1536,9 +1536,9 @@ POST /notifications/mark-as-read
 
     POST /api/v1/notifications/mark-as-read HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1556,9 +1556,9 @@ GET /notifications/preferences
 
     GET /api/v1/notifications/preferences HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1584,7 +1584,7 @@ PUT /notifications/preferences
 
     PUT /api/v1/notifications/preferences HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
@@ -1593,7 +1593,7 @@ PUT /notifications/preferences
         "reaction_notifications": false
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1616,9 +1616,9 @@ GET /reading-lists/lists/posts
 
     GET /api/v1/reading-lists/lists/posts HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1651,7 +1651,7 @@ POST /reading-lists
 
     POST /api/v1/reading-lists HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
@@ -1659,7 +1659,7 @@ POST /reading-lists
         "description": "Collection of React articles"
     }
 
-**Response (201 Created):**
+**Success Response (201 Created):**
 
 .. code-block:: json
 
@@ -1684,9 +1684,9 @@ POST /reading-lists/{id}/add-post/{postId}
 
     POST /api/v1/reading-lists/5/add-post/25 HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1709,14 +1709,14 @@ POST /reading-lists/{id}/add-note/{postId}
 
     POST /api/v1/reading-lists/5/add-note/25 HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
         "note": "Check the section about hooks"
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1743,9 +1743,9 @@ GET /saved-posts
 
     GET /api/v1/saved-posts HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1781,9 +1781,9 @@ POST /saved-posts/{postId}
 
     POST /api/v1/saved-posts/25 HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1801,9 +1801,9 @@ DELETE /saved-posts/{postId}
 
     DELETE /api/v1/saved-posts/25 HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1826,9 +1826,9 @@ GET /code/runtimes
 
     GET /api/v1/code/runtimes HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1863,7 +1863,7 @@ POST /code/execute
 
     POST /api/v1/code/execute HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
@@ -1874,7 +1874,7 @@ POST /code/execute
         "timeout": 30
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1902,7 +1902,7 @@ POST /code/execute
 
     POST /api/v1/code/execute HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
@@ -1958,9 +1958,9 @@ GET /code/languages
 
     GET /api/v1/code/languages HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -1989,9 +1989,9 @@ POST /ai/summarize/post/{postId}
 
     POST /api/v1/ai/summarize/post/1 HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2014,14 +2014,14 @@ POST /ai/translate/post/{postId}
 
     POST /api/v1/ai/translate/post/1 HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
         "target_language": "es"
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2044,9 +2044,9 @@ POST /ai/analyze/post/{postId}
 
     POST /api/v1/ai/analyze/post/1 HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2075,14 +2075,14 @@ POST /ai/question/post/{postId}
 
     POST /api/v1/ai/question/post/1 HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
         "question": "What are the main benefits mentioned in this article?"
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2105,7 +2105,7 @@ POST /ai/generate/content
 
     POST /api/v1/ai/generate/content HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
@@ -2114,7 +2114,7 @@ POST /ai/generate/content
         "tone": "educational"
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2141,7 +2141,7 @@ POST /ai-chat/send
 
     POST /api/v1/ai-chat/send HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
@@ -2150,7 +2150,7 @@ POST /ai-chat/send
         "model": "llama"
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2175,9 +2175,9 @@ GET /ai-chat/models
 
     GET /api/v1/ai-chat/models HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2208,14 +2208,14 @@ POST /ai-chat/history/sessions/create
 
     POST /api/v1/ai-chat/history/sessions/create HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
         "title": "Laravel API Discussion"
     }
 
-**Response (201 Created):**
+**Success Response (201 Created):**
 
 .. code-block:: json
 
@@ -2239,9 +2239,9 @@ GET /ai-chat/history/sessions
 
     GET /api/v1/ai-chat/history/sessions HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2277,9 +2277,9 @@ GET /user/statuses
 
     GET /api/v1/user/statuses HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2306,7 +2306,7 @@ POST /user/statuses
 
     POST /api/v1/user/statuses HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
@@ -2315,7 +2315,7 @@ POST /user/statuses
         "expires_at": "2026-02-17T18:00:00Z"
     }
 
-**Response (201 Created):**
+**Success Response (201 Created):**
 
 .. code-block:: json
 
@@ -2339,9 +2339,9 @@ POST /user/statuses/set-busy
 
     POST /api/v1/user/statuses/set-busy HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2368,9 +2368,9 @@ POST /reports/block/{userId}
 
     POST /api/v1/reports/block/50 HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2388,7 +2388,7 @@ POST /reports/report/{targetId}
 
     POST /api/v1/reports/report/50 HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
@@ -2396,7 +2396,7 @@ POST /reports/report/{targetId}
         "description": "This user has been sending inappropriate messages"
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2418,9 +2418,9 @@ GET /reports/blocked-users
 
     GET /api/v1/reports/blocked-users HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2431,7 +2431,7 @@ GET /reports/blocked-users
                 "id": 50,
                 "name": "Blocked User",
                 "username": "blockeduser",
-                "avatar": "https://cloudinary.com/avatar.jpg",
+                "avatar": "https://res.cloudinary.com/devhub/image/avatar.jpg",
                 "blocked_at": "2026-02-10T14:00:00Z"
             }
         ],
@@ -2449,9 +2449,9 @@ GET /reports/reasons
 
     GET /api/v1/reports/reasons HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2481,7 +2481,7 @@ PATCH /settings/update-password
 
     PATCH /api/v1/settings/update-password HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
@@ -2490,7 +2490,7 @@ PATCH /settings/update-password
         "password_confirmation": "NewSecurePass456!"
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2499,7 +2499,7 @@ PATCH /settings/update-password
         "message": "Password updated successfully"
     }
 
-**Response (422 Validation Error):**
+**Error Response (422 Validation Error):**
 
 .. code-block:: json
 
@@ -2520,14 +2520,14 @@ POST /settings/alt-email/send-otp
 
     POST /api/v1/settings/alt-email/send-otp HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
         "alt_email": "john.backup@example.com"
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2545,7 +2545,7 @@ POST /settings/alt-email/verify-otp
 
     POST /api/v1/settings/alt-email/verify-otp HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
@@ -2553,7 +2553,7 @@ POST /settings/alt-email/verify-otp
         "otp": "123456"
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2571,9 +2571,9 @@ DELETE /settings/soft/delete-account
 
     DELETE /api/v1/settings/soft/delete-account HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
@@ -2591,7 +2591,7 @@ DELETE /settings/force/delete-account
 
     DELETE /api/v1/settings/force/delete-account HTTP/1.1
     Host: devhub.eu-north-1.elasticbeanstalk.com
-    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     Content-Type: application/json
 
     {
@@ -2599,7 +2599,7 @@ DELETE /settings/force/delete-account
         "confirmation": "DELETE"
     }
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 
 .. code-block:: json
 
