@@ -5,30 +5,38 @@ namespace App\Services;
 use App\Http\Requests\CodeEditorRequests\CodeEditorRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class CodeEditorService
 {
-    private $pistonBaseUrl = 'https://emkc.org/api/v2/piston';
-    private const RUNTIMES_CACHE_KEY = 'code_editor_runtimes';
-    private const RUNTIMES_CACHE_TTL = 3600;
+    private string $pistonBaseUrl;
+    private ?string $pistonApiKey;
 
-    public function getRuntimes()
+    public function __construct()
+    {
+        $this->pistonBaseUrl = config('services.piston.base_url');
+        $this->pistonApiKey = config('services.piston.api_key');
+    }
+
+    private function httpClient(int $timeout = 10): \Illuminate\Http\Client\PendingRequest
+    {
+        $client = Http::timeout($timeout);
+
+        if ($this->pistonApiKey) {
+            $client->withHeaders([
+                'Authorization' => $this->pistonApiKey,
+            ]);
+        }
+
+        return $client;
+    }
+
+    public function getRuntimes(): JsonResponse
     {
         try {
-            $cachedRuntimes = Cache::get(self::RUNTIMES_CACHE_KEY);
-            if ($cachedRuntimes !== null) {
-                return response()->json([
-                    'success' => true,
-                    'data' => $cachedRuntimes,
-                    'cached' => true
-                ]);
-            }
-
-            $response = Http::timeout(10)->get($this->pistonBaseUrl . '/runtimes');
+            $response = $this->httpClient()->get($this->pistonBaseUrl . '/runtimes');
 
             if (!$response->successful()) {
                 throw new \Exception('Failed to fetch runtimes from Piston API');
@@ -36,12 +44,10 @@ class CodeEditorService
 
             $runtimes = $response->json();
 
-            Cache::put(self::RUNTIMES_CACHE_KEY, $runtimes, self::RUNTIMES_CACHE_TTL);
-
             return response()->json([
                 'success' => true,
                 'data' => $runtimes,
-                'cached' => false
+                'count' => count($runtimes)
             ]);
         } catch (\Exception $e) {
             Log::error('Error fetching runtimes: ' . $e->getMessage());
@@ -53,10 +59,7 @@ class CodeEditorService
         }
     }
 
-    /**
-     * Execute code with the specified language and version
-     */
-    public function executeCode(CodeEditorRequest $request)
+    public function executeCode(CodeEditorRequest $request): JsonResponse
     {
         $validated = $request->validated();
 
@@ -79,8 +82,7 @@ class CodeEditorService
         }
 
         try {
-
-            $response = Http::timeout($timeout + 5)
+            $response = $this->httpClient($timeout + 5)
                 ->post($this->pistonBaseUrl . '/execute', $pistonPayload);
 
             if (!$response->successful()) {
@@ -93,15 +95,22 @@ class CodeEditorService
             }
 
             $result = $response->json();
+            $run = $result['run'] ?? [];
 
             return response()->json([
                 'success' => true,
-                'language' => $validated['language'],
-                'version' => $validated['version'],
-                'file' => 'main.' . $extension,
-                'output' => $this->parseExecutionOutput($result),
-                'execution_time' => $result['run']['compile_output'] ?? null,
-                'exit_code' => $result['run']['code'] ?? 0,
+                'language' => $result['language'] ?? $validated['language'],
+                'version' => $result['version'] ?? $validated['version'],
+                'run' => [
+                    'stdout' => $run['stdout'] ?? '',
+                    'stderr' => $run['stderr'] ?? '',
+                    'code' => $run['code'] ?? 0,
+                    'output' => $run['output'] ?? trim(($run['stdout'] ?? '') . ($run['stderr'] ?? '')),
+                    'memory' => $run['memory'] ?? null,
+                    'message' => $run['message'] ?? null,
+                    'cpu_time' => $run['cpu_time'] ?? null,
+                    'wall_time' => $run['wall_time'] ?? null,
+                ],
             ]);
 
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
@@ -138,19 +147,13 @@ class CodeEditorService
         $searchTerm = Str::trim(Str::lower($searchTerm));
 
         try {
+            $response = $this->httpClient()->get($this->pistonBaseUrl . '/runtimes');
 
-            $cachedRuntimes = Cache::get(self::RUNTIMES_CACHE_KEY);
-
-            if ($cachedRuntimes === null) {
-                $response = Http::timeout(10)->get($this->pistonBaseUrl . '/runtimes');
-                if (!$response->successful()) {
-                    throw new \Exception('Failed to fetch runtimes');
-                }
-                $runtimes = $response->json();
-                Cache::put(self::RUNTIMES_CACHE_KEY, $runtimes, self::RUNTIMES_CACHE_TTL);
-            } else {
-                $runtimes = $cachedRuntimes;
+            if (!$response->successful()) {
+                throw new \Exception('Failed to fetch runtimes');
             }
+
+            $runtimes = $response->json();
 
             if (!is_array($runtimes)) {
                 throw new \UnexpectedValueException('Invalid response format from runtimes API');
@@ -159,13 +162,13 @@ class CodeEditorService
             $filteredRuntimes = array_filter($runtimes, function ($runtime) use ($searchTerm) {
                 $language = strtolower($runtime['language'] ?? '');
                 $version = strtolower($runtime['version'] ?? '');
-                return strpos($language, $searchTerm) !== false || strpos($version, $searchTerm) !== false;
+                return str_contains($language, $searchTerm) || str_contains($version, $searchTerm);
             });
 
             if (empty($filteredRuntimes)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No runtimes found matching: ' . htmlspecialchars($searchTerm),
+                    'message' => 'No runtimes found matching: ' . $searchTerm,
                     'search_term' => $searchTerm
                 ], 404);
             }
@@ -188,16 +191,13 @@ class CodeEditorService
     public function getSupportedLanguages(): JsonResponse
     {
         try {
-            $runtimes = Cache::get(self::RUNTIMES_CACHE_KEY);
+            $response = $this->httpClient()->get($this->pistonBaseUrl . '/runtimes');
 
-            if ($runtimes === null) {
-                $response = Http::timeout(10)->get($this->pistonBaseUrl . '/runtimes');
-                if (!$response->successful()) {
-                    throw new \Exception('Failed to fetch runtimes');
-                }
-                $runtimes = $response->json();
-                Cache::put(self::RUNTIMES_CACHE_KEY, $runtimes, self::RUNTIMES_CACHE_TTL);
+            if (!$response->successful()) {
+                throw new \Exception('Failed to fetch runtimes');
             }
+
+            $runtimes = $response->json();
 
             // Extract unique languages
             $languages = array_unique(array_column($runtimes, 'language'));
@@ -218,39 +218,6 @@ class CodeEditorService
         }
     }
 
-    /**
-     * Clear the runtimes cache
-     */
-    public function clearRuntimesCache(): JsonResponse
-    {
-        try {
-            Cache::forget(self::RUNTIMES_CACHE_KEY);
-            return response()->json([
-                'success' => true,
-                'message' => 'Runtimes cache cleared successfully'
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error clearing cache: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Error clearing cache',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
-            ], 500);
-        }
-    }
-
-    private function parseExecutionOutput(array $result): array
-    {
-        $stdout = $result['run']['stdout'] ?? '';
-        $stderr = $result['run']['stderr'] ?? '';
-        $output = trim($stdout . ($stderr ? PHP_EOL . $stderr : ''));
-
-        return [
-            'stdout' => trim($stdout),
-            'stderr' => trim($stderr),
-            'combined' => $output ?: 'No output produced'
-        ];
-    }
 
     private function parseExecutionError($response): string
     {
@@ -287,7 +254,7 @@ class CodeEditorService
             'haskell' => 'hs', 'hs' => 'hs',
             'golang' => 'go', 'clojure' => 'clj', 'elixir' => 'exs',
             'lua' => 'lua', 'groovy' => 'groovy', 'dart' => 'dart',
-            'bash' => 'sh', 'shell' => 'sh',
+            'bash' => 'sh', 'shell' => 'sh', 'python2' => 'py', 'python3' => 'py',
         ];
 
         return $extensions[$lang] ?? 'txt';

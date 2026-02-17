@@ -57,13 +57,13 @@ class FollowersController
         ]);
     }
 
-    public function UserFollow(User $user)
+    public function UserFollowStats(User $user)
     {
         $count_following = $user->following()->count();
         $count_followers = $user->followers()->count();
 
         return response()->json([
-            'following_count' => $count,
+            'following_count' => $count_following,
             'followers_count' => $count_followers,
         ]);
     }
