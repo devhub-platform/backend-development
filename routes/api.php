@@ -169,7 +169,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
         // Followers
         Route::controller(FollowersController::class)->group(function () {
-            Route::get('users/{user}/follow-stats/count', 'UserFollow');
+            Route::get('users/{user}/follow-stats/count', 'UserFollowStats');
             Route::post('users/{user}/follow', 'follow');
             Route::post('users/{user}/unfollow', 'unfollow');
             Route::get('followers/suggestions', 'suggestions');
