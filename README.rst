@@ -168,6 +168,8 @@ Create a ``.env`` file with the following key configurations:
 
 ----
 
+.. _api-reference:
+
 API Reference
 =============
 
@@ -194,6 +196,8 @@ Rate Limits
 
 ----
 
+.. _authentication-apis:
+
 Authentication APIs
 ===================
 
@@ -216,6 +220,93 @@ Public Endpoints (No Auth Required)
 | ``/auth/github/callback``        | GET    | GitHub OAuth callback            |
 +----------------------------------+--------+--------------------------------+
 
+**POST /login - User Login**
+
+Request:
+
+.. code-block:: json
+
+    {
+        "email": "user@example.com",
+        "password": "your-password"
+    }
+
+Response (200 OK):
+
+.. code-block:: json
+
+    {
+        "success": true,
+        "message": "Login successful",
+        "data": {
+            "user": {
+                "id": 1,
+                "name": "John Doe",
+                "username": "johndoe",
+                "email": "user@example.com",
+                "avatar": "https://cloudinary.com/avatar.jpg",
+                "email_verified_at": "2026-01-15T10:00:00Z"
+            },
+            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+            "token_type": "bearer",
+            "expires_in": 3600
+        }
+    }
+
+Response (401 Unauthorized):
+
+.. code-block:: json
+
+    {
+        "success": false,
+        "message": "Invalid credentials"
+    }
+
+**POST /register - User Registration**
+
+Request:
+
+.. code-block:: json
+
+    {
+        "name": "John Doe",
+        "username": "johndoe",
+        "email": "john@example.com",
+        "password": "SecurePass123!",
+        "password_confirmation": "SecurePass123!"
+    }
+
+Response (201 Created):
+
+.. code-block:: json
+
+    {
+        "success": true,
+        "message": "Registration successful. Please verify your email.",
+        "data": {
+            "user": {
+                "id": 1,
+                "name": "John Doe",
+                "username": "johndoe",
+                "email": "john@example.com"
+            },
+            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+        }
+    }
+
+Response (422 Validation Error):
+
+.. code-block:: json
+
+    {
+        "success": false,
+        "message": "Validation failed",
+        "errors": {
+            "email": ["The email has already been taken."],
+            "username": ["The username has already been taken."]
+        }
+    }
+
 Email Verification
 ------------------
 
@@ -228,6 +319,59 @@ Email Verification
 +----------------------------------+--------+----------------------------------+
 | ``/email/is-verified``           | GET    | Check verification status        |
 +----------------------------------+--------+----------------------------------+
+
+**POST /email/send-otp - Send Verification OTP**
+
+Request:
+
+.. code-block:: json
+
+    {
+        "email": "user@example.com"
+    }
+
+Response (200 OK):
+
+.. code-block:: json
+
+    {
+        "success": true,
+        "message": "OTP sent successfully to your email"
+    }
+
+**POST /email/verify-otp - Verify Email with OTP**
+
+Request:
+
+.. code-block:: json
+
+    {
+        "email": "user@example.com",
+        "otp": "123456"
+    }
+
+Response (200 OK):
+
+.. code-block:: json
+
+    {
+        "success": true,
+        "message": "Email verified successfully"
+    }
+
+**GET /email/is-verified - Check Verification Status**
+
+Response (200 OK):
+
+.. code-block:: json
+
+    {
+        "success": true,
+        "data": {
+            "is_verified": true,
+            "verified_at": "2026-02-17T10:30:00Z"
+        }
+    }
 
 Password Reset
 --------------
@@ -242,6 +386,70 @@ Password Reset
 | ``/password/reset``              | POST   | Reset password                   |
 +----------------------------------+--------+----------------------------------+
 
+**POST /password/forgot - Request Password Reset**
+
+Request:
+
+.. code-block:: json
+
+    {
+        "email": "user@example.com"
+    }
+
+Response (200 OK):
+
+.. code-block:: json
+
+    {
+        "success": true,
+        "message": "Password reset OTP sent to your email"
+    }
+
+**POST /password/verify-otp - Verify Reset OTP**
+
+Request:
+
+.. code-block:: json
+
+    {
+        "email": "user@example.com",
+        "otp": "123456"
+    }
+
+Response (200 OK):
+
+.. code-block:: json
+
+    {
+        "success": true,
+        "message": "OTP verified successfully",
+        "data": {
+            "reset_token": "temp-reset-token-xyz"
+        }
+    }
+
+**POST /password/reset - Reset Password**
+
+Request:
+
+.. code-block:: json
+
+    {
+        "email": "user@example.com",
+        "otp": "123456",
+        "password": "NewSecurePass123!",
+        "password_confirmation": "NewSecurePass123!"
+    }
+
+Response (200 OK):
+
+.. code-block:: json
+
+    {
+        "success": true,
+        "message": "Password reset successfully"
+    }
+
 Protected Auth Endpoints
 ------------------------
 
@@ -255,35 +463,78 @@ Protected Auth Endpoints
 | ``/me``                          | GET    | Get current user info            |
 +----------------------------------+--------+----------------------------------+
 
-**Login Request Example:**
+**POST /logout - Logout User**
 
-.. code-block:: json
+Headers:
 
-    {
-        "email": "user@example.com",
-        "password": "your-password"
-    }
+.. code-block:: text
 
-**Login Response Example:**
+    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+
+Response (200 OK):
 
 .. code-block:: json
 
     {
         "success": true,
-        "message": "Login successful",
+        "message": "Successfully logged out"
+    }
+
+**POST /refresh - Refresh JWT Token**
+
+Headers:
+
+.. code-block:: text
+
+    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+
+Response (200 OK):
+
+.. code-block:: json
+
+    {
+        "success": true,
         "data": {
-            "user": {
-                "id": 1,
-                "name": "John Doe",
-                "email": "user@example.com"
-            },
-            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+            "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9-NEW-TOKEN...",
             "token_type": "bearer",
             "expires_in": 3600
         }
     }
 
+**GET /me - Get Current User Info**
+
+Headers:
+
+.. code-block:: text
+
+    Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+
+Response (200 OK):
+
+.. code-block:: json
+
+    {
+        "success": true,
+        "data": {
+            "id": 1,
+            "name": "John Doe",
+            "username": "johndoe",
+            "email": "user@example.com",
+            "avatar": "https://cloudinary.com/avatar.jpg",
+            "cover_image": "https://cloudinary.com/cover.jpg",
+            "bio": "Full-stack developer",
+            "location": "San Francisco, CA",
+            "website": "https://johndoe.dev",
+            "github": "johndoe",
+            "linkedin": "johndoe",
+            "email_verified_at": "2026-01-15T10:00:00Z",
+            "created_at": "2026-01-01T00:00:00Z"
+        }
+    }
+
 ----
+
+.. _posts-apis:
 
 Posts APIs
 ==========
@@ -374,7 +625,20 @@ Post Views
         "tags": ["laravel", "php", "tutorial"]
     }
 
+**GET /posts - List All Posts**
+
+Query Parameters: ``?page=1&per_page=15``
+
+Response (200 OK):
+
+.. code-block:: json
+
+    {
+        "success": true,
+        "data": [
 ----
+
+.. _comments-apis:
 
 Comments APIs
 =============
@@ -1044,6 +1308,130 @@ Alternative Email
         "current_password": "old-password",
         "password": "new-password",
         "password_confirmation": "new-password"
+    }
+
+**PATCH /settings/update-password - Update Password**
+
+Request:
+
+.. code-block:: json
+
+    {
+        "current_password": "OldPass123!",
+        "password": "NewSecurePass456!",
+        "password_confirmation": "NewSecurePass456!"
+    }
+
+Response (200 OK):
+
+.. code-block:: json
+
+    {
+        "success": true,
+        "message": "Password updated successfully"
+    }
+
+Response (422 Validation Error):
+
+.. code-block:: json
+
+    {
+        "success": false,
+        "message": "Validation failed",
+        "errors": {
+            "current_password": ["The current password is incorrect."]
+        }
+    }
+
+**POST /settings/social-accounts - Add Social Accounts**
+
+Request:
+
+.. code-block:: json
+
+    {
+        "github": "johndoe",
+        "linkedin": "johndoe",
+        "twitter": "johndoe_dev"
+    }
+
+Response (200 OK):
+
+.. code-block:: json
+
+    {
+        "success": true,
+        "message": "Social accounts updated successfully"
+    }
+
+**POST /settings/alt-email/send-otp - Add Alternative Email**
+
+Request:
+
+.. code-block:: json
+
+    {
+        "alt_email": "john.backup@example.com"
+    }
+
+Response (200 OK):
+
+.. code-block:: json
+
+    {
+        "success": true,
+        "message": "OTP sent to alternative email"
+    }
+
+**POST /settings/alt-email/verify-otp - Verify Alternative Email**
+
+Request:
+
+.. code-block:: json
+
+    {
+        "alt_email": "john.backup@example.com",
+        "otp": "123456"
+    }
+
+Response (200 OK):
+
+.. code-block:: json
+
+    {
+        "success": true,
+        "message": "Alternative email verified successfully"
+    }
+
+**DELETE /settings/soft/delete-account - Soft Delete Account**
+
+Response (200 OK):
+
+.. code-block:: json
+
+    {
+        "success": true,
+        "message": "Account deactivated. You can reactivate within 30 days."
+    }
+
+**DELETE /settings/force/delete-account - Permanently Delete Account**
+
+Request:
+
+.. code-block:: json
+
+    {
+        "password": "CurrentPassword123!",
+        "confirmation": "DELETE"
+    }
+
+Response (200 OK):
+
+.. code-block:: json
+
+    {
+        "success": true,
+        "message": "Account permanently deleted"
     }
 
 ----
