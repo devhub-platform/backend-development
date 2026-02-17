@@ -5,6 +5,7 @@ DevHub Community Documentation
 
 | **Production URL:** https://devhub.eu-north-1.elasticbeanstalk.com
 | **API Base URL:** https://devhub.eu-north-1.elasticbeanstalk.com/api/v1
+| **API Documentation:** https://0yviq6a5i5.apidog.io
 
 Check out the :doc:`usage` section for getting started, and :doc:`api` for the complete API reference.
 
