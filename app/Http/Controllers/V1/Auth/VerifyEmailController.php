@@ -38,9 +38,6 @@ class VerifyEmailController
         return $this->successResponse('Email verified successfully');
     }
 
-    /**
-     * @throws \Exception
-     */
     public function sendEmailOTP(ResendEmailRequest $request) // resend OTP to email
     {
         $user = User::where('email', $request->email)->first();
@@ -51,6 +48,10 @@ class VerifyEmailController
 
         if ($user->email_verified_at) {
             return $this->errorResponse('Email is already verified', 400);
+        }
+
+        if ($user->two_factor_expires_at && $user->two_factor_expires_at > now()->subMinutes(1)) {
+            return $this->errorResponse('Please wait before requesting another OTP', 429);
         }
 
         $otp = random_int(100000, 999999);
@@ -67,14 +68,16 @@ class VerifyEmailController
     public function isVerified()
     {
         $user = auth()->user();
+
         if (!$user) {
-            return $this->errorResponse('Unauthenticated', 401);
-        }
-        if ($user->email_verified_at) {
-            return $this->successResponse('Email is verified with user: ' . $user->name);
+            return $this->errorResponse('Unauthenticated. Please log in to check verification status.', 401);
         }
 
-        return $this->errorResponse('Email is not verified', 400);
+        if ($user->email_verified_at) {
+            return $this->successResponse('Email is verified for user: ' . $user->name);
+        }
+
+        return $this->errorResponse('Email is not verified. Please complete the verification process.', 400);
     }
 
     private function errorResponse(string $message, int $status)

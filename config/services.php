@@ -71,5 +71,10 @@ return [
     'mail' => [
         'admin_email_1' => env('ADMIN_EMAIL1'),
         'admin_email_2' => env('ADMIN_EMAIL2'),
-    ]
+    ],
+
+    'piston' => [
+        'api_key' => env('PISTON_API_KEY'),
+        'base_url' => env('PISTON_API_URL', 'https://emkc.org/api/v2/piston'),
+    ],
 ];

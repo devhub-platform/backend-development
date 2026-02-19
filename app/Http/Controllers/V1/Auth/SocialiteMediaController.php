@@ -51,10 +51,6 @@ class SocialiteMediaController
         return $this->extracted($githubUser);
     }
 
-    /**
-     * @param $mediaUser
-     * @return JsonResponse
-     */
     public function extracted($mediaUser): JsonResponse
     {
         $username = str()->before($mediaUser->getEmail(), '@')
@@ -69,7 +65,7 @@ class SocialiteMediaController
                 'username' => $username,
                 'website_url' => null,
                 'role' => 'user',
-                'bio' => $mediaUser->getNickname() ?? 'Bio not set yet.',
+                'bio' => $mediaUser->getNickname(),
                 'github_username' => $mediaUser->getNickname(),
                 'provider_id' => $mediaUser->getId(),
                 'password' => bcrypt(str()->random(16)),
@@ -78,6 +74,7 @@ class SocialiteMediaController
             ]
         );
 
+        JWTAuth::factory()->setTTL(60 * 24 * 7); // Set token to expire in 1 week (7 days)
         $token = JWTAuth::fromUser($user);
 
         return response()->json([

@@ -17,20 +17,22 @@ class FollowersController
 
         if ($authUser->id === $user->id) {
             return response()->json([
-                'message' => 'You cannot follow yourself.'
+                'error' => 'You cannot follow yourself.'
             ], 400);
         }
 
         if ($authUser->following()->where('following_id', $user->id)->exists()) {
             return response()->json([
-                'message' => 'You are already following this user.'
+                'error' => 'You are already following this user.'
             ], 400);
         }
 
         $authUser->following()->attach($user->id);
 
-        Notification::send($user, new FollowNotification($user));
-        Log::info('Followed ' . $user->name);
+        if ($user->isNotificationEnabled('new_follower')) {
+            Notification::send($user, new FollowNotification($authUser));
+        }
+        Log::info("User {$authUser->id} followed user {$user->id}");
 
         return response()->json([
             'message' => "Successfully followed user {$user->name}"
@@ -43,73 +45,28 @@ class FollowersController
 
         if (!$authUser->following()->where('following_id', $user->id)->exists()) {
             return response()->json([
-                'message' => 'You are not following this user.'
+                'error' => 'You are not following this user.'
             ], 400);
         }
+
         $authUser->following()->detach($user->id);
 
-        Log::notice('Unfollowed ' . $user->name);
+        Log::notice("User {$authUser->id} unfollowed user {$user->id}");
         return response()->json([
-            'message' => 'Successfully unfollowed user ' . $user->name
+            'message' => "Successfully unfollowed user {$user->name}"
         ]);
     }
 
-    public function usersFollowing(User $user)
+    public function UserFollowStats(User $user)
     {
-        $following = $user->following()->get();
-        if ($following->isEmpty()) {
-            return response()->json([
-                'message' => 'This user is not following anyone yet.'
-            ]);
-        }
-        return response()->json([
-            'Following' => UserResource::collection($following),
-        ]);
-    }
-
-    public function usersFollowers(User $user)
-    {
-        $followers = $user->followers()->get();
-        if ($followers->isEmpty()) {
-            return response()->json([
-                'message' => 'This user has no followers yet.'
-            ]);
-        }
-        return response()->json([
-            'Followers' => UserResource::collection($followers),
-        ]);
-    }
-
-    public function followersCount(User $user)
-    {
-        $count = $user->followers()->count();
-
-        if ($count === 0) {
-            return response()->json([
-                'message' => 'This user has no followers yet.'
-            ]);
-        }
+        $count_following = $user->following()->count();
+        $count_followers = $user->followers()->count();
 
         return response()->json([
-            'followers_count' => $count,
+            'following_count' => $count_following,
+            'followers_count' => $count_followers,
         ]);
     }
-
-    public function followingCount(User $user)
-    {
-        $count = $user->following()->count();
-
-        if ($count === 0) {
-            return response()->json([
-                'message' => 'This user is not following anyone yet.'
-            ]);
-        }
-
-        return response()->json([
-            'following_count' => $count,
-        ]);
-    }
-
     public function myFollowers()
     {
         $user = auth()->user();
@@ -164,5 +121,4 @@ class FollowersController
             'Suggested Users' => $suggestedUsers,
         ]);
     }
-
 }

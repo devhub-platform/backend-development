@@ -46,24 +46,29 @@ class ReportController
 
         $validated = $request->validate([
             'message' => 'required|string|max:1000',
+            'reason' => 'nullable|string|max:255',
         ]);
 
         $report = Report::create([
             'reporter_id' => $user->id,
             'reported_user_id' => $target->id,
             'message' => $validated['message'],
+            'reason' => $validated['reason'],
         ]);
+
+        if (!$user->blockedUsers()->where('reported_user_id', $target->id)->exists()) {
+            $user->blockedUsers()->attach($target->id);
+        }
 
         $adminMails = 'youssef.ahmed.fci@gmail.com';
         Notification::route('mail', $adminMails)
             ->notify(new UserReportedNotification($report));
 
-        $user = Auth::user();
         Mail::to(Auth::user()->email)
             ->send(new SupportReportMail($user, $report));
 
         return response()->json([
-            'message' => "User $target->name reported successfully",
+            'message' => "User $target->name reported and blocked successfully",
             'data' => new ReportResource($report->load(['reporter', 'reportedUser'])),
             'admin_notification_sent_to' => $adminMails,
         ]);
@@ -99,6 +104,20 @@ class ReportController
                 'name' => $user->name,
                 'avatar' => $user->avatar_url,
             ]),
+        ]);
+    }
+
+    public function reason()
+    {
+        return response()->json([
+            'reasons' => [
+                'Spam or misleading',
+                'Hate speech or graphic violence',
+                'Harassment or bullying',
+                'Inappropriate content',
+                'Fake profile',
+                'Other',
+            ],
         ]);
     }
 }

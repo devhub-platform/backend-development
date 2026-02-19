@@ -101,15 +101,13 @@
         <h2 class="greeting">Hello {{ $user->name ?? 'there' }},</h2>
         <p>Welcome to <strong>{{ config('app.name') }}</strong>! We're excited to have you join our community.</p>
         <p>To get started, please verify your email address by clicking the button below:</p>
-        <div class="button-wrapper">
-            <a href="{{ $verificationUrl ?? '#' }}" class="button">Verify Email Address</a>
-        </div>
         <div class="divider"></div>
-        <p style="font-size: 14px; color: #718096;">If you didn't create an account, you can safely ignore this email.</p>
+        <p style="font-size: 14px; color: #718096;">If you didn't create an account, you can safely ignore this
+            email.</p>
     </div>
     <div class="footer">
         <p>&copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
-        <p>Questions? Contact us at support@example.com</p>
+        <p>Questions? Contact us at devhub-community@outlook.com</p>
     </div>
 </div>
 </body>

@@ -5,7 +5,6 @@ namespace App\Http\Resources;
 use App\Models\Post;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /** @mixin Post */
@@ -16,6 +15,7 @@ class PostResource extends JsonResource
         return [
             'id' => $this->id,
             'title' => $this->title,
+            'slug' => $this->slug,
             'content' => Str::limit($this->content, 200, '...'),
             'created_at' => $this->created_at->diffForHumans(),
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
@@ -27,9 +27,9 @@ class PostResource extends JsonResource
             'is_edited' => (bool)$this->is_edit,
 
             'user' => [
-                'Name' => $this->user->name,
-                'Username' => $this->user->username,
-                'avatar_Image' => $this->user->avatar_url ?? null,
+                'name' => $this->user->name,
+                'username' => $this->user->username,
+                'avatar_image' => $this->user->avatar_url ?? null,
             ],
 
             'reaction' => [
@@ -37,8 +37,8 @@ class PostResource extends JsonResource
                 'comments_count' => $this->comments()->count(),
             ],
 
-            'Tags' => TagResource::collection($this->whenLoaded('tags')),
-            'Comments' => CommentResource::collection($this->whenLoaded('comments')),
+            'tags' => TagResource::collection($this->whenLoaded('tags')),
+            'comments' => CommentResource::collection($this->whenLoaded('comments')),
         ];
     }
 }
