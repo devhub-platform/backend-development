@@ -17,6 +17,11 @@ class PostPolicy
 
     public function view(User $user, Post $post)
     {
+        $author = $post->user ?? $post->user()->first();
+        if ($author && $user->isBlockedWith($author)) {
+            return false;
+        }
+
         return true;
     }
 

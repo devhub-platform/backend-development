@@ -64,8 +64,8 @@ class HistoryController extends Controller
                 'id' => $session->id,
                 'title' => $session->title,
                 'model' => $session->model,
-                'created_at' => $session->created_at,
-                'updated_at' => $session->updated_at
+                'created_at' => $session->created_at->format('Y-m-d H:i:s'),
+                'updated_at' => $session->updated_at->format('Y-m-d H:i:s'),
             ],
             'messages' => $session->messages->map(function($message) {
                 return [
@@ -73,7 +73,7 @@ class HistoryController extends Controller
                     'role' => $message->role,
                     'content' => $message->content,
                     'attachments' => $message->attachments ?? [],
-                    'created_at' => $message->created_at
+                    'created_at' => $message->created_at->format('Y-m-d H:i:s')
                 ];
             })
         ]);
@@ -98,7 +98,7 @@ class HistoryController extends Controller
             'id' => $session->id,
             'title' => $session->title,
             'model' => $session->model,
-            'created_at' => $session->created_at
+            'created_at' => $session->created_at->format('Y-m-d H:i:s'),
         ], 201);
     }
 

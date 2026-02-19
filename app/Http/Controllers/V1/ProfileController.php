@@ -102,9 +102,8 @@ class ProfileController
             $originalData = $user->only(array_keys($validated));
             $user->update($validated);
 
-            Log::info("Profile updated for user: {$user->email}", [
-                'changes' => array_diff($validated, $originalData)
-            ]);
+
+            Log::info("Profile updated for user: {$user->email}");
 
             return response()->json([
                 'message' => 'Profile updated successfully',
@@ -125,7 +124,7 @@ class ProfileController
         $perPage = $request->query('per_page', 15);
         $status = $request->query('status', null);
 
-        $query = $user->posts()->with('tags', 'user')->latest();
+        $query = $user->posts()->with('tags')->latest();
 
         if ($status) {
             $query->where('status', $status);
@@ -249,21 +248,5 @@ class ProfileController
         }
     }
 
-//    public function visits_views_analysis()
-//    {
-//        $user = Auth::user();
-//        $posts = $user->posts()->get();
-//
-//        $stats = [
-//            'number_of_visits_in_week' => visits($posts)->period('week')->count(),
-//            'number_of_visits_in_month' => visits($posts)->period('month')->count(),
-//            'number_of_visits_in_year' => visits($posts)->period('year')->count(),
-//        ];
-//
-//        return response()->json([
-//            'data' => $stats,
-//        ], 200);
-//
-//    }
 
 }

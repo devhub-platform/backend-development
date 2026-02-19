@@ -6,9 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class CodeEditorRequest extends FormRequest
 {
-    /**
-     * Get the validation rules that apply to the request.
-     */
+
     public function rules(): array
     {
         return [
@@ -22,32 +20,27 @@ class CodeEditorRequest extends FormRequest
                 'required',
                 'string',
                 'max:45',
-                'min:1',
-                'regex:/^[a-zA-Z0-9\-_\+#]+$/' // Allow language names with common special chars
+                'min:1'
             ],
             'version' => [
                 'required',
                 'string',
                 'max:30',
-                'min:1',
-                'regex:/^[a-zA-Z0-9\.\-_]+$/' // Validate version format
+                'min:1'
             ],
             'timeout' => [
                 'nullable',
                 'integer',
-                'between:1,35' // Max 35 seconds
+                'between:1,35'
             ],
             'stdin' => [
                 'nullable',
                 'string',
-                'max:5000' // Max 5000 characters for stdin
+                'max:5000'
             ],
         ];
     }
 
-    /**
-     * Get custom messages for validator errors.
-     */
     public function messages(): array
     {
         return [
@@ -62,34 +55,27 @@ class CodeEditorRequest extends FormRequest
         ];
     }
 
-    /**
-     * Authorize the request.
-     */
+
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Prepare the data for validation.
-     */
+
     protected function prepareForValidation(): void
     {
-        // Trim whitespace from code
         if ($this->has('code')) {
             $this->merge([
                 'code' => trim($this->code)
             ]);
         }
 
-        // Normalize language name to lowercase
         if ($this->has('language')) {
             $this->merge([
                 'language' => strtolower(trim($this->language))
             ]);
         }
 
-        // Set default timeout if not provided
         if (!$this->has('timeout')) {
             $this->merge([
                 'timeout' => 30

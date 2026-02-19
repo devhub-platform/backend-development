@@ -73,27 +73,21 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'alt_email',
         'alt_email_verified_at',
         'alt_email_otp',
-        'alt_email_otp_expires_at'
+        'alt_email_otp_expires_at',
+        'otp_expires_at',
+        'orcid_username',
+        'notification_preferences'
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
         'provider_id',
         'alt_email_otp',
-        'alt_email_otp_expires_at'
+        'alt_email_otp_expires_at',
+        'notification_preferences',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -101,6 +95,9 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             'password' => 'hashed',
             'alt_email_verified_at' => 'datetime',
             'alt_email_otp_expires_at' => 'datetime',
+            'otp_expires_at' => 'datetime',
+            'skills' => 'array',
+            'notification_preferences' => 'array',
         ];
     }
 
@@ -121,9 +118,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             ->withTimestamps();
     }
 
-    /**
-     * Users who are following this user.
-     */
+
     public function followers()
     {
         return $this->belongsToMany(User::class, 'followers', 'following_id', 'follower_id')
@@ -163,7 +158,6 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         return $this->hasOne(UserStatus::class);
     }
 
-// check if following
     public function isFollowingTag(int $tagId)
     {
         return $this->followedTags()->where('tag_id', $tagId)->exists();
@@ -195,9 +189,6 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         )->withTimestamps();
     }
 
-    /**
-     * Get all posts viewed by this user
-     */
     public function viewedPosts(): BelongsToMany
     {
         return $this->belongsToMany(
@@ -209,6 +200,85 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             ->withPivot('viewed_at')
             ->withTimestamps()
             ->orderByPivot('viewed_at', 'desc');
+    }
+
+
+    public function isBlockedBy(User $other): bool
+    {
+        return $this->blockers()->where('users.id', $other->id)->exists();
+    }
+
+    public function hasBlocked(User $other): bool
+    {
+        return $this->blockedUsers()->where('users.id', $other->id)->exists();
+    }
+
+    public function isBlockedWith(User $other): bool
+    {
+        return $this->hasBlocked($other) || $this->isBlockedBy($other);
+    }
+
+    public static function getDefaultNotificationPreferences(): array
+    {
+        return [
+            'new_follower' => true,
+            'new_comment' => true,
+            'new_reaction' => true,
+            'new_post_from_following' => true,
+            'mention' => true,
+        ];
+    }
+
+    public function getNotificationPreferences(): array
+    {
+        return array_merge(
+            self::getDefaultNotificationPreferences(),
+            $this->notification_preferences ?? []
+        );
+    }
+
+    public function isNotificationEnabled(string $type): bool
+    {
+        $preferences = $this->getNotificationPreferences();
+        return $preferences[$type] ?? true;
+    }
+
+    public function updateNotificationPreference(string $type, bool $enabled): void
+    {
+        $preferences = $this->getNotificationPreferences();
+        $preferences[$type] = $enabled;
+        $this->update(['notification_preferences' => $preferences]);
+    }
+
+    /**
+     * Get the user's reaction on a reactable model.
+     */
+    public function myReaction($reactable): ?\Binafy\LaravelReaction\Models\Reaction
+    {
+        $userForeignName = config('laravel-reaction.user.foreign_key', 'user_id');
+
+        return $reactable->reactions()
+            ->where($userForeignName, $this->getKey())
+            ->first();
+    }
+
+    /**
+     * Update the user's reaction on a reactable model.
+     */
+    public function updateReaction(string $type, $reactable): ?\Binafy\LaravelReaction\Models\Reaction
+    {
+        $userForeignName = config('laravel-reaction.user.foreign_key', 'user_id');
+
+        $reaction = $reactable->reactions()
+            ->where($userForeignName, $this->getKey())
+            ->first();
+
+        if ($reaction) {
+            $reaction->update(['type' => $type]);
+            return $reaction->fresh();
+        }
+
+        return null;
     }
 
 }

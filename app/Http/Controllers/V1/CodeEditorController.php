@@ -19,7 +19,6 @@ class CodeEditorController
         return $this->service->getRuntimes();
     }
 
-
     public function execute(CodeEditorRequest $request): JsonResponse
     {
         return $this->service->executeCode($request);
@@ -33,10 +32,5 @@ class CodeEditorController
     public function languages(): JsonResponse
     {
         return $this->service->getSupportedLanguages();
-    }
-
-    public function refreshRuntimes(): JsonResponse
-    {
-        return $this->service->clearRuntimesCache();
     }
 }
