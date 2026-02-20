@@ -168,6 +168,15 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         return $this->hasMany(ReadingList::class);
     }
 
+    public function questions(): HasMany
+    {
+        return $this->hasMany(Question::class);
+    }
+
+    public function answers(): HasMany
+    {
+        return $this->hasMany(Answer::class);
+    }
 
     public function blockedUsers(): BelongsToMany
     {
