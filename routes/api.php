@@ -32,6 +32,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
     Route::controller(SocialiteMediaController::class)->group(function () {
         Route::post('auth/google/login', 'loginGoogle');
+        Route::post('auth/google/mobile', 'loginGoogleForMobile');
         Route::get('auth/google/callback', 'callbackGoogle');
         Route::post('auth/github/login', 'loginGithub');
         Route::get('auth/github/callback', 'callbackGithub');
@@ -330,7 +331,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 // Fallback & Welcome Routes
 Route::fallback(function () {
     return response()->json([
-        'Hey there!' => 'Ramadan Mubarak!!',
+        'Hey there!' => 'Ramadan Mubarak ❤!!',
         'message' => 'Resource not found , The API endpoint does not exist',
         'documentation' => 'https://0yviq6a5i5.apidog.io/',
         'version' => 'API v1 Devhub is a platform for developers to share knowledge, collaborate on projects, and connect with other developers. Our API allows you to access our platform programmatically, enabling you to integrate our features into your applications and services.',
