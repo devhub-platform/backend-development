@@ -363,6 +363,6 @@ Route::fallback(function () {
         'Hey there!' => 'Ramadan Mubarak ❤!!',
         'message' => 'Resource not found , The API endpoint does not exist',
         'documentation' => 'https://0yviq6a5i5.apidog.io/',
-        'version' => 'API v1 Devhub is a platform for developers to share knowledge, collaborate on projects, and connect with other developers. Our API allows you to access our platform programmatically, enabling you to integrate our features into your applications and services.',
+        'version' => 'API v01',
     ], 404);
 });
