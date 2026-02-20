@@ -3,6 +3,7 @@
 use App\Http\Controllers\V1\AiModels\AIChatController;
 use App\Http\Controllers\V1\AiModels\HistoryController;
 use App\Http\Controllers\V1\AiModels\PostSummarizeController;
+use App\Http\Controllers\V1\AnswerController;
 use App\Http\Controllers\V1\Auth\AuthController;
 use App\Http\Controllers\V1\Auth\ForgetPasswordController;
 use App\Http\Controllers\V1\Auth\SocialiteMediaController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\V1\NotificationController;
 use App\Http\Controllers\V1\PostController;
 use App\Http\Controllers\V1\PostViewController;
 use App\Http\Controllers\V1\ProfileController;
+use App\Http\Controllers\V1\QuestionController;
 use App\Http\Controllers\V1\ReactionController;
 use App\Http\Controllers\V1\ReadingListController;
 use App\Http\Controllers\V1\ReportController;
@@ -218,6 +220,9 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
             Route::get('notifications/mention', 'showNewMentionNotifications');
 
+            Route::get('notifications/questions', 'getQuestionsNotifications');
+            Route::get('notifications/answers', 'getAnswersNotifications');
+
             Route::post('notifications/mark-as-read', 'makeAllRead');
             Route::post('notifications/{notification}/mark-as-read', 'makeAsRead');
             Route::delete('notifications/clear', 'clearAllNotifications');
@@ -263,6 +268,30 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('reading-lists/{readingList}/add-note/{post}', 'addNoteToPostInReadingList');
             Route::delete('reading-lists/{readingList}/delete-note/{post}', 'deleteNoteInPostInReadingList');
             Route::get('reading-lists/{readingList}/show-notes/{post}', 'showNotesInReadingList');
+        });
+
+        // Q&A System
+        Route::controller(QuestionController::class)->group(function () {
+            Route::get('questions', 'index');
+            Route::post('questions', 'store');
+            Route::get('questions/search', 'search');
+            Route::get('questions/user/my-questions', 'userQuestions');
+            Route::get('questions/{question}', 'show');
+            Route::patch('questions/{question}', 'update');
+            Route::delete('questions/{question}', 'destroy');
+            Route::post('questions/{question}/vote', 'vote');
+        });
+
+        Route::controller(AnswerController::class)->group(function () {
+            Route::get('questions/{question}/answers', 'index');
+            Route::post('questions/{question}/answers', 'store');
+            Route::get('questions/{question}/answers/{answer}', 'show');
+            Route::patch('questions/{question}/answers/{answer}', 'update');
+            Route::delete('questions/{question}/answers/{answer}', 'destroy');
+            Route::post('questions/{question}/answers/{answer}/accept', 'accept');
+            Route::post('questions/{question}/answers/{answer}/vote', 'vote');
+            Route::get('answers/user/my-answers', 'userAnswers');
+            Route::get('answers/user/accepted-answers', 'userAcceptedAnswers');
         });
 
         // Code Editor
