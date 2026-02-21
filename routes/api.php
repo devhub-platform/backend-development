@@ -360,8 +360,8 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 // Fallback & Welcome Routes
 Route::fallback(function () {
     return response()->json([
-        'Hey there!' => 'Ramadan Mubarak ❤!!',
-        'message' => 'Resource not found , The API endpoint does not exist',
+        'Hey_there!' => 'Ramadan Mubarak ❤❤❤❤!!',
+        'message' => 'Resource not found "ERROR 404" , The API endpoint does not exist',
         'documentation' => 'https://0yviq6a5i5.apidog.io/',
         'version' => 'API v01',
     ], 404);

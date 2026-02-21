@@ -17,10 +17,17 @@ class ForgetPasswordController
     public function forgetPassword(HttpRequest $request)
     {
         $request->validate([
-            'email' => 'required|email|exists:users,email',
+            'email' => 'required|email',
         ]);
 
         $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            $user = User::where('alt_email', $request->email)
+                ->whereNotNull('alt_email_verified_at')
+                ->first();
+        }
+
         if (!$user) {
             return response()->json(['error' => 'Email not found. Please create an account.'], 404);
         }
@@ -40,8 +47,8 @@ class ForgetPasswordController
             'otp_expires_at' => now()->addMinutes(self::OTP_EXPIRES_MINUTES),
         ]);
 
-        Mail::to($user->email)->send(new MailOTP($otp));
-        Log::notice('OTP sent to email: ' . $user->email);
+        Mail::to($request->email)->send(new MailOTP($otp));
+        Log::notice('OTP sent to email: ' . $request->email);
         return response()->json(['message' => 'OTP sent to your email.'], 200);
     }
 
@@ -55,6 +62,12 @@ class ForgetPasswordController
         $user = User::where('email', $request->email)->first();
 
         if (!$user) {
+            $user = User::where('alt_email', $request->email)
+                ->whereNotNull('alt_email_verified_at')
+                ->first();
+        }
+
+        if (!$user) {
             return response()->json(['error' => 'Email not found.'], 404);
         }
 
@@ -66,13 +79,11 @@ class ForgetPasswordController
             return response()->json(['error' => 'Invalid OTP.'], 400);
         }
 
-        // Don't clear the OTP yet - keep it for password reset
-        // Just extend the expiration time to allow password reset
         $user->update([
             'otp_expires_at' => now()->addMinutes(self::OTP_EXPIRES_MINUTES),
         ]);
 
-        Log::info('OTP verified for email: ' . $user->email);
+        Log::info('OTP verified for email: ' . $request->email);
         return response()->json(['message' => 'OTP verified successfully. You can now reset your password.'], 200);
     }
 
@@ -87,6 +98,12 @@ class ForgetPasswordController
         $user = User::where('email', $request->email)->first();
 
         if (!$user) {
+            $user = User::where('alt_email', $request->email)
+                ->whereNotNull('alt_email_verified_at')
+                ->first();
+        }
+
+        if (!$user) {
             return response()->json(['error' => 'Email not found.'], 404);
         }
 
@@ -98,14 +115,13 @@ class ForgetPasswordController
             return response()->json(['error' => 'Invalid OTP.'], 400);
         }
 
-
         $user->update([
             'password' => bcrypt($request->password),
             'otp' => null,
             'otp_expires_at' => null,
         ]);
 
-        Log::alert('Password reset for email: ' . $user->email);
+        Log::alert('Password reset for email: ' . $request->email);
         return response()->json(['message' => 'Password reset successful. Please log in with your new password.'], 200);
     }
 }

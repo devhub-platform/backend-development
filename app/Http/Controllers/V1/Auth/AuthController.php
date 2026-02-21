@@ -24,21 +24,38 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request): JsonResponse
     {
-        $credentials = $request->only('email', 'password');
+        $email = $request->input('email');
+        $password = $request->input('password');
         $remember = (bool)($request->input('remember_me') ?? false);
 
         JWTAuth::factory()->setTTL($remember ? 60 * 24 * 30 : 60 * 24);
 
-        if (!$token = JWTAuth::attempt($credentials)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
+        if ($token = JWTAuth::attempt(['email' => $email, 'password' => $password])) {
+            return response()->json([
+                'message' => 'Login successful',
+                'user' => new UserResource(Auth::user()),
+                'token' => $token,
+                'remember_me' => $remember,
+            ]);
         }
 
-        return response()->json([
-            'message' => 'Login successful',
-            'data' => new UserResource(Auth::user()),
-            'token' => $token,
-            'remember_me' => $remember,
-        ]);
+        $user = User::where('alt_email', $email)
+            ->whereNotNull('alt_email_verified_at')
+            ->first();
+
+        if ($user && $this->verifyPassword($password, $user->password)) {
+            // Store that user logged in via alternative email
+            $this->setLoginMethod($user, 'alt_email');
+            $token = JWTAuth::fromUser($user);
+            return response()->json([
+                'message' => 'Login successful',
+                'data' => new UserResource($user),
+                'token' => $token,
+                'remember_me' => $remember,
+            ]);
+        }
+
+        return response()->json(['message' => 'Invalid credentials'], 401);
     }
 
     public function register(RegisteredRequest $request): JsonResponse
@@ -61,7 +78,7 @@ class AuthController extends Controller
 
             return response()->json([
                 'message' => 'User registered successfully',
-                'data' => new UserResource($user),
+                'user' => new UserResource($user),
                 'token' => $token,
             ], 201);
         } catch (\Throwable $e) {
@@ -118,7 +135,7 @@ class AuthController extends Controller
             Log::info('Fetched user details', ['email' => $user->email]);
 
             return response()->json([
-                'data' => new UserResource($user),
+                'user' => new UserResource($user),
             ]);
         } catch (JWTException $e) {
             Log::error('Fetch user failed', ['error' => $e->getMessage()]);
@@ -141,8 +158,8 @@ class AuthController extends Controller
 
             return response()->json([
                 'message' => 'Token refreshed successfully',
-                'token' => $newToken,
-                'data' => [
+                'new_token' => $newToken,
+                'user' => [
                     'name' => $user->name,
                     'email' => $user->email,
                     'username' => $user->username,
@@ -166,6 +183,16 @@ class AuthController extends Controller
             $username = $base . '_' . random_int(100000, 999999);
         } while (User::where('username', $username)->exists());
         return $username;
+    }
+
+    private function verifyPassword(string $password, string $hash): bool
+    {
+        return password_verify($password, $hash);
+    }
+
+    private function setLoginMethod(User $user, string $method): void
+    {
+        $user->setAttribute('login_method', $method);
     }
 
     private function sendWelcomeEmail(User $user): void

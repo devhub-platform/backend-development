@@ -20,7 +20,6 @@ class QuestionVote extends Model
 
     public $timestamps = true;
 
-    // Relationships
     public function question(): BelongsTo
     {
         return $this->belongsTo(Question::class);
