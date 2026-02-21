@@ -28,7 +28,7 @@ class ReadingList extends Model
             'reading_list_story',
             'reading_list_id',
             'post_id'
-        )->withTimestamps();
+        )->withTimestamps()->withPivot('note');
     }
 
 }

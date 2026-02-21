@@ -22,10 +22,20 @@ class ReadingListResource extends JsonResource
                 return [
                     'title' => $post->title,
                     'content' => Str::take($post->content, 100),
-                    'author' => $post->user->name,
                     'created_at' => $post->created_at->diffForHumans(),
+                    'read_time' => $post->read_time . ' min',
+                    'image_url' => $post->image_url,
+                    'id' => $post->id,
+                    'note' => $post->pivot->note,
+
+                    'author' => [
+                        'name' => $post->user->name,
+                        'avatar_url' => $post->user->avatar_url,
+                    ],
                 ];
             }),
+
+
         ];
     }
 }
