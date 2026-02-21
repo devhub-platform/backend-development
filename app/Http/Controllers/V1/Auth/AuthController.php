@@ -21,7 +21,6 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 class AuthController extends Controller
 {
     use AuthorizesRequests;
-
     public function login(LoginRequest $request): JsonResponse
     {
         $email = $request->input('email');
