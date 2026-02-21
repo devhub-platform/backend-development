@@ -23,6 +23,12 @@ class VerifyAltEmailController
                 ], 404);
             }
 
+            if ($user->isLoginViaAltEmail()) {
+                return response()->json([
+                    'message' => 'You cannot add a new alternative email while logged in via your alternative email. Please log in with your primary email address first.',
+                ], 403);
+            }
+
             $altEmail = $request->validated()['alt_email'];
 
             $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
@@ -166,6 +172,12 @@ class VerifyAltEmailController
                 return response()->json([
                     'message' => 'User not found',
                 ], 404);
+            }
+
+            if ($user->isLoginViaAltEmail()) {
+                return response()->json([
+                    'message' => 'You cannot remove your alternative email while logged in via it. Please log in with your primary email address first.',
+                ], 403);
             }
 
             if (!$user->alt_email) {
