@@ -11,7 +11,6 @@ class RegisteredRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'username' => ['nullable', 'string', 'min:3', 'max:255', 'unique:users,username'],
             'password' => ['required', 'string', Password::defaults(), 'confirmed'],
             'email' => ['required', 'email:rfc,dns', 'max:254', 'unique:users,email'],
         ];

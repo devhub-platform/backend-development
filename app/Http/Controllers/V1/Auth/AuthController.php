@@ -44,7 +44,6 @@ class AuthController extends Controller
             ->first();
 
         if ($user && $this->verifyPassword($password, $user->password)) {
-            // Store that user logged in via alternative email
             $this->setLoginMethod($user, 'alt_email');
             $token = JWTAuth::fromUser($user);
             return response()->json([
