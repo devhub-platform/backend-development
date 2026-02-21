@@ -139,7 +139,6 @@ class PostController
 
         $post = Post::create($validated);
 
-        // Notify followers only for published posts
         if ($post->status !== 'draft') {
             $followers = auth()->user()->followers
                 ->filter(fn($follower) => $follower->isNotificationEnabled('new_post_from_following'));

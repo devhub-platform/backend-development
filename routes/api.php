@@ -323,8 +323,19 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
         // Settings
         Route::controller(SettingController::class)->group(function () {
+            // Password management
             Route::patch('settings/update-password', 'updatePassword');
+
+            Route::post('settings/profile', 'updateProfile');
+
             Route::post('settings/social-accounts', 'addSocialAccounts');
+
+            Route::get('settings/notification-preferences', 'getNotificationPreferences');
+            Route::patch('settings/notification-preference', 'updateNotificationPreference');
+            Route::patch('settings/notification-preferences', 'updateNotificationPreferences');
+
+            Route::get('settings/account', 'getAccountSettings');
+
             Route::delete('settings/soft/delete-account', 'delete');
             Route::delete('settings/force/delete-account', 'forceDelete');
         });
