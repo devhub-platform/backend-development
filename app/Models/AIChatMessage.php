@@ -12,11 +12,11 @@ class AIChatMessage extends Model
         'ai_chat_session_id',
         'role',
         'content',
-        'attachments'
+        'attachments',
     ];
 
     protected $casts = [
-        'attachments' => 'array'
+        'attachments' => 'array',
     ];
 
     public function session()

@@ -4,6 +4,10 @@ namespace App\Services\AI;
 
 class AIResponseParser
 {
+    /**
+     * Parse the raw API response and extract the text content.
+     * Handles multiple response formats from different providers.
+     */
     public function parse(array $body): string
     {
         if (isset($body['choices'][0]['message']['content'])) {

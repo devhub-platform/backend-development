@@ -9,90 +9,68 @@ use Illuminate\Support\Facades\Log;
 class HackAIService
 {
     protected Client $client;
-    protected array $cache = [];
 
     public function __construct()
     {
-        Log::info('Initializing HackAIService', [
-            'base_url' => config('services.hackai.base_url'),
-            'has_token' => !empty(config('services.hackai.token'))
-        ]);
-
         $this->client = new Client([
-            'base_uri' => config('services.hackai.base_url') . '/',
-            'headers' => [
+            'base_uri' => rtrim(config('services.hackai.base_url'), '/') . '/',
+            'headers'  => [
                 'Authorization' => 'Bearer ' . config('services.hackai.token'),
-                'Content-Type' => 'application/json',
+                'Content-Type'  => 'application/json',
             ],
-            'timeout' => 60,
-            'connect_timeout' => 15,
+            'timeout'         => 300,
+            'connect_timeout' => 60,
+            'read_timeout'    => 300,
         ]);
     }
 
-    public function chat(array $messages, string $model, int $maxTokens = 500): array
+    public function chat(array $messages, string $model, int $maxTokens = 1000): array
     {
-        Log::info('HackAI chat called:', [
-            'model' => $model,
+        set_time_limit(600);
+
+        Log::info('HackAI chat request', [
+            'model'          => $model,
             'messages_count' => count($messages),
-            'max_tokens' => $maxTokens
+            'max_tokens'     => $maxTokens,
         ]);
 
-        $cacheKey = md5(serialize([$messages, $model, $maxTokens]));
-
-        if (isset($this->cache[$cacheKey])) {
-            Log::info('Returning cached response');
-            return $this->cache[$cacheKey];
-        }
-
         try {
-            Log::info('Sending request to HackAI API...');
-
             $response = $this->client->post('chat/completions', [
                 'json' => [
-                    'model' => $model,
-                    'messages' => $messages,
-                    'max_tokens' => $maxTokens,
+                    'model'       => $model,
+                    'messages'    => $messages,
+                    'max_tokens'  => $maxTokens,
                     'temperature' => 0.7,
                 ],
-            ]);
-
-            Log::info('HackAI API response status:', [
-                'status' => $response->getStatusCode()
             ]);
 
             $data = json_decode($response->getBody(), true);
 
             if (is_array($data)) {
-                Log::info('HackAI response valid');
-                $this->cache[$cacheKey] = $data;
                 return $data;
             }
 
-            Log::warning('HackAI returned invalid response');
-            return $this->getFallbackResponse();
+            Log::warning('HackAI returned non-array response', ['model' => $model]);
+            return $this->fallbackResponse();
 
         } catch (GuzzleException $e) {
-            Log::error('HackAI API Error:', [
+            Log::error('HackAI API request failed', [
                 'message' => $e->getMessage(),
-                'code' => $e->getCode()
+                'code'    => $e->getCode(),
+                'model'   => $model,
             ]);
-
-            return $this->getFallbackResponse();
+            return $this->fallbackResponse();
         }
     }
 
-    private function getFallbackResponse(): array
+    private function fallbackResponse(): array
     {
-        Log::warning('Returning fallback response from HackAIService');
-
         return [
-            'choices' => [
-                [
-                    'message' => [
-                        'content' => "I'm having trouble generating a response right now. Please try again."
-                    ]
+            'choices' => [[
+                'message' => [
+                    'content' => "I'm having trouble generating a response right now. Please try again."
                 ]
-            ]
+            ]]
         ];
     }
 }

@@ -12,13 +12,16 @@ class IngestionService
     public function extractText($file): string
     {
         $ext = strtolower($file->getClientOriginalExtension());
+
         try {
             if ($ext === 'pdf') {
                 $parser = new PdfParser();
                 return $parser->parseFile($file->getPathname())->getText();
-            } elseif (in_array($ext, ['doc', 'docx'])) {
+            }
+
+            if (in_array($ext, ['doc', 'docx'])) {
                 $phpWord = WordIO::load($file->getPathname());
-                $text = '';
+                $text    = '';
                 foreach ($phpWord->getSections() as $section) {
                     foreach ($section->getElements() as $el) {
                         if (method_exists($el, 'getText')) {
@@ -27,12 +30,20 @@ class IngestionService
                     }
                 }
                 return $text;
-            } elseif ($ext === 'txt') {
+            }
+
+            if ($ext === 'txt') {
                 return file_get_contents($file->getPathname());
             }
+
             return '';
+
         } catch (Exception $e) {
-            Log::error($e->getMessage());
+            Log::error('IngestionService failed to extract text', [
+                'file'      => $file->getClientOriginalName(),
+                'extension' => $ext,
+                'error'     => $e->getMessage(),
+            ]);
             return '';
         }
     }

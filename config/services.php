@@ -49,7 +49,7 @@ return [
 
     'hackai' => [
         'base_url' => env('HACKAI_BASE_URL'),
-        'token' => env('HACKCLUB_API_KEY'),
+        'token' => env('HACKAI_API_KEY'),
     ],
 
 
