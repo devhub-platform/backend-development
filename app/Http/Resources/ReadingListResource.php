@@ -18,6 +18,11 @@ class ReadingListResource extends JsonResource
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
             'post_count' => $this->posts_count,
 
+            'auth_user' => [
+                'name' => auth()->user()->name,
+                'avatar_url' => auth()->user()->avatar_url,
+            ],
+
             'posts' => $this->posts->map(function ($post) {
                 return [
                     'title' => $post->title,
@@ -34,7 +39,6 @@ class ReadingListResource extends JsonResource
                     ],
                 ];
             }),
-
 
         ];
     }
