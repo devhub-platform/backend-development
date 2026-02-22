@@ -6,40 +6,42 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Services\Chat\ChatService;
+use App\Services\Chat\ChatRateLimiter;
 
 class AIChatController extends Controller
 {
     public function __construct(
-        protected ChatService $chat
-    )
-    {
-    }
+        protected ChatService     $chat,
+        protected ChatRateLimiter $limiter
+    ) {}
 
     public function chat(Request $request): JsonResponse
     {
+        // Check rate limit before processing the request
+        $this->limiter->check($request->user()?->id);
+
         $validated = $request->validate([
-            'session_id' => 'nullable|exists:ai_chat_sessions,id',
-            'model' => 'required|string',
-            'message' => 'required|string|max:1500',
-            'attachments' => 'nullable|array',
-            'attachments.*' => 'integer|exists:attachments,id'
+            'session_id'    => 'nullable|exists:ai_chat_sessions,id',
+            'model'         => 'required|string',
+            'message'       => 'required|string|max:1500',
+            'attachments'   => 'nullable|array',
+            'attachments.*' => 'integer|exists:attachments,id',
         ]);
 
-        $data = [
-            'session_id' => $validated['session_id'] ?? null,
-            'model' => $validated['model'],
-            'message' => $validated['message'],
-            'attachments' => $validated['attachments'] ?? []
-        ];
-
-        $response = $this->chat->handle($data, $request->user());
+        $response = $this->chat->handle([
+            'session_id'  => $validated['session_id'] ?? null,
+            'model'       => $validated['model'],
+            'message'     => $validated['message'],
+            'attachments' => $validated['attachments'] ?? [],
+        ], $request->user());
 
         return response()->json([
-            'session_id' => $response['session_id'] ?? null,
-            'ai_message' => $response['content'] ?? 'No response',
-            'model_used' => $response['model_used'] ?? $validated['model'],
+            'session_id'         => $response['session_id'] ?? null,
+            'ai_message'         => $response['content'] ?? 'No response',
+            'model_used'         => $validated['model'],
+            'model_resolved'     => $response['model_used'] ?? $validated['model'],
             'processing_time_ms' => $response['processing_time_ms'] ?? 0,
-            'success' => $response['success'] ?? false
+            'success'            => $response['success'] ?? false,
         ]);
     }
 

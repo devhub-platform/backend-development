@@ -14,6 +14,7 @@ return new class extends Migration {
             $table->string('model');
             $table->boolean('pinned')->default(false);
             $table->boolean('active')->default(true);
+            $table->timestamp('closed_at')->nullable();
             $table->timestamps();
         });
     }

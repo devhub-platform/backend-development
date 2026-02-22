@@ -6,7 +6,8 @@ use Illuminate\Support\Facades\Cache;
 
 class ChatContextCache
 {
-    protected int $limit = 6;
+    // 12 slots = 6 user + 6 assistant message pairs
+    protected int $limit = 12;
 
     public function get(int $sessionId): array
     {
@@ -15,9 +16,10 @@ class ChatContextCache
 
     public function push(int $sessionId, array $message): void
     {
-        $context = $this->get($sessionId);
+        $context   = $this->get($sessionId);
         $context[] = $message;
 
+        // Keep only the most recent messages within the limit
         if (count($context) > $this->limit) {
             $context = array_slice($context, -$this->limit);
         }

@@ -15,13 +15,13 @@ class AIChatSession extends Model
         'model',
         'pinned',
         'active',
-        'closed_at'
+        'closed_at',
     ];
 
     protected $casts = [
-        'pinned' => 'boolean',
-        'active' => 'boolean',
-        'closed_at' => 'datetime'
+        'pinned'    => 'boolean',
+        'active'    => 'boolean',
+        'closed_at' => 'datetime',
     ];
 
     public function messages(): HasMany
