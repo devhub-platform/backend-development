@@ -19,13 +19,15 @@ class Answer extends Model
         'user_id',
         'content',
         'is_accepted',
+        'helpful_count',
     ];
 
     protected $casts = [
-        'is_accepted' => 'boolean',
+        'is_accepted'   => 'boolean',
         'helpful_count' => 'integer',
     ];
 
+    // ─── Relationships ────────────────────────────────────────────────────────
 
     public function question(): BelongsTo
     {
@@ -41,6 +43,8 @@ class Answer extends Model
     {
         return $this->hasMany(AnswerVote::class);
     }
+
+    // ─── Scopes ───────────────────────────────────────────────────────────────
 
     public function scopeAccepted($query)
     {
@@ -61,6 +65,19 @@ class Answer extends Model
     {
         return $query->orderBy('helpful_count', 'desc');
     }
+
+    public function scopeTopVoted($query)
+    {
+        return $query->orderByRaw('(
+            SELECT COUNT(*) FROM answer_votes
+            WHERE answer_votes.answer_id = answers.id AND vote_type = "upvote"
+        ) - (
+            SELECT COUNT(*) FROM answer_votes
+            WHERE answer_votes.answer_id = answers.id AND vote_type = "downvote"
+        ) DESC');
+    }
+
+    // ─── Helpers ──────────────────────────────────────────────────────────────
 
     public function upvotesCount(): int
     {
@@ -84,9 +101,6 @@ class Answer extends Model
 
     public function getUserVote(User $user): ?string
     {
-        return $this->votes()
-            ->where('user_id', $user->id)
-            ->value('vote_type');
+        return $this->votes()->where('user_id', $user->id)->value('vote_type');
     }
 }
-

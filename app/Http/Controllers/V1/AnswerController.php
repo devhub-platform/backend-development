@@ -13,34 +13,34 @@ use App\Notifications\NewAnswerNotification;
 use App\Services\AnswerService;
 use App\Services\QuestionService;
 use App\Services\VoteService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class AnswerController extends \Illuminate\Routing\Controller
 {
     use AuthorizesRequests;
+
     public function __construct(
-        private AnswerService $answerService,
-        private VoteService $voteService,
+        private AnswerService   $answerService,
+        private VoteService     $voteService,
         private QuestionService $questionService
     ) {}
 
+    /**
+     * List answers for a question (accepted first → most helpful → newest)
+     */
     public function index(Question $question, Request $request): JsonResponse
     {
-        $perPage = $request->query('per_page', 10);
-
-        $answers = $this->answerService->getQuestionAnswers($question, $perPage);
+        $answers = $this->answerService->getQuestionAnswers(
+            $question,
+            $request->integer('per_page', 10)
+        );
 
         return response()->json([
             'success' => true,
-            'data' => AnswerResource::collection($answers),
-            'meta' => [
-                'total' => $answers->total(),
-                'per_page' => $answers->perPage(),
-                'current_page' => $answers->currentPage(),
-                'last_page' => $answers->lastPage(),
-            ],
+            'data'    => AnswerResource::collection($answers),
+            'meta'    => $this->paginationMeta($answers),
         ]);
     }
 
@@ -54,6 +54,7 @@ class AnswerController extends \Illuminate\Routing\Controller
             $request->input('content')
         );
 
+        // Notify question owner (not self)
         if ($question->user_id !== $request->user()->id) {
             $question->user->notify(new NewAnswerNotification($answer));
         }
@@ -61,7 +62,7 @@ class AnswerController extends \Illuminate\Routing\Controller
         return response()->json([
             'success' => true,
             'message' => 'Answer created successfully',
-            'data' => new AnswerResource($answer),
+            'data'    => new AnswerResource($answer),
         ], 201);
     }
 
@@ -78,7 +79,7 @@ class AnswerController extends \Illuminate\Routing\Controller
 
         return response()->json([
             'success' => true,
-            'data' => new AnswerResource($answer->load('user')),
+            'data'    => new AnswerResource($answer->load('user')),
         ]);
     }
 
@@ -98,7 +99,7 @@ class AnswerController extends \Illuminate\Routing\Controller
         return response()->json([
             'success' => true,
             'message' => 'Answer updated successfully',
-            'data' => new AnswerResource($answer),
+            'data'    => new AnswerResource($answer),
         ]);
     }
 
@@ -122,7 +123,7 @@ class AnswerController extends \Illuminate\Routing\Controller
     }
 
     /**
-     * Mark answer as accepted
+     * Accept an answer as the best solution
      */
     public function accept(Question $question, Answer $answer): JsonResponse
     {
@@ -135,20 +136,19 @@ class AnswerController extends \Illuminate\Routing\Controller
             ], 404);
         }
 
-        $question = $this->questionService->acceptAnswer($question, $answer->id);
+        $this->questionService->acceptAnswer($question, $answer->id);
 
-        // Notify answer author
         $answer->user->notify(new AnswerAcceptedNotification($answer->fresh()));
 
         return response()->json([
             'success' => true,
             'message' => 'Answer marked as accepted',
-            'data' => new AnswerResource($answer->fresh()),
+            'data'    => new AnswerResource($answer->fresh()),
         ]);
     }
 
     /**
-     * Vote on an answer
+     * Vote on an answer (upvote/downvote - toggleable)
      */
     public function vote(VoteAnswerRequest $request, Question $question, Answer $answer): JsonResponse
     {
@@ -170,56 +170,49 @@ class AnswerController extends \Illuminate\Routing\Controller
         return response()->json([
             'success' => true,
             'message' => $vote ? 'Vote recorded' : 'Vote removed',
-            'data' => [
-                'answer_id' => $answer->id,
-                'vote_score' => $answer->fresh()->voteScore(),
-                'current_user_vote' => $vote ? $vote->vote_type : null,
+            'data'    => [
+                'answer_id'         => $answer->id,
+                'vote_score'        => $answer->fresh()->voteScore(),
+                'current_user_vote' => $vote?->vote_type,
             ],
         ]);
     }
 
-    /**
-     * Get user's answers
-     */
     public function userAnswers(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $perPage = $request->query('per_page', 15);
-
-        $answers = $this->answerService->getUserAnswers($user, $perPage);
+        $answers = $this->answerService->getUserAnswers(
+            $request->user(),
+            $request->integer('per_page', 15)
+        );
 
         return response()->json([
             'success' => true,
-            'data' => AnswerResource::collection($answers),
-            'meta' => [
-                'total' => $answers->total(),
-                'per_page' => $answers->perPage(),
-                'current_page' => $answers->currentPage(),
-                'last_page' => $answers->lastPage(),
-            ],
+            'data'    => AnswerResource::collection($answers),
+            'meta'    => $this->paginationMeta($answers),
         ]);
     }
 
-    /**
-     * Get user's accepted answers
-     */
     public function userAcceptedAnswers(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $perPage = $request->query('per_page', 15);
-
-        $answers = $this->answerService->getUserAcceptedAnswers($user, $perPage);
+        $answers = $this->answerService->getUserAcceptedAnswers(
+            $request->user(),
+            $request->integer('per_page', 15)
+        );
 
         return response()->json([
             'success' => true,
-            'data' => AnswerResource::collection($answers),
-            'meta' => [
-                'total' => $answers->total(),
-                'per_page' => $answers->perPage(),
-                'current_page' => $answers->currentPage(),
-                'last_page' => $answers->lastPage(),
-            ],
+            'data'    => AnswerResource::collection($answers),
+            'meta'    => $this->paginationMeta($answers),
         ]);
     }
-}
 
+    private function paginationMeta($paginator): array
+    {
+        return [
+            'total'        => $paginator->total(),
+            'per_page'     => $paginator->perPage(),
+            'current_page' => $paginator->currentPage(),
+            'last_page'    => $paginator->lastPage(),
+        ];
+    }
+}

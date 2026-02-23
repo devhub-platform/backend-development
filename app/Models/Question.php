@@ -23,15 +23,18 @@ class Question extends Model
         'slug',
         'is_resolved',
         'views',
+        'answers_count',
+        'accepted_answer_id',
     ];
 
     protected $casts = [
-        'is_resolved' => 'boolean',
-        'views' => 'integer',
-        'answers_count' => 'integer',
+        'is_resolved'  => 'boolean',
+        'views'        => 'integer',
+        'answers_count'=> 'integer',
     ];
 
-    // Relationships
+    // ─── Relationships ────────────────────────────────────────────────────────
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -57,7 +60,8 @@ class Question extends Model
         return $this->hasMany(QuestionVote::class);
     }
 
-    // Scopes
+    // ─── Scopes ───────────────────────────────────────────────────────────────
+
     public function scopeResolved($query)
     {
         return $query->where('is_resolved', true);
@@ -78,19 +82,34 @@ class Question extends Model
         return $query->orderBy('views', 'desc');
     }
 
-    // Scout/Search
+    public function scopeUnanswered($query)
+    {
+        return $query->where('answers_count', 0);
+    }
+
+    /**
+     * Hot score: views / days since creation (avoid division by zero)
+     */
+    public function scopeHot($query)
+    {
+        return $query->orderByRaw('(views / NULLIF(DATEDIFF(NOW(), created_at), 0)) DESC');
+    }
+
+    // ─── Searchable ───────────────────────────────────────────────────────────
+
     public function toSearchableArray(): array
     {
         return [
-            'id' => $this->id,
-            'title' => $this->title,
-            'content' => $this->content,
-            'user_id' => $this->user_id,
+            'id'         => $this->id,
+            'title'      => $this->title,
+            'content'    => $this->content,
+            'user_id'    => $this->user_id,
             'created_at' => $this->created_at,
         ];
     }
 
-    // Helpers
+    // ─── Helpers ──────────────────────────────────────────────────────────────
+
     public function upvotesCount(): int
     {
         return $this->votes()->where('vote_type', 'upvote')->count();
@@ -113,9 +132,6 @@ class Question extends Model
 
     public function getUserVote(User $user): ?string
     {
-        return $this->votes()
-            ->where('user_id', $user->id)
-            ->value('vote_type');
+        return $this->votes()->where('user_id', $user->id)->value('vote_type');
     }
 }
-

@@ -9,9 +9,6 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class AnswerService
 {
-    /**
-     * Create a new answer
-     */
     public function createAnswer(Question $question, User $user, string $content): Answer
     {
         $answer = $question->answers()->create([
@@ -19,24 +16,17 @@ class AnswerService
             'content' => $content,
         ]);
 
-        // Update question answers count
         $question->increment('answers_count');
 
         return $answer->load('user');
     }
 
-    /**
-     * Update an answer
-     */
     public function updateAnswer(Answer $answer, string $content): Answer
     {
         $answer->update(['content' => $content]);
         return $answer->fresh();
     }
 
-    /**
-     * Delete an answer
-     */
     public function deleteAnswer(Answer $answer): bool
     {
         $answer->question->decrement('answers_count');
@@ -44,21 +34,18 @@ class AnswerService
     }
 
     /**
-     * Get answers for a question (sorted properly)
+     * Get answers sorted: accepted first → most helpful → newest
      */
     public function getQuestionAnswers(Question $question, int $perPage = 10): LengthAwarePaginator
     {
         return $question->answers()
-            ->with('user', 'votes')
+            ->with(['user', 'votes'])
             ->orderByRaw('is_accepted DESC')
             ->orderByRaw('helpful_count DESC')
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
 
-    /**
-     * Get user's answers
-     */
     public function getUserAnswers(User $user, int $perPage = 15): LengthAwarePaginator
     {
         return $user->answers()
@@ -67,9 +54,6 @@ class AnswerService
             ->paginate($perPage);
     }
 
-    /**
-     * Get user's accepted answers
-     */
     public function getUserAcceptedAnswers(User $user, int $perPage = 15): LengthAwarePaginator
     {
         return $user->answers()
@@ -79,20 +63,13 @@ class AnswerService
             ->paginate($perPage);
     }
 
-    /**
-     * Get answer count by user
-     */
     public function getUserAnswerCount(User $user): int
     {
         return $user->answers()->count();
     }
 
-    /**
-     * Get accepted answer count by user
-     */
     public function getUserAcceptedAnswerCount(User $user): int
     {
         return $user->answers()->where('is_accepted', true)->count();
     }
 }
-
