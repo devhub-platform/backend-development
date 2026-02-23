@@ -146,7 +146,7 @@ class NotificationController
 
         foreach ($validated['preferences'] as $type => $enabled) {
             if (in_array($type, $validTypes)) {
-                $currentPreferences[$type] = (bool) $enabled;
+                $currentPreferences[$type] = (bool)$enabled;
             }
         }
 
@@ -180,6 +180,34 @@ class NotificationController
             'message' => "Notification '{$type}' " . ($newValue ? 'enabled' : 'disabled'),
             'type' => $type,
             'enabled' => $newValue,
+        ]);
+    }
+
+    public function getQuestionsNotifications()
+    {
+        $user = auth()->user();
+        $notifications = $user->unreadNotifications()
+            ->whereIn('type', [
+                'App\Notifications\QuestionCreatedNotification',
+            ])->get([
+                'type', 'data', 'created_at'
+            ]);
+        return response()->json([
+            'questions_notifications' => $notifications,
+        ]);
+    }
+
+    public function getAnswersNotifications()
+    {
+        $user = auth()->user();
+        $notifications = $user->unreadNotifications()
+            ->whereIn('type', [
+                'App\Notifications\NewAnswerNotification',
+            ])->get([
+                'type', 'data', 'created_at'
+            ]);
+        return response()->json([
+            'answers_notifications' => $notifications,
         ]);
     }
 }

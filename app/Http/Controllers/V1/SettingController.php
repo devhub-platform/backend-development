@@ -3,160 +3,191 @@
 namespace App\Http\Controllers\V1;
 
 use App\Http\Requests\AddSocialAccountsRequest;
-use App\Http\Requests\ProfileRequests\AddAltEmailRequest;
+use App\Http\Requests\ProfileRequests\NotificationPreferenceRequest;
+use App\Http\Requests\ProfileRequests\UpdateNotificationPreferencesRequest;
 use App\Http\Requests\ProfileRequests\UpdatePasswordRequest;
-use App\Http\Requests\ProfileRequests\VerifyAltEmailRequest;
+use App\Http\Requests\ProfileRequests\UpdateProfileRequest;
 use App\Http\Resources\UserResource;
-use App\Mail\PasswordUpdatedSuccessfullyMail;
-use App\Mail\VerifyAltEmailMail;
-use Carbon\Carbon;
+use App\Services\SettingService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Storage;
-use Tymon\JWTAuth\Exceptions\JWTException;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class SettingController
 {
     use AuthorizesRequests;
 
-    public function updatePassword(UpdatePasswordRequest $request)
+    private SettingService $settingService;
+
+    public function __construct(SettingService $settingService)
     {
-        $validated = $request->validated();
-        try {
-            $this->authorize('update', Auth::user());
-            $user = Auth::user();
-            $name = $user->name;
-
-            if (!Hash::check($request->current_password, $user->password)) {
-                Log::warning("Failed password update attempt for user: {$user->email} - incorrect current password");
-                return response()->json([
-                    'message' => 'Current password is incorrect'
-                ], 400);
-            }
-
-            $user->password = Hash::make($validated['new_password']);
-            $user->save();
-
-            Mail::to($user->email)->send(new PasswordUpdatedSuccessfullyMail($user));
-
-            Log::info("Password updated successfully for user: {$user->email}");
-
-            return response()->json([
-                'message' => "Hi $name, your password has been updated successfully"
-            ], 200);
-        } catch (JWTException $e) {
-            Log::error("JWT exception during password update for user: " . Auth::user()->email . " - " . $e->getMessage());
-            return response()->json([
-                'message' => 'Failed to update password',
-                'error' => $e->getMessage()
-            ], 500);
-        } catch (\Exception $e) {
-            Log::error("Password update failed for user: " . Auth::user()->email . " - " . $e->getMessage());
-            return response()->json([
-                'message' => 'Failed to update password. Please try again.',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        $this->settingService = $settingService;
     }
 
-    public function forceDelete() // permanently delete user
+    public function updatePassword(UpdatePasswordRequest $request): JsonResponse
     {
-        try {
-            $user = auth()->user();
+        $this->authorize('update', Auth::user());
+        $user = Auth::user();
 
-            if (!$user) {
-                return response()->json([
-                    'message' => 'User not found',
-                ], 404);
-            }
+        $result = $this->settingService->updatePassword(
+            $user,
+            $request->input('current_password'),
+            $request->input('new_password')
+        );
 
-            $email = $user->email;
-            $userId = $user->id;
-
-            if ($user->avatar_url) {
-                Storage::disk('s3')->delete(basename($user->avatar_url));
-            }
-            if ($user->cover_image) {
-                Storage::disk('s3')->delete(basename($user->cover_image));
-            }
-
-            $user->forceDelete();
-
-            Log::warning('User permanently deleted: ' . $email . ' (ID: ' . $userId . ')');
-
-            return response()->json([
-                'message' => 'Profile permanently deleted successfully',
-            ], 200);
-        } catch (\Exception $e) {
-            Log::error("Permanent profile deletion failed for user: " . auth()->user()->email . " - " . $e->getMessage());
-            return response()->json([
-                'message' => 'Failed to permanently delete profile. Please try again.',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return response()->json([
+            'message' => $result['message'],
+        ], $result['status']);
     }
 
-    public function delete() // soft delete user can be restored later
+    public function delete(): JsonResponse
     {
-        try {
-            $user = auth()->user();
+        $user = Auth::user();
 
-            if (!$user) {
-                return response()->json([
-                    'message' => 'User not found',
-                ], 404);
-            }
-
-            $email = $user->email;
-            $user->delete();
-
-            Log::info('User soft deleted: ' . $email);
-
-            return response()->json([
-                'message' => 'Profile deleted successfully (soft delete)',
-            ], 200);
-        } catch (\Exception $e) {
-            Log::error("Profile deletion failed for user: " . auth()->user()->email . " - " . $e->getMessage());
-            return response()->json([
-                'message' => 'Failed to delete profile. Please try again.',
-                'error' => $e->getMessage()
-            ], 500);
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
         }
+
+        $result = $this->settingService->softDeleteAccount($user);
+
+        return response()->json(['message' => $result['message']], $result['status']);
     }
 
-    public function addSocialAccounts(AddSocialAccountsRequest $request)
+    public function forceDelete(): JsonResponse
     {
-        $validated = $request->validated();
+        $user = Auth::user();
 
-        try {
-            $user = Auth::user();
-
-            if (!$user) {
-                return response()->json([
-                    'message' => 'User not found',
-                ], 404);
-            }
-
-            $data = $request->only(['linkedin_username', 'github_username','orcid_username']);
-            $user->update($data);
-
-            Log::info("Social accounts updated for user: {$user->email}", $data);
-
-            return response()->json([
-                'message' => 'Social accounts updated successfully',
-                'data' => new UserResource($user->fresh()),
-            ], 200);
-        } catch (\Exception $e) {
-            Log::error("Social accounts update failed for user: " . Auth::user()->email . " - " . $e->getMessage());
-            return response()->json([
-                'message' => 'Failed to update social accounts. Please try again.',
-                'error' => $e->getMessage()
-            ], 500);
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
         }
+
+        $result = $this->settingService->forceDeleteAccount($user);
+
+        return response()->json(['message' => $result['message']], $result['status']);
+    }
+
+    public function addSocialAccounts(AddSocialAccountsRequest $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $data = $request->only(['linkedin_username', 'github_username', 'orcid_username']);
+        $result = $this->settingService->updateSocialAccounts($user, $data);
+
+        if (!$result['success']) {
+            return response()->json(['message' => $result['message']], $result['status']);
+        }
+
+        return response()->json([
+            'message' => $result['message'],
+            'data' => new UserResource($result['user']),
+        ], $result['status']);
+    }
+
+    public function updateProfile(UpdateProfileRequest $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $data = $request->validated();
+        $result = $this->settingService->updateProfile($user, $data);
+
+        if (!$result['success']) {
+            return response()->json(['message' => $result['message']], $result['status']);
+        }
+
+        return response()->json([
+            'message' => $result['message'],
+            'data' => new UserResource($result['user']),
+        ], $result['status']);
+    }
+
+    public function getNotificationPreferences(): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $result = $this->settingService->getNotificationPreferences($user);
+
+        return response()->json([
+            'message' => $result['message'],
+            'data' => $result['preferences'],
+        ], $result['status']);
+    }
+
+    public function updateNotificationPreference(NotificationPreferenceRequest $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $result = $this->settingService->updateNotificationPreference(
+            $user,
+            $request->input('type'),
+            $request->input('enabled')
+        );
+
+        if (!$result['success']) {
+            return response()->json(['message' => $result['message']], $result['status']);
+        }
+
+        return response()->json([
+            'message' => $result['message'],
+            'data' => $result['preferences'],
+        ], $result['status']);
+    }
+
+    public function updateNotificationPreferences(UpdateNotificationPreferencesRequest $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $preferences = $request->validated();
+        $result = $this->settingService->updateMultiplePreferences($user, $preferences);
+
+        if (!$result['success']) {
+            return response()->json(['message' => $result['message']], $result['status']);
+        }
+
+        return response()->json([
+            'message' => $result['message'],
+            'data' => $result['preferences'],
+        ], $result['status']);
+    }
+
+    public function getAccountSettings(): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $result = $this->settingService->getAccountSettings($user);
+
+        if (!$result['success']) {
+            return response()->json(['message' => $result['message']], $result['status']);
+        }
+
+        return response()->json([
+            'message' => $result['message'],
+            'data' => $result['settings'],
+        ], $result['status']);
     }
 
 }

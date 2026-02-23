@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 use Tymon\JWTAuth\Facades\JWTAuth;
+use Google_Client;
 
 class SocialiteMediaController
 {
@@ -24,6 +26,64 @@ class SocialiteMediaController
             'url' => $redirectUrl
         ]);
     }
+
+    public function loginGoogleForMobile(Request $request): JsonResponse
+    {
+        $request->validate([
+            'id_token' => ['required', 'string'],
+        ]);
+
+        try {
+            $client = new Google_Client(['client_id' => config('services.google.client_id')]);
+            $payload = $client->verifyIdToken($request->id_token);
+
+            if (!$payload) {
+                return response()->json([
+                    'message' => 'Invalid Google token'
+                ], 401);
+            }
+
+            $email = $payload['email'];
+            $name = $payload['name'] ?? str()->before($email, '@');
+            $avatar = $payload['picture'] ?? null;
+            $googleId = $payload['sub'];
+
+            $username = str()->before($email, '@') . '_' . strval(rand(9999, 99999));
+
+            $user = User::updateOrCreate(
+                ['email' => $email],
+                [
+                    'name' => $name,
+                    'username' => $username,
+                    'website_url' => null,
+                    'role' => 'user',
+                    'bio' => null,
+                    'github_username' => null,
+                    'provider_id' => $googleId,
+                    'password' => bcrypt(str()->random(16)),
+                    'avatar_url' => $avatar,
+                    'email_verified_at' => now(),
+                ]
+            );
+
+            JWTAuth::factory()->setTTL(60 * 24 * 30 * 12); // Set token to expire in 30 days
+            $token = JWTAuth::fromUser($user);
+
+            return response()->json([
+                'message' => 'Login successful using Google',
+                'user' => new UserResource($user),
+                'token' => $token
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Google mobile login failed: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Authentication failed',
+                'error' => config('app.debug') ? $e->getMessage() : null
+            ], 401);
+        }
+    }
+
 
     public function loginGithub(): JsonResponse
     {

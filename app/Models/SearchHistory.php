@@ -3,23 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/**
- * @property int $id
- * @property int $user_id
- * @property string|null $query
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- * @method static \Illuminate\Database\Eloquent\Builder<static>|SearchHistory newModelQuery()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|SearchHistory newQuery()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|SearchHistory query()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|SearchHistory whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|SearchHistory whereId($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|SearchHistory whereQuery($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|SearchHistory whereUpdatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|SearchHistory whereUserId($value)
- * @mixin \Eloquent
- */
 class SearchHistory extends Model
 {
     protected $table = 'search_histories';
@@ -27,4 +12,9 @@ class SearchHistory extends Model
         'user_id',
         'query',
     ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 }

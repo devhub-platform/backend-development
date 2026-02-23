@@ -25,8 +25,8 @@ use App\Http\Controllers\V1\TagFollowController;
 use App\Http\Controllers\V1\UserController;
 use App\Http\Controllers\V1\UserStatusesController;
 use App\Http\Controllers\V1\VerifyAltEmailController;
-use App\Http\Controllers\V1\AiModels\AttachmentController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\V1\AiModels\AttachmentController;
 
 Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
@@ -53,9 +53,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::post('password/verify-otp', 'verifyOtp');
         Route::post('password/reset', 'resetPassword');
     });
-
-    // Public AI routes (no auth required)
-    Route::get('ai-chat/models', [AIChatController::class, 'models']);
 
     Route::middleware(['auth:api', 'throttle:25,1'])->group(function () {
 
@@ -92,8 +89,10 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::controller(UserController::class)->group(function () {
             Route::get('users', 'index');
             Route::get('users/recommended', 'getRecommendedUsers');
+
             Route::get('users/{id}', 'showUserProfile');
             Route::get('users/{id}/similar-skills', 'getUsersWithSimilarSkills');
+
             Route::get('users/{user}/posts', 'userPosts');
             Route::get('users/{user}/comments', 'userComments');
             Route::get('users/{user}/tags', 'userTags');
@@ -114,27 +113,42 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
         // Comments (protected from blocked users)
         Route::middleware('blocked.user')->controller(CommentController::class)->group(function () {
+
             Route::post('posts/{post}/comments', 'store');
             Route::post('posts/{post}/comments/{parentComment}/reply', 'reply');
+
             Route::post('comments/{comment}/react', 'react');
             Route::delete('comments/{comment}/remove-react', 'removeReaction');
         });
 
-        // Comments (public reads)
+        // Comments (public reads - no blocked.user middleware needed)
         Route::controller(CommentController::class)->group(function () {
+            // Get comments by post/user
             Route::get('posts/{postId}/comments', 'getByPost');
             Route::get('posts/{postId}/comments/count', 'countByPost');
             Route::get('users/{userId}/comments', 'getByUser');
+
+            // Replies & Thread
             Route::get('comments/{comment}/replies', 'getReplies');
             Route::get('comments/{comment}/thread', 'getThread');
+
+            // Pin/Unpin
             Route::post('comments/{comment}/pin', 'pin');
             Route::post('comments/{comment}/unpin', 'unpin');
+
+            // Get Reactions info
             Route::get('comments/{comment}/my-reaction', 'myReaction');
             Route::get('comments/{comment}/reactions', 'getReactions');
+
+            // Soft delete & Restore
             Route::delete('comments/{id}/force', 'forceDelete');
+
+            // My comments
             Route::get('my/comments', 'myRecentComments');
             Route::get('my/comments/stats', 'myCommentStats');
         });
+//        Route::apiResource('comments', CommentController::class);
+
 
         Route::controller(TagController::class)->group(function () {
             Route::get('tags/popular', 'popularTag');
@@ -183,7 +197,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('posts/{post}/reactions-count', 'reactionCounts');
         });
 
-        // Saved Posts
+        // Saved Posts (Reading List)
         Route::controller(SavedPostController::class)->group(function () {
             Route::get('saved-posts', 'index');
             Route::post('saved-posts/{post}', 'store');
@@ -195,13 +209,18 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('notifications/comments', 'showNewCommentNotify');
             Route::get('notifications/all', 'showAllNotifications');
             Route::get('notifications/reacts', 'showNewReactNotify');
+
             Route::get('notifications/new-followers', 'showNewFollowersNotifications');
             Route::delete('notifications/followers/clear', 'clearAllNotificationFromFollowers');
+
             Route::get('notifications/post-created', 'newPostCreateFromFollower');
+
             Route::get('notifications/mention', 'showNewMentionNotifications');
+
             Route::post('notifications/mark-as-read', 'makeAllRead');
             Route::post('notifications/{notification}/mark-as-read', 'makeAsRead');
             Route::delete('notifications/clear', 'clearAllNotifications');
+
             Route::get('notifications/preferences', 'getNotificationPreferences');
             Route::put('notifications/preferences', 'updateNotificationPreferences');
             Route::patch('notifications/preferences/{type}/toggle', 'toggleNotificationPreference');
@@ -286,12 +305,11 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::delete('settings/alt-email/remove', 'removeAltEmail');
         });
 
-        // AI Chat
         Route::prefix('ai-chat')->group(function () {
             Route::controller(AIChatController::class)->group(function () {
                 Route::post('send', 'chat');
+                Route::get('models', 'models');
             });
-
             Route::post('attachments/upload', [AttachmentController::class, 'upload']);
 
             Route::prefix('history')->controller(HistoryController::class)->group(function () {
@@ -312,9 +330,9 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 // Fallback & Welcome Routes
 Route::fallback(function () {
     return response()->json([
-        'Hey there!'    => 'Ramadan Mubarak!!',
-        'message'       => 'Resource not found, the API endpoint does not exist',
+        'Hey there!' => 'Ramadan Mubarak!!',
+        'message' => 'Resource not found , The API endpoint does not exist',
         'documentation' => 'https://0yviq6a5i5.apidog.io/',
-        'version'       => 'API v1 - Devhub is a platform for developers to share knowledge, collaborate on projects, and connect with other developers.',
+        'version' => 'API v1 Devhub is a platform for developers to share knowledge, collaborate on projects, and connect with other developers. Our API allows you to access our platform programmatically, enabling you to integrate our features into your applications and services.',
     ], 404);
 });

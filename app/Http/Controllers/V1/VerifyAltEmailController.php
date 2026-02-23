@@ -23,6 +23,24 @@ class VerifyAltEmailController
                 ], 404);
             }
 
+            if($user->alt_email && $user->alt_email_verified_at) {
+                return response()->json([
+                    'message' => 'You already have a verified alternative email. Please remove it before adding a new one.',
+                ], 400);
+            }
+
+            if($user->alt_email && !$user->alt_email_verified_at) {
+                return response()->json([
+                    'message' => 'You have an alternative email pending verification. Please verify it or remove it before adding a new one.',
+                ], 400);
+            }
+
+            if ($user->isLoginViaAltEmail()) {
+                return response()->json([
+                    'message' => 'You cannot add a new alternative email while logged in via your alternative email. Please log in with your primary email address first.',
+                ], 403);
+            }
+
             $altEmail = $request->validated()['alt_email'];
 
             $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
@@ -107,9 +125,6 @@ class VerifyAltEmailController
         }
     }
 
-    /**
-     * Resend OTP to alternative email
-     */
     public function resendAltEmailOtp()
     {
         try {
@@ -127,7 +142,6 @@ class VerifyAltEmailController
                 ], 400);
             }
 
-            // Check if already verified
             if ($user->alt_email_verified_at) {
                 return response()->json([
                     'message' => 'Alternative email is already verified.',
@@ -166,6 +180,12 @@ class VerifyAltEmailController
                 return response()->json([
                     'message' => 'User not found',
                 ], 404);
+            }
+
+            if ($user->isLoginViaAltEmail()) {
+                return response()->json([
+                    'message' => 'You cannot remove your alternative email while logged in via it. Please log in with your primary email address first.',
+                ], 403);
             }
 
             if (!$user->alt_email) {
