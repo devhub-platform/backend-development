@@ -1,6 +1,9 @@
 <?php
 
 return [
+
+    'post_chat' => 'google/gemini-2.5-flash',
+
     'chat' => [
         [
             'id'       => 'openai/gpt-oss-120b',
