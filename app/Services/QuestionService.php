@@ -4,32 +4,27 @@ namespace App\Services;
 
 use App\Models\Question;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 
 class QuestionService
 {
-
     public function createQuestion(User $user, array $data): Question
     {
         $data['user_id'] = $user->id;
-        $data['slug'] = Str::slug($data['title']) . '-' . uniqid();
+        $data['slug']    = Str::slug($data['title']) . '-' . uniqid();
 
         return Question::create($data);
     }
-
 
     public function updateQuestion(Question $question, array $data): Question
     {
         if (isset($data['title'])) {
             $data['slug'] = Str::slug($data['title']) . '-' . uniqid();
         }
-
         $question->update($data);
         return $question->fresh();
     }
-
 
     public function deleteQuestion(Question $question): bool
     {
@@ -37,16 +32,19 @@ class QuestionService
     }
 
     /**
-     * Get paginated questions with filters
+     * Get paginated questions with filters + sorting
+     * Supports: recent | popular | unanswered | hot
      */
     public function getQuestions(
-        int $perPage = 15,
-        ?string $sortBy = 'recent',
-        ?bool $isResolved = null,
-        ?int $postId = null
+        int     $perPage    = 15,
+        string  $sortBy     = 'recent',
+        ?bool   $isResolved = null,
+        ?int    $postId     = null,
+        ?string $tag        = null
     ): LengthAwarePaginator {
-        $query = Question::query();
+        $query = Question::query()->with(['user', 'post']);
 
+        // ─── Filters ──────────────────────────────────────────────────────────
         if ($isResolved !== null) {
             $query->where('is_resolved', $isResolved);
         }
@@ -55,20 +53,19 @@ class QuestionService
             $query->where('post_id', $postId);
         }
 
-        // Apply sorting
+        // ─── Sorting ──────────────────────────────────────────────────────────
         match ($sortBy) {
-            'popular' => $query->orderBy('views', 'desc'),
-            'unanswered' => $query->where('answers_count', 0)->recent(),
-            'trending' => $query->orderByRaw('(views / DATEDIFF(NOW(), created_at)) DESC'),
-            default => $query->recent(),
+            'popular'    => $query->popular(),
+            'unanswered' => $query->unanswered()->recent(),
+            'hot'        => $query->hot(),
+            default      => $query->recent(),
         };
 
-        return $query->with(['user', 'post'])
-            ->paginate($perPage);
+        return $query->paginate($perPage);
     }
 
     /**
-     * Get a single question with answers
+     * Get a single question with sorted answers
      */
     public function getQuestionWithAnswers(Question $question): Question
     {
@@ -77,30 +74,46 @@ class QuestionService
         return $question->load([
             'user',
             'post',
+            'acceptedAnswer',
+            'acceptedAnswer.user',
             'answers' => fn($q) => $q
                 ->orderByRaw('is_accepted DESC')
                 ->orderByRaw('helpful_count DESC')
                 ->orderBy('created_at', 'desc'),
             'answers.user',
-            'acceptedAnswer',
-            'acceptedAnswer.user',
+            'answers.votes',
         ]);
     }
 
+    /**
+     * Full-text search + fallback to LIKE
+     */
     public function searchQuestions(string $query, int $perPage = 15): LengthAwarePaginator
     {
-        return Question::whereRaw("MATCH(title, content) AGAINST(? IN BOOLEAN MODE)", [$query])
-            ->orWhere('title', 'ilike', "%{$query}%")
-            ->orWhere('content', 'ilike', "%{$query}%")
+        return Question::where(function ($q) use ($query) {
+            $q->whereRaw("MATCH(title, content) AGAINST(? IN BOOLEAN MODE)", [$query])
+                ->orWhere('title', 'like', "%{$query}%")
+                ->orWhere('content', 'like', "%{$query}%");
+        })
             ->with(['user', 'post'])
             ->recent()
             ->paginate($perPage);
     }
 
+    /**
+     * Accept an answer and mark question as resolved
+     */
     public function acceptAnswer(Question $question, int $answerId): Question
     {
+        // Unaccept previous if exists
+        if ($question->accepted_answer_id) {
+            $question->answers()
+                ->where('id', $question->accepted_answer_id)
+                ->update(['is_accepted' => false]);
+        }
+
         $question->update([
-            'is_resolved' => true,
+            'is_resolved'        => true,
             'accepted_answer_id' => $answerId,
         ]);
 
@@ -109,6 +122,9 @@ class QuestionService
         return $question->fresh();
     }
 
+    /**
+     * Unaccept the current accepted answer
+     */
     public function unacceptAnswer(Question $question): Question
     {
         if ($question->accepted_answer_id) {
@@ -118,7 +134,7 @@ class QuestionService
         }
 
         $question->update([
-            'is_resolved' => false,
+            'is_resolved'        => false,
             'accepted_answer_id' => null,
         ]);
 
@@ -133,25 +149,23 @@ class QuestionService
             ->paginate($perPage);
     }
 
-
     public function getUserAnsweredQuestions(User $user, int $perPage = 15): LengthAwarePaginator
     {
         return Question::whereIn('id', function ($query) use ($user) {
-            $query->select('question_id')
-                ->from('answers')
-                ->where('user_id', $user->id);
+            $query->select('question_id')->from('answers')->where('user_id', $user->id);
         })
             ->with(['user', 'post'])
             ->recent()
             ->paginate($perPage);
     }
 
-    public function getTrendingQuestions()
+    /**
+     * Hot questions: views / days old (trending logic)
+     */
+    public function getTrendingQuestions(int $perPage = 15): LengthAwarePaginator
     {
         return Question::with(['user', 'post'])
-            ->orderByRaw('(views / DATAFEED(NOW(), created_at)) DESC')
-            ->recent()
-            ->paginate(15);
+            ->hot()
+            ->paginate($perPage);
     }
 }
-
