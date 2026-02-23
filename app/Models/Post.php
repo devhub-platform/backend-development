@@ -87,6 +87,10 @@ class Post extends Model implements HasReaction
             ->withTimestamps();
     }
 
+    public function questions(): HasMany
+    {
+        return $this->hasMany(Question::class);
+    }
 
     public function viewedByUsers(): BelongsToMany
     {

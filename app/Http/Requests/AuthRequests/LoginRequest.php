@@ -10,9 +10,18 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'email', 'max:254'],
+            'email' => ['required', 'email:rfc,dns', 'max:254'],
             'password' => ['required', Password::defaults(), 'string'],
             'remember_me' => ['nullable', 'boolean'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'email.required' => 'Email is required',
+            'email.email' => 'Please enter a valid email address',
+            'password.required' => 'Password is required',
         ];
     }
 

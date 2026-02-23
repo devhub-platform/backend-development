@@ -3,121 +3,120 @@
 namespace App\Http\Controllers\V1;
 
 use App\Http\Resources\ReportResource;
-use App\Mail\SupportReportMail;
 use App\Models\Report;
 use App\Models\User;
-use App\Notifications\UserReportedNotification;
+use App\Services\ReportService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Notification;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use App\Policies\ReportPolicy;
 
 class ReportController
 {
-    public function block(User $target)
+    use AuthorizesRequests;
+    private ReportService $reportService;
+
+    public function __construct(ReportService $reportService)
     {
-        $user = auth()->user();
-        abort_if($user->id === $target->id, 400, 'Cannot block yourself');
-
-
-        if (!$target) {
-            return response()->json([
-                'message' => 'Target user not found',
-            ], 404);
-        }
-
-        if ($user->blockedUsers()->where('reported_user_id', $target->id)->exists()) {
-            return response()->json([
-                'message' => "User $target->name is already blocked",
-            ], 400);
-        }
-
-        $user->blockedUsers()->attach($target->id);
-
-        return response()->json([
-            'message' => "User $target->name blocked successfully",
-        ]);
+        $this->reportService = $reportService;
     }
 
-    public function report(Request $request, User $target)
+    /**
+     * Block a user
+     */
+    public function block(User $target): JsonResponse
     {
-        $user = auth()->user();
-        abort_if($user->id === $target->id, 400, 'Cannot report yourself');
+        $blocker = Auth::user();
+
+        if (!$blocker) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $result = $this->reportService->blockUser($blocker, $target);
+
+        if (!$result['success']) {
+            return response()->json(['message' => $result['message']], $result['status']);
+        }
+
+        return response()->json(['message' => $result['message']], $result['status']);
+    }
+
+    public function report(Request $request, User $target): JsonResponse
+    {
+        $reporter = Auth::user();
+
+        if (!$reporter) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
 
         $validated = $request->validate([
             'message' => 'required|string|max:1000',
-            'reason' => 'nullable|string|max:255',
+            'reason' => 'nullable|string|in:spam,harassment,hate_speech,violence,adult_content,copyright,misinformation,other',
         ]);
 
-        $report = Report::create([
-            'reporter_id' => $user->id,
-            'reported_user_id' => $target->id,
-            'message' => $validated['message'],
-            'reason' => $validated['reason'],
-        ]);
+        $result = $this->reportService->reportUser(
+            $reporter,
+            $target,
+            $validated['message'],
+            $validated['reason'] ?? null
+        );
 
-        if (!$user->blockedUsers()->where('reported_user_id', $target->id)->exists()) {
-            $user->blockedUsers()->attach($target->id);
-        }
-
-        $adminMails = 'youssef.ahmed.fci@gmail.com';
-        Notification::route('mail', $adminMails)
-            ->notify(new UserReportedNotification($report));
-
-        Mail::to(Auth::user()->email)
-            ->send(new SupportReportMail($user, $report));
-
-        return response()->json([
-            'message' => "User $target->name reported and blocked successfully",
-            'data' => new ReportResource($report->load(['reporter', 'reportedUser'])),
-            'admin_notification_sent_to' => $adminMails,
-        ]);
-    }
-
-    public function unblock(User $target)
-    {
-        $user = auth()->user();
-
-        if (!$user->blockedUsers()->where('reported_user_id', $target->id)->exists()) {
-            return response()->json(['message' => 'User is not blocked'], 400);
-        }
-
-        $user->blockedUsers()->detach($target->id);
-
-        return response()->json(['message' => "User {$target->name} unblocked"]);
-    }
-
-    public function blockList()
-    {
-        $blockedUsers = auth()->user()->blockedUsers()->get();
-
-        if ($blockedUsers->isEmpty()) {
-            return response()->json([
-                'message' => 'No blocked users found',
-                'data' => [],
-            ]);
+        if (!$result['success']) {
+            return response()->json(['message' => $result['message']], $result['status']);
         }
 
         return response()->json([
-            'data' => $blockedUsers->map(fn($user) => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'avatar' => $user->avatar_url,
-            ]),
-        ]);
+            'message' => $result['message'],
+            'data' => new ReportResource($result['report']),
+            'admin_notification_sent_to' => $result['admin_notification_sent_to'],
+        ], $result['status']);
     }
 
-    public function reason()
+    public function unblock(User $target): JsonResponse
     {
+        $blocker = Auth::user();
+
+        if (!$blocker) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $result = $this->reportService->unblockUser($blocker, $target);
+
+        if (!$result['success']) {
+            return response()->json(['message' => $result['message']], $result['status']);
+        }
+
+        return response()->json(['message' => $result['message']], $result['status']);
+    }
+
+    public function blockList(): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $this->authorize('view-block-list', Report::class);
+
+        $result = $this->reportService->getBlockedUsers($user);
+
         return response()->json([
-            'reasons' => [
-                'Spam or misleading',
-                'Hate speech or graphic violence',
-                'Harassment or bullying',
-                'Inappropriate content',
-                'Fake profile',
-                'Other',
-            ],
-        ]);
+            'message' => $result['message'],
+            'data' => $result['data'],
+            'count' => $result['count'],
+        ], $result['status']);
+    }
+
+    public function reason(): JsonResponse
+    {
+        $result = $this->reportService->getReportReasons();
+
+        return response()->json([
+            'message' => $result['message'],
+            'data' => $result['data'],
+            'count' => $result['count'],
+        ], $result['status']);
     }
 }

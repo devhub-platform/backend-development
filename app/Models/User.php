@@ -39,11 +39,6 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         ];
     }
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
         'username',
@@ -111,6 +106,10 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         return $this->hasMany(Comment::class);
     }
 
+    public function searchHistories(): HasMany
+    {
+        return $this->hasMany(SearchHistory::class);
+    }
 
     public function following()
     {
@@ -168,6 +167,15 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         return $this->hasMany(ReadingList::class);
     }
 
+    public function questions(): HasMany
+    {
+        return $this->hasMany(Question::class);
+    }
+
+    public function answers(): HasMany
+    {
+        return $this->hasMany(Answer::class);
+    }
 
     public function blockedUsers(): BelongsToMany
     {
@@ -226,6 +234,9 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             'new_reaction' => true,
             'new_post_from_following' => true,
             'mention' => true,
+            'question_answered' => true,
+            'weekly_digest' => true,
+            'chat_message' => true,
         ];
     }
 
@@ -250,9 +261,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         $this->update(['notification_preferences' => $preferences]);
     }
 
-    /**
-     * Get the user's reaction on a reactable model.
-     */
+
     public function myReaction($reactable): ?\Binafy\LaravelReaction\Models\Reaction
     {
         $userForeignName = config('laravel-reaction.user.foreign_key', 'user_id');
@@ -262,9 +271,6 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             ->first();
     }
 
-    /**
-     * Update the user's reaction on a reactable model.
-     */
     public function updateReaction(string $type, $reactable): ?\Binafy\LaravelReaction\Models\Reaction
     {
         $userForeignName = config('laravel-reaction.user.foreign_key', 'user_id');
