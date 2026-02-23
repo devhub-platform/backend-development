@@ -78,7 +78,6 @@ class Question extends Model
         return $query->orderBy('views', 'desc');
     }
 
-    // Scout/Search
     public function toSearchableArray(): array
     {
         return [
@@ -90,7 +89,6 @@ class Question extends Model
         ];
     }
 
-    // Helpers
     public function upvotesCount(): int
     {
         return $this->votes()->where('vote_type', 'upvote')->count();
