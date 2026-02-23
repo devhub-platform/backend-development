@@ -315,7 +315,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 // ─── Fallback ─────────────────────────────────────────────────────────────────
 Route::fallback(function () {
     return response()->json([
-        'Hey there!'    => 'Ramadan Mubarak!!',
+        'Hey_there!'    => 'Ramadan Mubarak!!',
         'message'       => 'Resource not found, the API endpoint does not exist',
         'documentation' => 'https://0yviq6a5i5.apidog.io/',
         'version'       => 'API v1 - Devhub is a platform for developers to share knowledge, collaborate on projects, and connect with other developers.',
