@@ -9,10 +9,14 @@ class ModelResolver
 
     public function __construct(TokenTracker $tracker)
     {
-        $this->models = config('ai_models.chat');
+        $this->models  = config('ai_models.chat');
         $this->tracker = $tracker;
     }
 
+    /**
+     * Resolve which model to actually use.
+     * Returns the fallback model if the message is simple/cheap enough.
+     */
     public function resolve(string $requestedModel, string $userMessage = ''): string
     {
         if (empty($userMessage)) {
@@ -21,14 +25,14 @@ class ModelResolver
 
         foreach ($this->models as $model) {
             if ($model['id'] === $requestedModel) {
-                $useFallback = $this->tracker->shouldUseFallback($userMessage, $model['id']);
-                if ($useFallback && isset($model['fallback'])) {
+                if ($this->tracker->shouldUseFallback($userMessage, $model['id']) && isset($model['fallback'])) {
                     return $model['fallback'];
                 }
                 return $model['id'];
             }
         }
 
-        return 'openai/gpt-5.1-mini';
+        // Default fallback if the requested model is not in config
+        return 'openai/gpt-5-mini';
     }
 }

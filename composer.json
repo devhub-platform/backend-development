@@ -11,6 +11,7 @@
     "require": {
         "php": "^8.3",
         "aerni/cloudflared": "^1.1",
+        "aiven/aiven-laravel": "^1.0",
         "algolia/algoliasearch-client-php": "^4.35",
         "api-platform/laravel": "^4.2",
         "awssat/laravel-visits": "^6.2",
