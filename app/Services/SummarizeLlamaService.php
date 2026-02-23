@@ -17,9 +17,6 @@ class SummarizeLlamaService
         'general' => 'Please help with the following'
     ];
 
-    /**
-     * Send a general AI request to Llama 3
-     */
     public function sendAiRequest(Request $request)
     {
         $request->validate([

@@ -41,12 +41,6 @@ class UserResource extends JsonResource
             'joined' => $this->created_at?->diffForHumans(),
             'joined_at' => $this->created_at?->format('Y-m-d'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
-
-            'stats' => $this->when($this->relationLoaded('posts') || $this->relationLoaded('followers'), fn() => [
-                'posts_count' => $this->whenLoaded('posts', fn() => $this->posts->count()),
-                'followers_count' => $this->whenLoaded('followers', fn() => $this->followers->count()),
-                'following_count' => $this->whenLoaded('following', fn() => $this->following->count()),
-            ]),
         ];
     }
 
