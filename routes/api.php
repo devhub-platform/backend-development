@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\V1\AiModels\AIChatController;
+use App\Http\Controllers\V1\Chats\ChatController;
 use App\Http\Controllers\V1\AiModels\AttachmentController;
 use App\Http\Controllers\V1\AiModels\HistoryController;
 use App\Http\Controllers\V1\AiModels\PostChatController;
@@ -27,6 +28,7 @@ use App\Http\Controllers\V1\UserController;
 use App\Http\Controllers\V1\UserStatusesController;
 use App\Http\Controllers\V1\VerifyAltEmailController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\V1\Chats\MessageController;
 
 Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
@@ -288,6 +290,33 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::delete('settings/alt-email/remove', 'removeAltEmail');
         });
 
+        Route::prefix('chat')->controller(ChatController::class)->group(function () {
+            // Conversations
+            Route::get('conversations', 'index');
+            Route::post('conversations', 'createOrGetConversation');
+            Route::get('conversations/{conversation}', 'show');
+            Route::delete('conversations/{conversation}', 'destroy');
+
+            // Messages
+            Route::get('conversations/{conversation}/messages', 'getMessages');
+            Route::post('conversations/{conversation}/messages', 'sendMessage');
+            Route::delete('conversations/{conversation}/messages/{messageId}', 'deleteMessage');
+            Route::post('conversations/{conversation}/messages/read', 'markAsRead');
+
+            // Unread count
+            Route::get('unread-count', 'unreadCount');
+        });
+
+        Route::prefix('messages')->controller(MessageController::class)->group(function () {
+            Route::post('{conversation}/send', 'sendMessage');
+            Route::post('{conversation}/send-attachment', 'sendMessageWithAttachment');
+            Route::delete('{conversation}/{messageId}', 'deleteMessage');
+            Route::post('{conversation}/mark-as-read', 'markAsRead');
+            Route::put('{conversation}/{messageId}', 'updateMessage');
+            Route::post('{conversation}/{messageId}/reaction', 'addReactionToMessage');
+            Route::post('{conversation}/{messageId}/flag', 'makeMessageAsFlagged');
+        });
+
         // ─── AI Chat ──────────────────────────────────────────────────────────
         Route::prefix('ai-chat')->group(function () {
             // General chat - send message
@@ -309,15 +338,15 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
                 Route::put('sessions/{sessionId}/title', 'updateTitle');
             });
         });
+
     });
 });
 
-// ─── Fallback ─────────────────────────────────────────────────────────────────
 Route::fallback(function () {
     return response()->json([
-        'Hey_there!'    => 'Ramadan Mubarak!!',
-        'message'       => 'Resource not found, the API endpoint does not exist',
+        'Hey_there!' => 'Ramadan Mubarak!!',
+        'message' => 'Resource not found, the API endpoint does not exist',
         'documentation' => 'https://0yviq6a5i5.apidog.io/',
-        'version'       => 'API v1 - Devhub is a platform for developers to share knowledge, collaborate on projects, and connect with other developers.',
+        'version' => 'API v1 - Devhub is a platform for developers to share knowledge, collaborate on projects, and connect with other developers.',
     ], 404);
 });

@@ -13,14 +13,14 @@ return [
      * Channel: mc-chat-conversation.2,
      * Event: Musonza\Chat\Eventing\MessageWasSent
      */
-    'broadcasts' => false,
+    'broadcasts' => true,
 
     /*
      * Enable encryption for message bodies.
      * When enabled, new messages will be encrypted using Laravel's Crypt facade.
      * Existing unencrypted messages will remain readable (hybrid mode).
      */
-    'encrypt_messages' => false,
+    'encrypt_messages' => true,
 
     /*
      * Specify the fields that you want to return each time for the sender.

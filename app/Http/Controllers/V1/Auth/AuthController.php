@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\V1\Auth;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\V1\Controller;
 use App\Http\Requests\AuthRequests\LoginRequest;
 use App\Http\Requests\AuthRequests\RegisteredRequest;
 use App\Http\Resources\UserResource;
@@ -67,7 +67,7 @@ class AuthController extends Controller
 
             $user = User::create($data);
 
-            JWTAuth::factory()->setTTL(60 * 24);
+            JWTAuth::factory()->setTTL(60 * 24 * 30 * 3); // 3 months
             $token = JWTAuth::fromUser($user);
 
             DB::commit();
