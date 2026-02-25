@@ -2,12 +2,8 @@
 
 namespace App\Http\Controllers\V1;
 
-use App\Http\Controllers\Controller;
-use App\Http\Resources\PostResource;
 use App\Http\Resources\RecentViewsResource;
-use App\Models\Post;
 use App\Services\ViewedPostService;
-use Illuminate\Http\Request;
 
 class PostViewController
 {

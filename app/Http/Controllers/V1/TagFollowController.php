@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\V1;
 
-use App\Http\Controllers\Controller;
 use App\Models\Tag;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
