@@ -267,19 +267,31 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         });
 
         Route::prefix('chat')->controller(ChatController::class)->group(function () {
+<<<<<<< HEAD
 
+=======
+            // Conversations
+>>>>>>> 405e5a5 (Integrate real-time chat functionality using `musonza/chat`: add necessary migrations, models, routes, controllers, policies, and configuration updates. Enable message encryption, broadcasting, reactions, and improved conversation lifecycle management.)
             Route::get('conversations', 'index');
             Route::post('conversations', 'createOrGetConversation');
             Route::get('conversations/{conversation}', 'show');
             Route::delete('conversations/{conversation}', 'destroy');
 
+<<<<<<< HEAD
 
+=======
+            // Messages
+>>>>>>> 405e5a5 (Integrate real-time chat functionality using `musonza/chat`: add necessary migrations, models, routes, controllers, policies, and configuration updates. Enable message encryption, broadcasting, reactions, and improved conversation lifecycle management.)
             Route::get('conversations/{conversation}/messages', 'getMessages');
             Route::post('conversations/{conversation}/messages', 'sendMessage');
             Route::delete('conversations/{conversation}/messages/{messageId}', 'deleteMessage');
             Route::post('conversations/{conversation}/messages/read', 'markAsRead');
 
+<<<<<<< HEAD
 
+=======
+            // Unread count
+>>>>>>> 405e5a5 (Integrate real-time chat functionality using `musonza/chat`: add necessary migrations, models, routes, controllers, policies, and configuration updates. Enable message encryption, broadcasting, reactions, and improved conversation lifecycle management.)
             Route::get('unread-count', 'unreadCount');
         });
 
@@ -293,6 +305,10 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('{conversation}/{messageId}/flag', 'makeMessageAsFlagged');
         });
 
+<<<<<<< HEAD
+=======
+        // ─── AI Chat ──────────────────────────────────────────────────────────
+>>>>>>> 405e5a5 (Integrate real-time chat functionality using `musonza/chat`: add necessary migrations, models, routes, controllers, policies, and configuration updates. Enable message encryption, broadcasting, reactions, and improved conversation lifecycle management.)
         Route::prefix('ai-chat')->group(function () {
             Route::post('send', [AIChatController::class, 'chat']);
 
@@ -310,6 +326,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
                 Route::put('sessions/{sessionId}/title', 'updateTitle');
             });
         });
+
     });
 });
 
