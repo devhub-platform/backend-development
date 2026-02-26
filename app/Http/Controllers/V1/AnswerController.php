@@ -27,9 +27,6 @@ class AnswerController extends \Illuminate\Routing\Controller
         private QuestionService $questionService
     ) {}
 
-    /**
-     * List answers for a question (accepted first → most helpful → newest)
-     */
     public function index(Question $question, Request $request): JsonResponse
     {
         $answers = $this->answerService->getQuestionAnswers(
@@ -54,7 +51,6 @@ class AnswerController extends \Illuminate\Routing\Controller
             $request->input('content')
         );
 
-        // Notify question owner (not self)
         if ($question->user_id !== $request->user()->id) {
             $question->user->notify(new NewAnswerNotification($answer));
         }
@@ -123,7 +119,7 @@ class AnswerController extends \Illuminate\Routing\Controller
     }
 
     /**
-     * Accept an answer as the best solution
+     * Accept an answer - question owner can accept multiple answers
      */
     public function accept(Question $question, Answer $answer): JsonResponse
     {
@@ -142,7 +138,30 @@ class AnswerController extends \Illuminate\Routing\Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Answer marked as accepted',
+            'message' => 'Answer accepted successfully',
+            'data'    => new AnswerResource($answer->fresh()),
+        ]);
+    }
+
+    /**
+     * Unaccept a specific answer
+     */
+    public function unaccept(Question $question, Answer $answer): JsonResponse
+    {
+        $this->authorize('accept', $answer);
+
+        if ($answer->question_id !== $question->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Answer does not belong to this question',
+            ], 404);
+        }
+
+        $this->questionService->unacceptAnswer($question, $answer->id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Answer unaccepted successfully',
             'data'    => new AnswerResource($answer->fresh()),
         ]);
     }

@@ -18,14 +18,28 @@ class ReadingListResource extends JsonResource
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
             'post_count' => $this->posts_count,
 
+            'auth_user' => [
+                'name' => auth()->user()->name,
+                'avatar_url' => auth()->user()->avatar_url,
+            ],
+
             'posts' => $this->posts->map(function ($post) {
                 return [
                     'title' => $post->title,
                     'content' => Str::take($post->content, 100),
-                    'author' => $post->user->name,
                     'created_at' => $post->created_at->diffForHumans(),
+                    'read_time' => $post->read_time . ' min',
+                    'image_url' => $post->image_url,
+                    'id' => $post->id,
+                    'note' => $post->pivot->note,
+
+                    'author' => [
+                        'name' => $post->user->name,
+                        'avatar_url' => $post->user->avatar_url,
+                    ],
                 ];
             }),
+
         ];
     }
 }

@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\V1\AiModels;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use App\Models\AIChatSession;
+use App\Http\Controllers\V1\Controller;
 use App\Models\AIChatMessage;
+use App\Models\AIChatSession;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class HistoryController extends Controller
 {

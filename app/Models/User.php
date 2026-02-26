@@ -13,13 +13,14 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Scout\Searchable;
+use Musonza\Chat\Traits\Messageable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[ObservedBy([UserObserver::class])]
 class User extends Authenticatable implements JWTSubject, MustVerifyEmail
 {
-    use HasFactory, Notifiable, softDeletes, Reactor, Searchable;
+    use HasFactory, Notifiable, softDeletes, Reactor, Searchable , Messageable;
 
     public function getJWTIdentifier()
     {

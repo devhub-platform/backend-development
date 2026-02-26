@@ -58,11 +58,11 @@ class QuestionController extends \Illuminate\Routing\Controller
         ], 201);
     }
 
-    public function show(Question $question): JsonResponse
+    public function show(Request $request, Question $question): JsonResponse
     {
         $this->authorize('view', $question);
 
-        $question = $this->questionService->getQuestionWithAnswers($question);
+        $question = $this->questionService->getQuestionWithAnswers($question, $request->user()?->id);
 
         return response()->json([
             'success' => true,
