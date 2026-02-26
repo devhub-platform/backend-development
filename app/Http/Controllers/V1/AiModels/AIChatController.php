@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\V1\AiModels;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use App\Services\Chat\ChatService;
+use App\Http\Controllers\V1\Controller;
 use App\Services\Chat\ChatRateLimiter;
+use App\Services\Chat\ChatService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class AIChatController extends Controller
 {
@@ -20,9 +20,11 @@ class AIChatController extends Controller
         // Check rate limit before processing the request
         $this->limiter->check($request->user()?->id);
 
+        $validModelIds = array_column(config('ai_models.chat', []), 'id');
+
         $validated = $request->validate([
             'session_id'    => 'nullable|exists:ai_chat_sessions,id',
-            'model'         => 'required|string',
+            'model'         => ['required', 'string', 'in:' . implode(',', $validModelIds)],
             'message'       => 'required|string|max:1500',
             'attachments'   => 'nullable|array',
             'attachments.*' => 'integer|exists:attachments,id',

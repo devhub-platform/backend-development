@@ -2,24 +2,21 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class QuestionVote extends Model
+class QuestionView extends Model
 {
-    use HasFactory;
-
-    protected $table = 'question_votes';
+    protected $table = 'question_views';
 
     protected $fillable = [
         'question_id',
         'user_id',
-        'vote_type',
+        'viewed_at',
     ];
 
     protected $casts = [
-        'vote_type' => 'string',
+        'viewed_at' => 'datetime',
     ];
 
     public function question(): BelongsTo

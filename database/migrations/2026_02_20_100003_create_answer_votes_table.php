@@ -14,8 +14,9 @@ return new class extends Migration {
             $table->enum('vote_type', ['upvote', 'downvote']);
             $table->timestamps();
 
+            // One vote per user per answer
             $table->unique(['answer_id', 'user_id']);
-            $table->index(['answer_id', 'vote_type']);
+            $table->index('answer_id');
         });
     }
 
@@ -24,4 +25,3 @@ return new class extends Migration {
         Schema::dropIfExists('answer_votes');
     }
 };
-

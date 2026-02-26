@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Scout\Searchable;
@@ -24,13 +25,12 @@ class Question extends Model
         'is_resolved',
         'views',
         'answers_count',
-        'accepted_answer_id',
     ];
 
     protected $casts = [
-        'is_resolved'  => 'boolean',
-        'views'        => 'integer',
-        'answers_count'=> 'integer',
+        'is_resolved'   => 'boolean',
+        'views'         => 'integer',
+        'answers_count' => 'integer',
     ];
 
     // ─── Relationships ────────────────────────────────────────────────────────
@@ -50,14 +50,27 @@ class Question extends Model
         return $this->hasMany(Answer::class);
     }
 
-    public function acceptedAnswer(): BelongsTo
+    public function acceptedAnswers(): HasMany
     {
-        return $this->belongsTo(Answer::class, 'accepted_answer_id');
+        return $this->hasMany(Answer::class)->where('is_accepted', true);
     }
 
     public function votes(): HasMany
     {
         return $this->hasMany(QuestionVote::class);
+    }
+
+    public function questionViews(): HasMany
+    {
+        return $this->hasMany(QuestionView::class);
+    }
+
+    public function viewedByUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'question_views', 'question_id', 'user_id')
+            ->withPivot('viewed_at')
+            ->withTimestamps()
+            ->orderByPivot('viewed_at', 'desc');
     }
 
     // ─── Scopes ───────────────────────────────────────────────────────────────
@@ -87,9 +100,6 @@ class Question extends Model
         return $query->where('answers_count', 0);
     }
 
-    /**
-     * Hot score: views / days since creation (avoid division by zero)
-     */
     public function scopeHot($query)
     {
         return $query->orderByRaw('(views / NULLIF(DATEDIFF(NOW(), created_at), 0)) DESC');
@@ -109,6 +119,11 @@ class Question extends Model
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
+
+    public function getUniqueViewersCountAttribute(): int
+    {
+        return $this->questionViews()->distinct('user_id')->count('user_id');
+    }
 
     public function upvotesCount(): int
     {

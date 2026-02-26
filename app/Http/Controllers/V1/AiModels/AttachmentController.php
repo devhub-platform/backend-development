@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\V1\AiModels;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Http\Controllers\V1\Controller;
+use App\Jobs\ProcessAttachmentJob;
+use App\Models\Attachment;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use App\Models\Attachment;
-use App\Jobs\ProcessAttachmentJob;
 
 class AttachmentController extends Controller
 {

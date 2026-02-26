@@ -7,21 +7,24 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::create('question_votes', function (Blueprint $table) {
+        Schema::create('answers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('question_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->enum('vote_type', ['upvote', 'downvote']);
+            $table->text('content');
+            $table->boolean('is_accepted')->default(false);
+            $table->unsignedInteger('helpful_count')->default(0);
+            $table->softDeletes();
             $table->timestamps();
 
-            // One vote per user per question
-            $table->unique(['question_id', 'user_id']);
             $table->index('question_id');
+            $table->index('user_id');
+            $table->index('is_accepted');
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('question_votes');
+        Schema::dropIfExists('answers');
     }
 };

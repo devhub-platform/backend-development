@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\V1\AiModels;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\V1\Controller;
 use App\Models\Post;
-use App\Services\Chat\PostChatService;
 use App\Services\Chat\ChatRateLimiter;
-use Illuminate\Http\Request;
+use App\Services\Chat\PostChatService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class PostChatController extends Controller
 {

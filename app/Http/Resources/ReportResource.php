@@ -6,7 +6,6 @@ use App\Models\Report;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin Report */
 class ReportResource extends JsonResource
 {
     public function toArray(Request $request): array
@@ -16,7 +15,6 @@ class ReportResource extends JsonResource
             'message' => $this->message,
             'status' => $this->status,
             'reporter' => [
-//                'id' => $this->reporter->id,
                 'name' => $this->reporter->name,
                 'email' => $this->reporter->email,
             ],

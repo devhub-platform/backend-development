@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Answer;
 use App\Models\Question;
+use App\Models\QuestionView;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
@@ -31,20 +33,14 @@ class QuestionService
         return $question->delete();
     }
 
-    /**
-     * Get paginated questions with filters + sorting
-     * Supports: recent | popular | unanswered | hot
-     */
     public function getQuestions(
-        int     $perPage    = 15,
-        string  $sortBy     = 'recent',
-        ?bool   $isResolved = null,
-        ?int    $postId     = null,
-        ?string $tag        = null
+        int    $perPage    = 15,
+        string $sortBy     = 'recent',
+        ?bool  $isResolved = null,
+        ?int   $postId     = null
     ): LengthAwarePaginator {
         $query = Question::query()->with(['user', 'post']);
 
-        // ─── Filters ──────────────────────────────────────────────────────────
         if ($isResolved !== null) {
             $query->where('is_resolved', $isResolved);
         }
@@ -53,7 +49,6 @@ class QuestionService
             $query->where('post_id', $postId);
         }
 
-        // ─── Sorting ──────────────────────────────────────────────────────────
         match ($sortBy) {
             'popular'    => $query->popular(),
             'unanswered' => $query->unanswered()->recent(),
@@ -64,18 +59,13 @@ class QuestionService
         return $query->paginate($perPage);
     }
 
-    /**
-     * Get a single question with sorted answers
-     */
-    public function getQuestionWithAnswers(Question $question): Question
+    public function getQuestionWithAnswers(Question $question, ?int $userId = null): Question
     {
-        $question->increment('views');
+        $this->trackView($question, $userId);
 
         return $question->load([
             'user',
             'post',
-            'acceptedAnswer',
-            'acceptedAnswer.user',
             'answers' => fn($q) => $q
                 ->orderByRaw('is_accepted DESC')
                 ->orderByRaw('helpful_count DESC')
@@ -86,8 +76,38 @@ class QuestionService
     }
 
     /**
-     * Full-text search + fallback to LIKE
+     * Accept an answer - multiple answers can be accepted
      */
+    public function acceptAnswer(Question $question, int $answerId): Question
+    {
+        $question->answers()->where('id', $answerId)->update(['is_accepted' => true]);
+
+        // Mark question as resolved if not already
+        if (!$question->is_resolved) {
+            $question->update(['is_resolved' => true]);
+        }
+
+        return $question->fresh();
+    }
+
+    /**
+     * Unaccept a specific answer
+     * If no more accepted answers → mark question as unresolved
+     */
+    public function unacceptAnswer(Question $question, int $answerId): Question
+    {
+        $question->answers()->where('id', $answerId)->update(['is_accepted' => false]);
+
+        // Check if any accepted answers remain
+        $hasAccepted = $question->answers()->where('is_accepted', true)->exists();
+
+        if (!$hasAccepted) {
+            $question->update(['is_resolved' => false]);
+        }
+
+        return $question->fresh();
+    }
+
     public function searchQuestions(string $query, int $perPage = 15): LengthAwarePaginator
     {
         return Question::where(function ($q) use ($query) {
@@ -98,47 +118,6 @@ class QuestionService
             ->with(['user', 'post'])
             ->recent()
             ->paginate($perPage);
-    }
-
-    /**
-     * Accept an answer and mark question as resolved
-     */
-    public function acceptAnswer(Question $question, int $answerId): Question
-    {
-        // Unaccept previous if exists
-        if ($question->accepted_answer_id) {
-            $question->answers()
-                ->where('id', $question->accepted_answer_id)
-                ->update(['is_accepted' => false]);
-        }
-
-        $question->update([
-            'is_resolved'        => true,
-            'accepted_answer_id' => $answerId,
-        ]);
-
-        $question->answers()->where('id', $answerId)->update(['is_accepted' => true]);
-
-        return $question->fresh();
-    }
-
-    /**
-     * Unaccept the current accepted answer
-     */
-    public function unacceptAnswer(Question $question): Question
-    {
-        if ($question->accepted_answer_id) {
-            $question->answers()
-                ->where('id', $question->accepted_answer_id)
-                ->update(['is_accepted' => false]);
-        }
-
-        $question->update([
-            'is_resolved'        => false,
-            'accepted_answer_id' => null,
-        ]);
-
-        return $question->fresh();
     }
 
     public function getUserQuestions(User $user, int $perPage = 15): LengthAwarePaginator
@@ -159,13 +138,31 @@ class QuestionService
             ->paginate($perPage);
     }
 
-    /**
-     * Hot questions: views / days old (trending logic)
-     */
     public function getTrendingQuestions(int $perPage = 15): LengthAwarePaginator
     {
         return Question::with(['user', 'post'])
             ->hot()
             ->paginate($perPage);
+    }
+
+    private function trackView(Question $question, ?int $userId): void
+    {
+        if (!$userId) {
+            $question->increment('views');
+            return;
+        }
+
+        $alreadyViewed = QuestionView::where('question_id', $question->id)
+            ->where('user_id', $userId)
+            ->exists();
+
+        if (!$alreadyViewed) {
+            QuestionView::create([
+                'question_id' => $question->id,
+                'user_id'     => $userId,
+                'viewed_at'   => now(),
+            ]);
+            $question->increment('views');
+        }
     }
 }

@@ -5,24 +5,24 @@ namespace App\Providers;
 use App\Models\Comment;
 use App\Models\Post;
 use App\Models\ReadingList;
+use App\Policies\ChatPolicy;
 use App\Policies\CommentPolicy;
+use App\Policies\PostPolicy;
 use App\Policies\ReadingListPolicy;
-use Illuminate\Support\ServiceProvider;
+use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Musonza\Chat\Models\Conversation;
 
 class AuthServiceProvider extends ServiceProvider
 {
-    public function register()
-    {
-
-    }
-
-    public function boot()
-    {
-    }
-
     protected $policies = [
-        Post::class => PostPolicy::class,
-        Comment::class => CommentPolicy::class,
-        ReadingList::class => ReadingListPolicy::class
+        Post::class         => PostPolicy::class,
+        Comment::class      => CommentPolicy::class,
+        ReadingList::class  => ReadingListPolicy::class,
+        Conversation::class => ChatPolicy::class,
     ];
+
+    public function boot(): void
+    {
+        $this->registerPolicies();
+    }
 }
