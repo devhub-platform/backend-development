@@ -3,6 +3,7 @@
 return [
 
     'post_chat' => 'google/gemini-2.5-flash',
+    'question_chat' => 'google/gemini-2.5-flash',
 
     'chat' => [
         [
