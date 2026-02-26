@@ -23,13 +23,12 @@ class QuestionChatService
         set_time_limit(120);
         $startTime = microtime(true);
 
-        $model = config('ai_models.post_chat', self::MODEL);
+        $model = config('ai_models.question_chat', self::MODEL);
 
         try {
             // Eager load all relations in one query - avoids N+1
             $question->load([
-                'acceptedAnswer',
-                'acceptedAnswer.votes',
+                'answers',
                 'answers.votes',
             ]);
 
