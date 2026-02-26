@@ -7,54 +7,64 @@ use App\Models\AnswerVote;
 use App\Models\Question;
 use App\Models\QuestionVote;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 class VoteService
 {
     /**
-     * Toggle vote on a question.
-     * - Same vote type → remove (toggle off)
-     * - Different vote type → switch
-     * - No existing vote → create
+     * Toggle vote on a question - wrapped in transaction to prevent race conditions
      */
     public function voteQuestion(Question $question, User $user, string $voteType): ?QuestionVote
     {
-        $existing = $question->votes()->where('user_id', $user->id)->first();
+        return DB::transaction(function () use ($question, $user, $voteType) {
+            $existing = QuestionVote::where('question_id', $question->id)
+                ->where('user_id', $user->id)
+                ->lockForUpdate()
+                ->first();
 
-        if ($existing) {
-            if ($existing->vote_type === $voteType) {
-                $existing->delete();
-                return null;
+            if ($existing) {
+                if ($existing->vote_type === $voteType) {
+                    $existing->delete();
+                    return null;
+                }
+                $existing->update(['vote_type' => $voteType]);
+                return $existing;
             }
-            $existing->update(['vote_type' => $voteType]);
-            return $existing;
-        }
 
-        return $question->votes()->create([
-            'user_id'   => $user->id,
-            'vote_type' => $voteType,
-        ]);
+            return QuestionVote::create([
+                'question_id' => $question->id,
+                'user_id'     => $user->id,
+                'vote_type'   => $voteType,
+            ]);
+        });
     }
 
     /**
-     * Toggle vote on an answer.
+     * Toggle vote on an answer - wrapped in transaction to prevent race conditions
      */
     public function voteAnswer(Answer $answer, User $user, string $voteType): ?AnswerVote
     {
-        $existing = $answer->votes()->where('user_id', $user->id)->first();
+        return DB::transaction(function () use ($answer, $user, $voteType) {
+            $existing = AnswerVote::where('answer_id', $answer->id)
+                ->where('user_id', $user->id)
+                ->lockForUpdate()
+                ->first();
 
-        if ($existing) {
-            if ($existing->vote_type === $voteType) {
-                $existing->delete();
-                return null;
+            if ($existing) {
+                if ($existing->vote_type === $voteType) {
+                    $existing->delete();
+                    return null;
+                }
+                $existing->update(['vote_type' => $voteType]);
+                return $existing;
             }
-            $existing->update(['vote_type' => $voteType]);
-            return $existing;
-        }
 
-        return $answer->votes()->create([
-            'user_id'   => $user->id,
-            'vote_type' => $voteType,
-        ]);
+            return AnswerVote::create([
+                'answer_id' => $answer->id,
+                'user_id'   => $user->id,
+                'vote_type' => $voteType,
+            ]);
+        });
     }
 
     public function removeQuestionVote(Question $question, User $user): bool

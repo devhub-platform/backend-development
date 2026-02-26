@@ -5,6 +5,9 @@ use App\Http\Controllers\V1\Chats\ChatController;
 use App\Http\Controllers\V1\AiModels\AttachmentController;
 use App\Http\Controllers\V1\AiModels\HistoryController;
 use App\Http\Controllers\V1\AiModels\PostChatController;
+use App\Http\Controllers\V1\AiModels\QuestionChatController;
+use App\Http\Controllers\V1\QuestionController;
+use App\Http\Controllers\V1\AnswerController;
 use App\Http\Controllers\V1\Auth\AuthController;
 use App\Http\Controllers\V1\Auth\ForgetPasswordController;
 use App\Http\Controllers\V1\Auth\SocialiteMediaController;
@@ -100,6 +103,32 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('posts/viewed/recent', 'getRecentViewedPosts');
             Route::delete('posts/viewed/clear', 'clearViewedPosts');
         });
+
+        // ─── Q&A - Questions ──────────────────────────────────────────────────
+        Route::controller(QuestionController::class)->group(function () {
+            Route::get('questions',                      'index');
+            Route::post('questions/create',                     'store');
+            Route::get('questions/hot',             'trending');
+            Route::get('questions/{question}',           'show');
+            Route::put('questions/{question}',           'update');
+            Route::delete('questions/{question}',        'destroy');
+            Route::post('questions/{question}/vote',     'vote');
+        });
+
+        // ─── Q&A - Answers ────────────────────────────────────────────────────
+        Route::controller(AnswerController::class)->group(function () {
+            Route::get('questions/{question}/answers',                       'index');
+            Route::post('questions/{question}/answers/create',                      'store');
+            Route::get('questions/{question}/answers/{answer}',              'show');
+            Route::put('questions/{question}/answers/{answer}',              'update');
+            Route::delete('questions/{question}/answers/{answer}',           'destroy');
+            Route::post('questions/{question}/answers/{answer}/vote',        'vote');
+            Route::post('questions/{question}/answers/{answer}/accept',      'accept');
+            Route::post('questions/{question}/answers/{answer}/unaccept',    'unaccept');
+        });
+
+        // ─── Q&A - AI Chat ────────────────────────────────────────────────────
+        Route::post('questions/{question}/ai-chat', [QuestionChatController::class, 'chat']);
 
         // ─── Users ────────────────────────────────────────────────────────────
         Route::controller(UserController::class)->group(function () {
@@ -290,20 +319,16 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::delete('settings/alt-email/remove', 'removeAltEmail');
         });
 
+        // ─── Chat ─────────────────────────────────────────────────────────────
         Route::prefix('chat')->controller(ChatController::class)->group(function () {
-            // Conversations
             Route::get('conversations', 'index');
             Route::post('conversations', 'createOrGetConversation');
             Route::get('conversations/{conversation}', 'show');
             Route::delete('conversations/{conversation}', 'destroy');
-
-            // Messages
             Route::get('conversations/{conversation}/messages', 'getMessages');
             Route::post('conversations/{conversation}/messages', 'sendMessage');
             Route::delete('conversations/{conversation}/messages/{messageId}', 'deleteMessage');
             Route::post('conversations/{conversation}/messages/read', 'markAsRead');
-
-            // Unread count
             Route::get('unread-count', 'unreadCount');
         });
 
@@ -319,13 +344,9 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
         // ─── AI Chat ──────────────────────────────────────────────────────────
         Route::prefix('ai-chat')->group(function () {
-            // General chat - send message
             Route::post('send', [AIChatController::class, 'chat']);
-
-            // Upload file attachment
             Route::post('attachments/upload', [AttachmentController::class, 'upload']);
 
-            // Chat history & sessions management
             Route::prefix('history')->controller(HistoryController::class)->group(function () {
                 Route::get('sessions', 'sessions');
                 Route::post('sessions/create', 'create');

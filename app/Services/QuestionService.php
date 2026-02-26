@@ -7,6 +7,7 @@ use App\Models\Question;
 use App\Models\QuestionView;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class QuestionService
@@ -152,16 +153,21 @@ class QuestionService
             return;
         }
 
-        $alreadyViewed = QuestionView::where('question_id', $question->id)
-            ->where('user_id', $userId)
-            ->exists();
+        // firstOrCreate is atomic - prevents race condition
+        [$view, $created] = [
+            null,
+            false,
+        ];
 
-        if (!$alreadyViewed) {
-            QuestionView::create([
-                'question_id' => $question->id,
-                'user_id'     => $userId,
-                'viewed_at'   => now(),
-            ]);
+        DB::transaction(function () use ($question, $userId, &$created) {
+            $result = QuestionView::firstOrCreate(
+                ['question_id' => $question->id, 'user_id' => $userId],
+                ['viewed_at'   => now()]
+            );
+            $created = $result->wasRecentlyCreated;
+        });
+
+        if ($created) {
             $question->increment('views');
         }
     }

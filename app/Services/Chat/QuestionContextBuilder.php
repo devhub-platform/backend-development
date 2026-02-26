@@ -2,26 +2,25 @@
 
 namespace App\Services\Chat;
 
-use App\Models\Question;
 use App\Models\Answer;
+use App\Models\Question;
 
 class QuestionContextBuilder
 {
     // Token budget: 70% for context, 30% for response
-    private const MAX_CONTEXT_TOKENS  = 2800; // ~70% of 4000
-    private const MAX_QUESTION_CHARS  = 1000;
-    private const MAX_ANSWER_CHARS    = 600;
-    private const MAX_ANSWERS         = 5;
+    private const MAX_QUESTION_CHARS = 1000;
+    private const MAX_ANSWER_CHARS   = 600;
+    private const MAX_ANSWERS        = 5;
 
     /**
-     * Build token-efficient system prompt from question + answers.
-     * Priority: Question → Accepted Answer → Top Voted → Rest
+     * Build token-efficient system prompt.
+     * Priority: Question → Accepted Answers → Top Voted → Rest
      */
     public function build(Question $question): string
     {
         $questionBlock  = $this->buildQuestionBlock($question);
-        $acceptedBlock  = $this->buildAcceptedAnswerBlock($question);
-        $topBlock       = $this->buildTopAnswersBlock($question, $question->accepted_answer_id);
+        $acceptedBlock  = $this->buildAcceptedAnswersBlock($question);
+        $topBlock       = $this->buildTopAnswersBlock($question);
 
         $context = implode("\n", array_filter([
             $questionBlock,
@@ -67,36 +66,45 @@ Content:
 BLOCK;
     }
 
-    private function buildAcceptedAnswerBlock(Question $question): string
+    /**
+     * Build accepted answers block - supports multiple accepted answers
+     */
+    private function buildAcceptedAnswersBlock(Question $question): string
     {
-        if (!$question->acceptedAnswer) return '';
+        $accepted = $question->answers
+            ->where('is_accepted', true)
+            ->values();
 
-        $content = $this->truncate($question->acceptedAnswer->content, self::MAX_ANSWER_CHARS);
-        $score   = $question->acceptedAnswer->voteScore();
+        if ($accepted->isEmpty()) return '';
 
-        return <<<BLOCK
+        $lines = ["\n=== ACCEPTED ANSWER(S) ==="];
+        foreach ($accepted as $i => $answer) {
+            $content  = $this->truncate($answer->content, self::MAX_ANSWER_CHARS);
+            $score    = $answer->voteScore();
+            $lines[]  = "\nAccepted #" . ($i + 1) . " [Score: {$score}]:\n{$content}";
+        }
 
-=== ACCEPTED ANSWER [Score: {$score}] ===
-{$content}
-BLOCK;
+        return implode("\n", $lines);
     }
 
-    private function buildTopAnswersBlock(Question $question, ?int $excludeId): string
+    /**
+     * Build top voted non-accepted answers block
+     */
+    private function buildTopAnswersBlock(Question $question): string
     {
-        $answers = Answer::where('question_id', $question->id)
-            ->when($excludeId, fn($q) => $q->where('id', '!=', $excludeId))
-            ->select(['id', 'content', 'is_accepted', 'helpful_count'])
-            ->orderByDesc('helpful_count')
-            ->limit(self::MAX_ANSWERS)
-            ->get();
+        $answers = $question->answers
+            ->where('is_accepted', false)
+            ->sortByDesc(fn($a) => $a->voteScore())
+            ->take(self::MAX_ANSWERS)
+            ->values();
 
         if ($answers->isEmpty()) return '';
 
         $lines = ["\n=== OTHER ANSWERS ==="];
         foreach ($answers as $i => $answer) {
-            $content  = $this->truncate($answer->content, self::MAX_ANSWER_CHARS);
-            $score    = $answer->voteScore();
-            $lines[]  = "\nAnswer #" . ($i + 1) . " [Score: {$score}]:\n{$content}";
+            $content = $this->truncate($answer->content, self::MAX_ANSWER_CHARS);
+            $score   = $answer->voteScore();
+            $lines[] = "\nAnswer #" . ($i + 1) . " [Score: {$score}]:\n{$content}";
         }
 
         return implode("\n", $lines);
