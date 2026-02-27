@@ -128,4 +128,9 @@ class MessageController extends Controller
         return response()->json(['message' => 'Message flagged.']);
     }
 
+    public function broadcastTest(Request $request): JsonResponse
+    {
+        event(new \App\Events\MyEvent('Menna Sayed sent a message'));
+        return response()->json(['message' => 'Broadcast event sent.']);
+    }
 }
