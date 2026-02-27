@@ -53,27 +53,16 @@ return [
             'app_id' => env('PUSHER_APP_ID'),
             'options' => [
                 'cluster' => env('PUSHER_APP_CLUSTER'),
-                'host' => env('PUSHER_HOST') ?: 'api-'.env('PUSHER_APP_CLUSTER', 'mt1').'.pusher.com',
+                'host' => env('PUSHER_HOST') ?: 'api-' . env('PUSHER_APP_CLUSTER', 'mt1') . '.pusher.com',
                 'port' => env('PUSHER_PORT', 443),
-<<<<<<< HEAD
-<<<<<<< HEAD
-                'scheme' => env('PUSHER_SCHEME', 'http'),
-                'encrypted' => true,
-                'useTLS' => env('PUSHER_SCHEME', 'http') === 'http',
-=======
                 'scheme' => env('PUSHER_SCHEME', 'https'),
                 'encrypted' => true,
                 'useTLS' => env('PUSHER_SCHEME', 'https') === 'https',
->>>>>>> 405e5a5 (Integrate real-time chat functionality using `musonza/chat`: add necessary migrations, models, routes, controllers, policies, and configuration updates. Enable message encryption, broadcasting, reactions, and improved conversation lifecycle management.)
-=======
-                'scheme' => env('PUSHER_SCHEME', 'http'),
-                'encrypted' => true,
-                'useTLS' => env('PUSHER_SCHEME', 'http') === 'http',
->>>>>>> 62cf503 (Update broadcasting and chat configs; add Laravel Echo and Pusher JS dependencies for real-time features)
             ],
             'client_options' => [
                 // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html
             ],
+            'guard' => 'api'
         ],
 
         'ably' => [
@@ -90,5 +79,4 @@ return [
         ],
 
     ],
-
 ];

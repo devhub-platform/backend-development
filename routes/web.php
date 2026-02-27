@@ -7,6 +7,6 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/me', function () {
-    return view('welcome');
+Route::get('/chats', function () {
+    return view('Chat-users.test-pusher-chat');
 });
