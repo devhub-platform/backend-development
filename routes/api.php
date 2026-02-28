@@ -288,7 +288,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::prefix('messages')->controller(MessageController::class)->group(function () {
             Route::post('{conversation}/send', 'sendMessage');
             Route::post('{conversation}/send-attachment', 'sendMessageWithAttachment');
-            Route::delete('{conversation}/{messageId}', 'deleteMessage');
+            Route::delete('{messageId}/conversation/{conversation}', 'deleteMessage');
             Route::post('{conversation}/mark-as-read', 'markAsRead');
             Route::put('{conversation}/{messageId}', 'updateMessage');
             Route::post('{conversation}/{messageId}/reaction', 'reactToMessage');
