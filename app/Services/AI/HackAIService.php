@@ -3,6 +3,7 @@
 namespace App\Services\AI;
 
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Support\Facades\Log;
 
@@ -13,21 +14,19 @@ class HackAIService
     public function __construct()
     {
         $this->client = new Client([
-            'base_uri' => rtrim(config('services.hackai.base_url'), '/') . '/',
-            'headers'  => [
+            'base_uri'        => rtrim(config('services.hackai.base_url'), '/') . '/',
+            'headers'         => [
                 'Authorization' => 'Bearer ' . config('services.hackai.token'),
                 'Content-Type'  => 'application/json',
             ],
-            'timeout'         => 300,
-            'connect_timeout' => 60,
-            'read_timeout'    => 300,
+            'timeout'         => 90,  // max wait for full response
+            'connect_timeout' => 10,  // max wait to establish connection
+            'read_timeout'    => 90,  // max wait for reading response
         ]);
     }
 
     public function chat(array $messages, string $model, int $maxTokens = 1000): array
     {
-        set_time_limit(600);
-
         Log::info('HackAI chat request', [
             'model'          => $model,
             'messages_count' => count($messages),
@@ -53,6 +52,13 @@ class HackAIService
             Log::warning('HackAI returned non-array response', ['model' => $model]);
             return $this->fallbackResponse();
 
+        } catch (ConnectException $e) {
+            Log::error('HackAI connection failed', [
+                'message' => $e->getMessage(),
+                'model'   => $model,
+            ]);
+            return $this->fallbackResponse('Connection to AI service failed. Please try again.');
+
         } catch (GuzzleException $e) {
             Log::error('HackAI API request failed', [
                 'message' => $e->getMessage(),
@@ -63,13 +69,11 @@ class HackAIService
         }
     }
 
-    private function fallbackResponse(): array
+    private function fallbackResponse(string $message = "I'm having trouble generating a response right now. Please try again."): array
     {
         return [
             'choices' => [[
-                'message' => [
-                    'content' => "I'm having trouble generating a response right now. Please try again."
-                ]
+                'message' => ['content' => $message]
             ]]
         ];
     }

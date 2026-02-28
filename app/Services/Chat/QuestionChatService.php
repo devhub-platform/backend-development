@@ -3,8 +3,8 @@
 namespace App\Services\Chat;
 
 use App\Models\Question;
-use App\Services\AI\HackAIService;
 use App\Services\AI\AIResponseParser;
+use App\Services\AI\HackAIService;
 
 class QuestionChatService
 {
@@ -18,42 +18,35 @@ class QuestionChatService
         protected QuestionContextBuilder $contextBuilder,
     ) {}
 
+    /**
+     * Handle a chat message in the context of a specific Q&A question.
+     *
+     * Answers and votes are eager-loaded once to avoid N+1 queries.
+     * The question context is injected as a system prompt on the first turn only.
+     */
     public function handle(Question $question, string $message, ?int $sessionId, int $userId): array
     {
-        set_time_limit(120);
         $startTime = microtime(true);
-
-        $model = config('ai_models.question_chat', self::MODEL);
+        $model     = config('ai_models.question_chat', self::MODEL);
 
         try {
-            // Eager load all relations in one query - avoids N+1
-            $question->load([
-                'answers',
-                'answers.votes',
-            ]);
+            $question->loadMissing(['answers', 'answers.votes']);
 
-            // Resolve or create session
             $session = $this->history->resolveSession($sessionId, $model, $userId);
-
-            // Build context from cache
             $context = $this->cache->get($session->id);
 
-            // Inject system prompt on first message only
             if (empty($context)) {
-                array_unshift($context, [
+                $context[] = [
                     'role'    => 'system',
                     'content' => $this->contextBuilder->build($question),
-                ]);
+                ];
             }
 
-            // Append current user message
             $context[] = ['role' => 'user', 'content' => $message];
 
-            // Send to AI
-            $raw     = $this->ai->chat($context, $model, 800);
+            $raw     = $this->callWithRetry($context, $model, 800);
             $content = $this->parser->parse($raw);
 
-            // Persist to DB and sync cache
             $this->history->storeUserMessage($session->id, $message, []);
             $this->history->storeAIMessage($session->id, $content);
             $this->cache->push($session->id, ['role' => 'user',      'content' => $message]);
@@ -78,5 +71,35 @@ class QuestionChatService
                 'success'            => false,
             ];
         }
+    }
+
+    /**
+     * Attempt the AI call up to $maxAttempts times with a 500ms delay between retries.
+     *
+     * @throws \Exception Re-throws the last exception if all attempts fail.
+     */
+    private function callWithRetry(array $context, string $model, int $maxTokens, int $maxAttempts = 2): array
+    {
+        $lastException = null;
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            try {
+                $result = $this->ai->chat($context, $model, $maxTokens);
+                if (!empty($result)) {
+                    return $result;
+                }
+            } catch (\Exception $e) {
+                $lastException = $e;
+                if ($attempt < $maxAttempts) {
+                    usleep(500_000);
+                }
+            }
+        }
+
+        if ($lastException) {
+            throw $lastException;
+        }
+
+        return $this->ai->chat($context, $model, $maxTokens);
     }
 }

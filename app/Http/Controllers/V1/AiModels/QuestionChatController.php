@@ -2,36 +2,36 @@
 
 namespace App\Http\Controllers\V1\AiModels;
 
-use App\Http\Controllers\Controller;
 use App\Models\Question;
-use App\Services\Chat\QuestionChatService;
 use App\Services\Chat\ChatRateLimiter;
-use Illuminate\Http\Request;
+use App\Services\Chat\QuestionChatService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
-class QuestionChatController extends Controller
+class QuestionChatController extends BaseChatController
 {
     public function __construct(
         protected QuestionChatService $service,
-        protected ChatRateLimiter     $limiter,
-    ) {}
+        ChatRateLimiter               $limiter,
+    ) {
+        parent::__construct($limiter);
+    }
 
     public function chat(Request $request, Question $question): JsonResponse
     {
-        $this->limiter->check($request->user()->id);
+        $this->authorize('view', $question);
 
-        $validated = $request->validate([
-            'message'    => 'required|string|max:2000',
-            'session_id' => 'nullable|integer|exists:ai_chat_sessions,id',
-        ]);
+        if ($error = $this->validateAndGetSession($request)) {
+            return $error;
+        }
 
         $result = $this->service->handle(
             question:  $question,
-            message:   $validated['message'],
-            sessionId: $validated['session_id'] ?? null,
+            message:   $request->input('message'),
+            sessionId: $request->input('session_id'),
             userId:    $request->user()->id,
         );
 
-        return response()->json($result, $result['success'] ? 200 : 500);
+        return $this->chatResponse($result, ['question_id' => $question->id]);
     }
 }

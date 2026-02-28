@@ -2,19 +2,24 @@
 
 namespace App\Http\Controllers\V1\AiModels;
 
-use App\Http\Controllers\V1\Controller;
+use App\Http\Controllers\Controller;
 use App\Models\AIChatMessage;
 use App\Models\AIChatSession;
+use App\Models\Attachment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class HistoryController extends Controller
 {
+    /**
+     * Return a paginated list of the authenticated user's chat sessions.
+     * Pinned sessions are always sorted to the top.
+     */
     public function sessions(Request $request): JsonResponse
     {
         $userId = $request->user()?->id;
 
-        // Require authentication - never expose all sessions to guests
         if (!$userId) {
             return response()->json(['error' => 'Authentication required'], 401);
         }
@@ -22,6 +27,7 @@ class HistoryController extends Controller
         $sessions = AIChatSession::with(['messages' => fn($q) => $q->latest()->take(1)])
             ->withCount('messages')
             ->where('user_id', $userId)
+            ->orderBy('pinned', 'desc')
             ->orderBy('updated_at', 'desc')
             ->paginate($request->query('per_page', 20));
 
@@ -46,16 +52,22 @@ class HistoryController extends Controller
         ]);
     }
 
+    /**
+     * Return full session details and all messages in chronological order.
+     */
     public function show(Request $request, $sessionId): JsonResponse
     {
         $session = $this->findUserSession($sessionId, $request->user()?->id);
-        if (!$session) return $this->notFound();
+        if (!$session) {
+            return $this->notFound();
+        }
 
         return response()->json([
             'session'  => [
                 'id'         => $session->id,
                 'title'      => $session->title,
                 'model'      => $session->model,
+                'pinned'     => (bool) $session->pinned,
                 'created_at' => $session->created_at->format('Y-m-d H:i:s'),
                 'updated_at' => $session->updated_at->format('Y-m-d H:i:s'),
             ],
@@ -72,17 +84,21 @@ class HistoryController extends Controller
         ]);
     }
 
+    /**
+     * Create a new chat session.
+     * If no model is provided, the system default is used.
+     */
     public function create(Request $request): JsonResponse
     {
         $request->validate([
             'title' => 'nullable|string|max:255',
-            'model' => 'required|string',
+            'model' => 'nullable|string',
         ]);
 
         $session = AIChatSession::create([
             'user_id' => $request->user()?->id,
             'title'   => $request->title ?? 'New Chat',
-            'model'   => $request->model,
+            'model'   => $request->model ?? config('ai_models.default'),
             'active'  => true,
             'pinned'  => false,
         ]);
@@ -95,79 +111,100 @@ class HistoryController extends Controller
         ], 201);
     }
 
+    /**
+     * Permanently delete a session along with its messages and attachments.
+     * S3 objects are removed before the DB records are deleted.
+     */
     public function delete(Request $request, $sessionId): JsonResponse
     {
         $session = $this->findUserSession($sessionId, $request->user()?->id);
-        if (!$session) return $this->notFound();
+        if (!$session) {
+            return $this->notFound();
+        }
 
-        // Delete all messages before deleting the session
-        AIChatMessage::where('ai_chat_session_id', $sessionId)->delete();
+        $messages      = AIChatMessage::where('ai_chat_session_id', $sessionId)->get();
+        $attachmentIds = $messages
+            ->flatMap(fn($m) => $m->attachments ?? [])
+            ->filter()
+            ->unique()
+            ->values()
+            ->toArray();
+
+        if (!empty($attachmentIds)) {
+            $attachments = Attachment::whereIn('id', $attachmentIds)
+                ->where('user_id', $request->user()->id)
+                ->get();
+
+            foreach ($attachments as $attachment) {
+                if ($attachment->s3_path) {
+                    try {
+                        Storage::disk('s3')->delete($attachment->s3_path);
+                    } catch (\Exception) {
+                        // Non-fatal — continue cleanup.
+                    }
+                }
+            }
+
+            Attachment::whereIn('id', $attachmentIds)
+                ->where('user_id', $request->user()->id)
+                ->delete();
+        }
+
+        $messages->each->delete();
         $session->delete();
 
         return response()->json(['message' => 'Session deleted successfully']);
     }
 
+    /** Pin a session so it appears at the top of the session list. */
     public function pin(Request $request, $sessionId): JsonResponse
     {
         $session = $this->findUserSession($sessionId, $request->user()?->id);
-        if (!$session) return $this->notFound();
+        if (!$session) {
+            return $this->notFound();
+        }
 
         $session->update(['pinned' => true]);
+
         return response()->json(['message' => 'Session pinned', 'pinned' => true]);
     }
 
+    /** Remove the pin from a session. */
     public function unpin(Request $request, $sessionId): JsonResponse
     {
         $session = $this->findUserSession($sessionId, $request->user()?->id);
-        if (!$session) return $this->notFound();
+        if (!$session) {
+            return $this->notFound();
+        }
 
         $session->update(['pinned' => false]);
+
         return response()->json(['message' => 'Session unpinned', 'pinned' => false]);
     }
 
-    public function close(Request $request, $sessionId): JsonResponse
-    {
-        $session = $this->findUserSession($sessionId, $request->user()?->id);
-        if (!$session) return $this->notFound();
-
-        $session->update(['active' => false, 'closed_at' => now()]);
-
-        return response()->json([
-            'message'   => 'Session closed',
-            'active'    => false,
-            'closed_at' => $session->closed_at,
-        ]);
-    }
-
-    public function activate(Request $request, $sessionId): JsonResponse
-    {
-        $session = $this->findUserSession($sessionId, $request->user()?->id);
-        if (!$session) return $this->notFound();
-
-        $session->update(['active' => true, 'closed_at' => null]);
-        return response()->json(['message' => 'Session activated', 'active' => true]);
-    }
-
+    /** Update the display title of a session. */
     public function updateTitle(Request $request, $sessionId): JsonResponse
     {
         $request->validate(['title' => 'required|string|max:255']);
 
         $session = $this->findUserSession($sessionId, $request->user()?->id);
-        if (!$session) return $this->notFound();
+        if (!$session) {
+            return $this->notFound();
+        }
 
         $session->update(['title' => $request->title]);
+
         return response()->json(['message' => 'Title updated', 'title' => $session->title]);
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
+    // -------------------------------------------------------------------------
 
-    /**
-     * Find a session that belongs to the given user.
-     * Returns null if not found or user is not authenticated.
-     */
+    /** Find a session that belongs to the given user, or return null. */
     private function findUserSession($sessionId, ?int $userId): ?AIChatSession
     {
-        if (!$userId) return null;
+        if (!$userId) {
+            return null;
+        }
 
         return AIChatSession::where('id', $sessionId)
             ->where('user_id', $userId)
