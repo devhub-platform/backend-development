@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1\Chats;
 
 use App\Http\Controllers\V1\Controller;
+use App\Http\Resources\MessageResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -80,7 +81,9 @@ class ChatController extends Controller
             ->setParticipant($request->user())
             ->readAll();
 
-        return response()->json($messages);
+        return response()->json([
+            'messages' => MessageResource::collection($messages)->response()->getData(true),
+        ]);
     }
 
     public function sendMessage(Request $request, Conversation $conversation): JsonResponse
@@ -141,4 +144,16 @@ class ChatController extends Controller
 
         return response()->json(['unread_count' => $count]);
     }
+
+    public function clearConversations(Conversation $conversation, Request $request)
+    {
+        $this->authorize('view', $conversation);
+
+        Chat::conversation($conversation)
+            ->setParticipant($request->user())
+            ->clear();
+
+        return response()->json(['message' => 'Conversation cleared successfully.']);
+    }
+
 }

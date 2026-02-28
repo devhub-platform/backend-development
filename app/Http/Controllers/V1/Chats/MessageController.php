@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1\Chats;
 
 use App\Http\Controllers\V1\Controller;
+use App\Http\Resources\MessageResource;
 use App\Http\Requests\MessagesRequests\SendMessageAttchmentRequest;
 use App\Http\Requests\MessagesRequests\SendMessageRequest;
 use App\Services\AWSS3Service;
@@ -38,7 +39,7 @@ class MessageController extends Controller
 
         return response()->json([
             'message' => 'Message sent.',
-            'data' => $message,
+            'data' => new MessageResource($message),
         ], 201);
     }
 
@@ -64,7 +65,7 @@ class MessageController extends Controller
 
         return response()->json([
             'message' => 'Attachment sent successfully.',
-            'data' => $message,
+            'data' => new MessageResource($message),
         ], 201);
     }
 
@@ -99,7 +100,7 @@ class MessageController extends Controller
             'message' => 'All messages marked as read.',
             'data' => [
                 'conversation_id' => $conversation->id,
-                'marked_at' => now()->toIso8601String(),
+                'marked_at' => now()->format('Y-m-d H:i:s'),
             ]
         ], 200);
     }
@@ -171,7 +172,7 @@ class MessageController extends Controller
                 'message_id' => $messageId,
                 'conversation_id' => $conversation->id,
                 'reaction' => $validated['reaction'],
-                'reacted_at' => now()->toIso8601String(),
+                'reacted_at' => now()->format('Y-m-d H:i:s'),
             ]
         ], 201);
     }
@@ -195,7 +196,7 @@ class MessageController extends Controller
                 'message_id' => $messageId,
                 'conversation_id' => $conversation->id,
                 'reaction' => $validated['reaction'],
-                'unreacted_at' => now()->toIso8601String(),
+                'unreacted_at' => now()->format('Y-m-d H:i:s'),
             ]
         ], 200);
     }

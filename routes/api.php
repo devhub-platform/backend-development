@@ -280,7 +280,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('conversations/{conversation}/messages', 'sendMessage');
             Route::delete('conversations/{conversation}/messages/{messageId}', 'deleteMessage');
             Route::post('conversations/{conversation}/messages/read', 'markAsRead');
-
+            Route::delete('conversations/{conversation}/clear', 'clearConversations');
 
             Route::get('unread-count', 'unreadCount');
         });
