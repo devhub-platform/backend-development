@@ -89,12 +89,18 @@ class ChatController extends Controller
 
         $validated = $request->validate([
             'message' => ['required', 'string', 'max:5000'],
-            'type' => ['nullable', 'string', 'in:text,image,video,file'],
+            'type' => ['nullable', 'string', 'in:text,image,video,file,attachment'],
+            'data' => ['nullable', 'array'],
         ]);
 
         $message = Chat::message($validated['message'])
-            ->type($validated['type'] ?? 'text')
-            ->from($request->user())
+            ->type($validated['type'] ?? 'text');
+
+        if (isset($validated['data'])) {
+            $message->data($validated['data']);
+        }
+
+        $message = $message->from($request->user())
             ->to($conversation)
             ->send();
 
@@ -108,9 +114,9 @@ class ChatController extends Controller
     {
         $this->authorize('view', $conversation);
 
-        Chat::messages()
+        $message = Chat::messages()->getById($messageId);
+        Chat::message($message)
             ->setParticipant($request->user())
-            ->setMessage(Chat::messages()->getById($messageId))
             ->delete();
 
         return response()->json(['message' => 'Message deleted.']);

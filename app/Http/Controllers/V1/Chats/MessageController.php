@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\V1\Chats;
 
 use App\Http\Controllers\V1\Controller;
+use App\Http\Requests\SendMessageAttchmentRequest;
+use App\Http\Requests\SendMessageRequest;
 use App\Models\User;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
@@ -11,20 +13,31 @@ use Musonza\Chat\Facades\ChatFacade as Chat;
 use Musonza\Chat\Models\Conversation;
 use App\Policies\ChatPolicy;
 
+use App\Services\AWSS3Service;
+use App\Services\ImageUploadCloudinaryService;
+
 class MessageController extends Controller
 {
-    public function sendMessage(Request $request, Conversation $conversation): JsonResponse
+    public function __construct(
+        private ImageUploadCloudinaryService $cloudinaryService,
+        private AWSS3Service $awsS3Service
+    ) {
+    }
+
+    public function sendMessage(SendMessageRequest $request, Conversation $conversation): JsonResponse
     {
         $this->authorize('view', $conversation);
 
-        $validated = $request->validate([
-            'message' => 'required|string|max:5000',
-            'type' => 'nullable|string|in:text,image,video,file',
-        ]);
+        $validated = $request->validated();
 
         $message = Chat::message($validated['message'])
-            ->type($validated['type'] ?? 'text')
-            ->from(auth()->user())
+            ->type($validated['type'] ?? 'text');
+
+        if (isset($validated['data'])) {
+            $message->data($validated['data']);
+        }
+
+        $message = $message->from(auth()->user())
             ->to($conversation)
             ->send();
 
@@ -34,20 +47,21 @@ class MessageController extends Controller
         ], 201);
     }
 
-    public function sendMessageWithAttachment(Request $request, Conversation $conversation): JsonResponse
+    public function sendMessageWithAttachment(SendMessageAttchmentRequest $request, Conversation $conversation): JsonResponse
     {
         $this->authorize('view', $conversation);
 
-        $validated = $request->validate([
-            'file_name' => 'required|string|max:255',
-            'file_url'  => 'required|url',
-        ]);
+        $validated = $request->validated();
+        $file = $request->file('file');
+        $fileName = $validated['file_name'] ?? $file->getClientOriginalName();
+
+        $fileUrl = $this->awsS3Service->uploadFile($file, 'chat_attachments');
 
         $message = Chat::message('Attachment')
             ->type('attachment')
             ->data([
-                'file_name' => $validated['file_name'],
-                'file_url'  => $validated['file_url'],
+                'file_name' => $fileName,
+                'file_url'  => $fileUrl,
             ])
             ->from(auth()->user())
             ->to($conversation)
@@ -63,9 +77,9 @@ class MessageController extends Controller
     {
         $this->authorize('view', $conversation);
 
-        Chat::messages()
-            ->setParticipant($request->user())
-            ->setMessage(Chat::messages()->getById($messageId))
+        $message = Chat::messages()->getById($messageId);
+        Chat::message($message)
+            ->setParticipant(auth()->user())
             ->delete();
 
         return response()->json(['message' => 'Message deleted.']);
@@ -76,7 +90,7 @@ class MessageController extends Controller
         $this->authorize('view', $conversation);
 
         Chat::conversation($conversation)
-            ->setParticipant($request->user())
+            ->setParticipant(auth()->user())
             ->readAll();
 
         return response()->json(['message' => 'All messages marked as read.']);
@@ -102,7 +116,7 @@ class MessageController extends Controller
         return response()->json(['message' => 'Message updated.']);
     }
 
-    public function addReactionToMessage(Request $request, Conversation $conversation, int $messageId): JsonResponse
+    public function toggleReaction(Request $request, Conversation $conversation, int $messageId): JsonResponse
     {
         $this->authorize('view', $conversation);
 
@@ -110,12 +124,59 @@ class MessageController extends Controller
             'reaction' => 'required|string|max:255',
         ]);
 
-        Chat::messages()
+        $message = Chat::messages()->getById($messageId);
+        $result = Chat::message($message)
             ->setParticipant($request->user())
-            ->setMessage(Chat::messages()->getById($messageId))
             ->toggleReaction($validated['reaction']);
 
+        return response()->json([
+            'message' => $result['added'] ? 'Reaction added.' : 'Reaction removed.',
+            'data' => $result
+        ]);
+    }
+
+    public function reactToMessage(Request $request, Conversation $conversation, int $messageId): JsonResponse
+    {
+        $this->authorize('view', $conversation);
+
+        $validated = $request->validate([
+            'reaction' => 'required|string|max:255',
+        ]);
+
+        $message = Chat::messages()->getById($messageId);
+        Chat::message($message)
+            ->setParticipant($request->user())
+            ->react($validated['reaction']);
+
         return response()->json(['message' => 'Reaction added to message.']);
+    }
+
+    public function unreactToMessage(Request $request, Conversation $conversation, int $messageId): JsonResponse
+    {
+        $this->authorize('view', $conversation);
+
+        $validated = $request->validate([
+            'reaction' => 'required|string|max:255',
+        ]);
+
+        $message = Chat::messages()->getById($messageId);
+        Chat::message($message)
+            ->setParticipant($request->user())
+            ->unreact($validated['reaction']);
+
+        return response()->json(['message' => 'Reaction removed from message.']);
+    }
+
+    public function getReactionsSummary(Request $request, Conversation $conversation, int $messageId): JsonResponse
+    {
+        $this->authorize('view', $conversation);
+
+        $message = Chat::messages()->getById($messageId);
+        $summary = Chat::message($message)->reactionsSummary();
+
+        return response()->json([
+            'data' => $summary
+        ]);
     }
 
     public function makeMessageAsFlagged(Request $request, Conversation $conversation, int $messageId): JsonResponse
