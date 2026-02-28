@@ -2,25 +2,30 @@
 
 namespace App\Services\Chat;
 
-use App\Models\Answer;
 use App\Models\Question;
+use Illuminate\Support\Facades\Cache;
 
 class QuestionContextBuilder
 {
-    // Token budget: 70% for context, 30% for response
     private const MAX_QUESTION_CHARS = 1000;
     private const MAX_ANSWER_CHARS   = 600;
     private const MAX_ANSWERS        = 5;
+    private const CACHE_TTL          = 60 * 10; // 10 minutes
 
-    /**
-     * Build token-efficient system prompt.
-     * Priority: Question → Accepted Answers → Top Voted → Rest
-     */
     public function build(Question $question): string
     {
-        $questionBlock  = $this->buildQuestionBlock($question);
-        $acceptedBlock  = $this->buildAcceptedAnswersBlock($question);
-        $topBlock       = $this->buildTopAnswersBlock($question);
+        return Cache::remember(
+            "question:context:{$question->id}",
+            self::CACHE_TTL,
+            fn() => $this->buildPrompt($question)
+        );
+    }
+
+    private function buildPrompt(Question $question): string
+    {
+        $questionBlock = $this->buildQuestionBlock($question);
+        $acceptedBlock = $this->buildAcceptedAnswersBlock($question);
+        $topBlock      = $this->buildTopAnswersBlock($question);
 
         $context = implode("\n", array_filter([
             $questionBlock,
@@ -66,9 +71,6 @@ Content:
 BLOCK;
     }
 
-    /**
-     * Build accepted answers block - supports multiple accepted answers
-     */
     private function buildAcceptedAnswersBlock(Question $question): string
     {
         $accepted = $question->answers
@@ -79,17 +81,14 @@ BLOCK;
 
         $lines = ["\n=== ACCEPTED ANSWER(S) ==="];
         foreach ($accepted as $i => $answer) {
-            $content  = $this->truncate($answer->content, self::MAX_ANSWER_CHARS);
-            $score    = $answer->voteScore();
-            $lines[]  = "\nAccepted #" . ($i + 1) . " [Score: {$score}]:\n{$content}";
+            $content = $this->truncate($answer->content, self::MAX_ANSWER_CHARS);
+            $score   = $answer->voteScore();
+            $lines[] = "\nAccepted #" . ($i + 1) . " [Score: {$score}]:\n{$content}";
         }
 
         return implode("\n", $lines);
     }
 
-    /**
-     * Build top voted non-accepted answers block
-     */
     private function buildTopAnswersBlock(Question $question): string
     {
         $answers = $question->answers

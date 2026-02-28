@@ -77,10 +77,11 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         });
 
         // ─── Posts ────────────────────────────────────────────────────────────
+        // FIX: Removed duplicate force/restore routes (were defined twice)
         Route::controller(PostController::class)->group(function () {
             Route::get('user/posts', 'userPosts');
             Route::delete('posts/{post}/force', 'forceDelete');
-            Route::post('posts/{id}/restore', 'restore');
+            Route::post('posts/{post}/restore', 'restore');
             Route::get('posts/recent', 'recentPosts');
             Route::get('posts/top-views', 'topPostsViews');
             Route::get('posts/drafts', 'drafts');
@@ -90,8 +91,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('posts/{post}/tags-list', 'postsTagsList');
             Route::get('posts/{post}/comments', 'postComments');
             Route::post('posts/{post}/report', 'reportPost');
-            Route::post('posts/{post}/restore', 'restore');
-            Route::delete('posts/{post}/force', 'forceDelete');
         });
         Route::apiResource('posts', PostController::class);
 
@@ -106,25 +105,25 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
         // ─── Q&A - Questions ──────────────────────────────────────────────────
         Route::controller(QuestionController::class)->group(function () {
-            Route::get('questions',                      'index');
-            Route::post('questions/create',                     'store');
-            Route::get('questions/hot',             'trending');
-            Route::get('questions/{question}',           'show');
-            Route::put('questions/{question}',           'update');
-            Route::delete('questions/{question}',        'destroy');
-            Route::post('questions/{question}/vote',     'vote');
+            Route::get('questions',                  'index');
+            Route::post('questions/create',          'store');
+            Route::get('questions/hot',              'trending');
+            Route::get('questions/{question}',       'show');
+            Route::put('questions/{question}',       'update');
+            Route::delete('questions/{question}',    'destroy');
+            Route::post('questions/{question}/vote', 'vote');
         });
 
         // ─── Q&A - Answers ────────────────────────────────────────────────────
         Route::controller(AnswerController::class)->group(function () {
-            Route::get('questions/{question}/answers',                       'index');
-            Route::post('questions/{question}/answers/create',                      'store');
-            Route::get('questions/{question}/answers/{answer}',              'show');
-            Route::put('questions/{question}/answers/{answer}',              'update');
-            Route::delete('questions/{question}/answers/{answer}',           'destroy');
-            Route::post('questions/{question}/answers/{answer}/vote',        'vote');
-            Route::post('questions/{question}/answers/{answer}/accept',      'accept');
-            Route::post('questions/{question}/answers/{answer}/unaccept',    'unaccept');
+            Route::get('questions/{question}/answers',                    'index');
+            Route::post('questions/{question}/answers/create',            'store');
+            Route::get('questions/{question}/answers/{answer}',           'show');
+            Route::put('questions/{question}/answers/{answer}',           'update');
+            Route::delete('questions/{question}/answers/{answer}',        'destroy');
+            Route::post('questions/{question}/answers/{answer}/vote',     'vote');
+            Route::post('questions/{question}/answers/{answer}/accept',   'accept');
+            Route::post('questions/{question}/answers/{answer}/unaccept', 'unaccept');
         });
 
         // ─── Q&A - AI Chat ────────────────────────────────────────────────────
@@ -344,19 +343,27 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
         // ─── AI Chat ──────────────────────────────────────────────────────────
         Route::prefix('ai-chat')->group(function () {
-            Route::post('send', [AIChatController::class, 'chat']);
-            Route::post('attachments/upload', [AttachmentController::class, 'upload']);
 
-            Route::prefix('history')->controller(HistoryController::class)->group(function () {
-                Route::get('sessions', 'sessions');
-                Route::post('sessions/create', 'create');
-                Route::get('sessions/{sessionId}', 'show');
-                Route::delete('sessions/{sessionId}', 'delete');
-                Route::post('sessions/{sessionId}/pin', 'pin');
-                Route::post('sessions/{sessionId}/unpin', 'unpin');
-                Route::post('sessions/{sessionId}/close', 'close');
-                Route::post('sessions/{sessionId}/activate', 'activate');
-                Route::put('sessions/{sessionId}/title', 'updateTitle');
+            Route::post('send', [AIChatController::class, 'chat']);
+
+            // Separate throttle (10/min) — upload is heavier than regular requests
+            Route::controller(AttachmentController::class)
+                ->prefix('attachments')
+                ->middleware('throttle:10,1')
+                ->group(function () {
+                    Route::post('upload', 'upload');
+                    Route::delete('{attachmentId}', 'destroy');
+                    Route::get('{attachmentId}/status', 'status');
+                });
+
+            Route::prefix('sessions')->controller(HistoryController::class)->group(function () {
+                Route::get('/', 'sessions');
+                Route::post('create', 'create');
+                Route::get('{sessionId}', 'show');
+                Route::delete('{sessionId}', 'delete');
+                Route::post('{sessionId}/pin', 'pin');
+                Route::post('{sessionId}/unpin', 'unpin');
+                Route::put('{sessionId}/title', 'updateTitle');
             });
         });
 
