@@ -77,7 +77,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         });
 
         // ─── Posts ────────────────────────────────────────────────────────────
-        // FIX: Removed duplicate force/restore routes (were defined twice)
         Route::controller(PostController::class)->group(function () {
             Route::get('user/posts', 'userPosts');
             Route::delete('posts/{post}/force', 'forceDelete');
