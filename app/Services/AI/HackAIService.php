@@ -101,7 +101,7 @@ class HackAIService
             // Return safe fallback to user
             return [
                 'success' => false,
-                'fallback_message' => '⚠️ The AI service is currently unavailable. Please try again later.',
+                'fallback_message' => 'The AI service is currently unavailable. Please try again later.',
             ];
         }
     }
