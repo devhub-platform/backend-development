@@ -267,6 +267,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('settings/alt-email/send-otp', 'addAltEmail');
             Route::post('settings/alt-email/verify-otp', 'verifyAltEmail');
             Route::delete('settings/alt-email/remove', 'removeAltEmail');
+            Route::post('settings/alt-email/make-primary' , 'makeAsPrimaryEmail');
         });
 
         Route::prefix('chat')->controller(ChatController::class)->group(function () {
@@ -364,7 +365,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
 Route::fallback(function () {
     return response()->json([
-        'Hey_there!' => 'Ramadan Mubarak!!',
+        'Hey_there!' => 'Ramadan Kareem ❤! Welcome to Devhub API.',
         'message' => 'Resource not found, the API endpoint does not exist',
         'documentation' => 'https://0yviq6a5i5.apidog.io/',
         'version' => 'API v1 - Devhub is a platform for developers to share knowledge, collaborate on projects, and connect with other developers.',

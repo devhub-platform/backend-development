@@ -150,7 +150,7 @@ class ImageUploadCloudinaryService
             'width' => $options['width'] ?? null,
             'height' => $options['height'] ?? null,
             'crop' => $options['crop'] ?? 'fill',
-            'quality' => $options['quality'] ?? 'auto',
+            'quality' => $options['quality'] ?? 'high',
             'fetch_format' => 'auto',
         ];
 
