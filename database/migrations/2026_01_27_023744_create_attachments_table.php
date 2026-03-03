@@ -16,7 +16,7 @@ return new class extends Migration {
             $table->unsignedBigInteger('size')->nullable();
             $table->string('type')->default('document');   // image | document
             $table->string('status')->default('pending');  // pending | processed | failed
-            $table->string('url');
+            $table->text('url');
             $table->text('text')->nullable();              // extracted text (max 5000 chars)
             $table->index('session_id');                   // index for fast queries
             $table->timestamps();

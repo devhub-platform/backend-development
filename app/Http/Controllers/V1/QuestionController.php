@@ -7,14 +7,11 @@ use App\Http\Requests\QuestionsRequests\UpdateQuestionRequest;
 use App\Http\Requests\QuestionsRequests\VoteQuestionRequest;
 use App\Http\Resources\QuestionResource;
 use App\Models\Question;
-use App\Notifications\QuestionCreatedNotification;
 use App\Services\QuestionService;
 use App\Services\VoteService;
-use Illuminate\Auth\Authenticatable;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Notification;
 
 class QuestionController extends \Illuminate\Routing\Controller
 {
@@ -23,33 +20,25 @@ class QuestionController extends \Illuminate\Routing\Controller
     public function __construct(
         private QuestionService $questionService,
         private VoteService     $voteService
-    )
-    {
-    }
+    ) {}
 
+    /**
+     * List questions with filters & sorting
+     * Query params: per_page, sort_by (recent|popular|unanswered|hot), resolved, post_id
+     */
     public function index(Request $request): JsonResponse
     {
-        $perPage = $request->query('per_page', 15);
-        $sortBy = $request->query('sort_by', 'recent');
-        $isResolved = $request->query('resolved') !== null ? (bool)$request->query('resolved') : null;
-        $postId = $request->query('post_id');
-
         $questions = $this->questionService->getQuestions(
-            $perPage,
-            $sortBy,
-            $isResolved,
-            $postId
+            perPage:    $request->integer('per_page', 15),
+            sortBy:     $request->query('sort_by', 'recent'),
+            isResolved: $request->has('resolved') ? $request->boolean('resolved') : null,
+            postId:     $request->integer('post_id') ?: null,
         );
 
         return response()->json([
             'success' => true,
-            'data' => QuestionResource::collection($questions),
-            'meta' => [
-                'total' => $questions->total(),
-                'per_page' => $questions->perPage(),
-                'current_page' => $questions->currentPage(),
-                'last_page' => $questions->lastPage(),
-            ],
+            'data'    => QuestionResource::collection($questions),
+            'meta'    => $this->paginationMeta($questions),
         ]);
     }
 
@@ -65,22 +54,21 @@ class QuestionController extends \Illuminate\Routing\Controller
         return response()->json([
             'success' => true,
             'message' => 'Question created successfully',
-            'data' => new QuestionResource($question),
+            'data'    => new QuestionResource($question),
         ], 201);
     }
 
-    public function show(Question $question): JsonResponse
+    public function show(Request $request, Question $question): JsonResponse
     {
         $this->authorize('view', $question);
 
-        $question = $this->questionService->getQuestionWithAnswers($question);
+        $question = $this->questionService->getQuestionWithAnswers($question, $request->user()?->id);
 
         return response()->json([
             'success' => true,
-            'data' => new QuestionResource($question->load('answers', 'answers.user')),
+            'data'    => new QuestionResource($question),
         ]);
     }
-
 
     public function update(UpdateQuestionRequest $request, Question $question): JsonResponse
     {
@@ -91,10 +79,9 @@ class QuestionController extends \Illuminate\Routing\Controller
         return response()->json([
             'success' => true,
             'message' => 'Question updated successfully',
-            'data' => new QuestionResource($question),
+            'data'    => new QuestionResource($question),
         ]);
     }
-
 
     public function destroy(Question $question): JsonResponse
     {
@@ -108,7 +95,9 @@ class QuestionController extends \Illuminate\Routing\Controller
         ]);
     }
 
-
+    /**
+     * Vote on a question (upvote/downvote - toggleable)
+     */
     public function vote(VoteQuestionRequest $request, Question $question): JsonResponse
     {
         $this->authorize('vote', $question);
@@ -120,36 +109,63 @@ class QuestionController extends \Illuminate\Routing\Controller
         );
 
         return response()->json([
-            'success' => true,
-            'message' => $vote ? 'Vote recorded' : 'Vote removed',
-            'data' => [
-                'question_id' => $question->id,
-                'vote_score' => $question->fresh()->voteScore(),
-                'current_user_vote' => $vote ? $vote->vote_type : null,
+            'success'           => true,
+            'message'           => $vote ? 'Vote recorded' : 'Vote removed',
+            'data'              => [
+                'question_id'       => $question->id,
+                'vote_score'        => $question->fresh()->voteScore(),
+                'current_user_vote' => $vote?->vote_type,
             ],
         ]);
     }
 
-
-    public function userQuestions(Request $request): JsonResponse
+    /**
+     * Accept an answer as the best solution
+     */
+    public function acceptAnswer(Request $request, Question $question): JsonResponse
     {
-        $user = $request->user();
-        $perPage = $request->query('per_page', 15);
+        $this->authorize('update', $question);
 
-        $questions = $this->questionService->getUserQuestions($user, $perPage);
+        $request->validate(['answer_id' => 'required|integer|exists:answers,id']);
+
+        $question = $this->questionService->acceptAnswer($question, $request->integer('answer_id'));
 
         return response()->json([
             'success' => true,
-            'data' => QuestionResource::collection($questions),
-            'meta' => [
-                'total' => $questions->total(),
-                'per_page' => $questions->perPage(),
-                'current_page' => $questions->currentPage(),
-                'last_page' => $questions->lastPage(),
-            ],
+            'message' => 'Answer accepted successfully',
+            'data'    => new QuestionResource($question),
         ]);
     }
 
+    /**
+     * Unaccept the current accepted answer
+     */
+    public function unacceptAnswer(Question $question): JsonResponse
+    {
+        $this->authorize('update', $question);
+
+        $question = $this->questionService->unacceptAnswer($question);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Answer unaccepted successfully',
+            'data'    => new QuestionResource($question),
+        ]);
+    }
+
+    public function userQuestions(Request $request): JsonResponse
+    {
+        $questions = $this->questionService->getUserQuestions(
+            $request->user(),
+            $request->integer('per_page', 15)
+        );
+
+        return response()->json([
+            'success' => true,
+            'data'    => QuestionResource::collection($questions),
+            'meta'    => $this->paginationMeta($questions),
+        ]);
+    }
 
     public function search(Request $request): JsonResponse
     {
@@ -162,29 +178,39 @@ class QuestionController extends \Illuminate\Routing\Controller
             ], 400);
         }
 
-        $perPage = $request->query('per_page', 15);
-        $questions = $this->questionService->searchQuestions($query, $perPage);
+        $questions = $this->questionService->searchQuestions(
+            $query,
+            $request->integer('per_page', 15)
+        );
 
         return response()->json([
             'success' => true,
-            'data' => QuestionResource::collection($questions),
-            'meta' => [
-                'total' => $questions->total(),
-                'per_page' => $questions->perPage(),
-                'current_page' => $questions->currentPage(),
-                'last_page' => $questions->lastPage(),
-            ],
+            'data'    => QuestionResource::collection($questions),
+            'meta'    => $this->paginationMeta($questions),
         ]);
     }
 
-    public function trendQuotations()
+    /**
+     * Hot/Trending questions
+     */
+    public function trending(): JsonResponse
     {
-        $trendingQuestions = $this->questionService->getTrendingQuestions();
+        $questions = $this->questionService->getTrendingQuestions();
 
         return response()->json([
             'success' => true,
-            'data' => QuestionResource::collection($trendingQuestions),
+            'data'    => QuestionResource::collection($questions),
+            'meta'    => $this->paginationMeta($questions),
         ]);
+    }
+
+    private function paginationMeta($paginator): array
+    {
+        return [
+            'total'        => $paginator->total(),
+            'per_page'     => $paginator->perPage(),
+            'current_page' => $paginator->currentPage(),
+            'last_page'    => $paginator->lastPage(),
+        ];
     }
 }
-

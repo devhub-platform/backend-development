@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers\V1\AiModels;
 
-use App\Http\Controllers\V1\Controller;
+use App\Http\Controllers\Controller;
+use App\Models\AIChatSession;
+use App\Models\Attachment;
+use App\Services\Chat\ChatHistoryService;
 use App\Services\Chat\ChatRateLimiter;
 use App\Services\Chat\ChatService;
 use Illuminate\Http\JsonResponse;
@@ -11,37 +14,69 @@ use Illuminate\Http\Request;
 class AIChatController extends Controller
 {
     public function __construct(
-        protected ChatService     $chat,
-        protected ChatRateLimiter $limiter
+        protected ChatService        $chat,
+        protected ChatRateLimiter    $limiter,
+        protected ChatHistoryService $history,
     ) {}
 
     public function chat(Request $request): JsonResponse
     {
-        // Check rate limit before processing the request
-        $this->limiter->check($request->user()?->id);
-
-        $validModelIds = array_column(config('ai_models.chat', []), 'id');
+        $this->limiter->check($request->user()->id);
 
         $validated = $request->validate([
             'session_id'    => 'nullable|exists:ai_chat_sessions,id',
-            'model'         => ['required', 'string', 'in:' . implode(',', $validModelIds)],
+            'model'         => 'nullable|string',
             'message'       => 'required|string|max:1500',
-            'attachments'   => 'nullable|array',
+            'attachments'   => 'nullable|array|max:5',
             'attachments.*' => 'integer|exists:attachments,id',
         ]);
 
+        $userId = $request->user()->id;
+
+        // Security: session must belong to this user
+        if (!empty($validated['session_id'])) {
+            $session = AIChatSession::where('id', $validated['session_id'])
+                ->where('user_id', $userId)
+                ->first();
+
+            if (!$session) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Session not found.',
+                ], 404);
+            }
+        }
+
+        // Security: attachments must belong to this user
+        if (!empty($validated['attachments'])) {
+            $validCount = Attachment::whereIn('id', $validated['attachments'])
+                ->where('user_id', $userId)
+                ->count();
+
+            if ($validCount !== count($validated['attachments'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'One or more attachments are invalid.',
+                ], 403);
+            }
+        }
+
         $response = $this->chat->handle([
             'session_id'  => $validated['session_id'] ?? null,
-            'model'       => $validated['model'],
+            'model'       => $validated['model'] ?? null,
             'message'     => $validated['message'],
             'attachments' => $validated['attachments'] ?? [],
         ], $request->user());
 
+        // Model mismatch → tell frontend to open new chat
+        if (isset($response['error']) && $response['error'] === 'model_mismatch') {
+            return response()->json($response, 409);
+        }
+
         return response()->json([
             'session_id'         => $response['session_id'] ?? null,
             'ai_message'         => $response['content'] ?? 'No response',
-            'model_used'         => $validated['model'],
-            'model_resolved'     => $response['model_used'] ?? $validated['model'],
+            'model_used'         => $response['model_used'] ?? config('ai_models.default'),
             'processing_time_ms' => $response['processing_time_ms'] ?? 0,
             'success'            => $response['success'] ?? false,
         ]);
@@ -50,7 +85,8 @@ class AIChatController extends Controller
     public function models(): JsonResponse
     {
         return response()->json([
-            'models' => config('ai_models.chat'),
+            'default' => config('ai_models.default'),
+            'models'  => config('ai_models.chat'),
         ]);
     }
 }
