@@ -34,6 +34,30 @@ class ImageUploadCloudinaryService
         return $this->uploadImage($image, 'posts', $postSlug);
     }
 
+    public function uploadFile(UploadedFile $file, string $folder, ?string $customName = null): string
+    {
+        try {
+            $fileName = $customName ?? Str::uuid()->toString();
+
+            $response = cloudinary()->uploadApi()->upload($file->getRealPath(), [
+                'folder' => $folder,
+                'public_id' => $fileName . '_' . time(),
+                'overwrite' => true,
+                'resource_type' => 'auto',
+            ]);
+
+            if (isset($response['secure_url'])) {
+                Log::info("File uploaded successfully to Cloudinary: {$response['secure_url']}");
+                return $response['secure_url'];
+            }
+
+            throw new \Exception('Failed to get secure URL from Cloudinary response');
+        } catch (\Exception $e) {
+            Log::error("Cloudinary file upload failed: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
     public function uploadImage(UploadedFile $image, string $folder, ?string $customName = null): string
     {
         try {
@@ -126,7 +150,7 @@ class ImageUploadCloudinaryService
             'width' => $options['width'] ?? null,
             'height' => $options['height'] ?? null,
             'crop' => $options['crop'] ?? 'fill',
-            'quality' => $options['quality'] ?? 'auto',
+            'quality' => $options['quality'] ?? 'high',
             'fetch_format' => 'auto',
         ];
 
