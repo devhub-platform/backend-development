@@ -47,10 +47,20 @@ class HackAIService
             $data = json_decode($response->getBody(), true);
 
             if (is_array($data)) {
+                // Log raw response body when expected content is missing, to diagnose provider issues
+                if (empty($data['choices'][0]['message']['content'])) {
+                    Log::warning('HackAI response missing content', [
+                        'model'    => $model,
+                        'raw_body' => $data,
+                    ]);
+                }
                 return $data;
             }
 
-            Log::warning('HackAI returned non-array response', ['model' => $model]);
+            Log::warning('HackAI returned non-array response', [
+                'model'    => $model,
+                'raw_body' => (string) $response->getBody(),
+            ]);
             return $this->fallbackResponse();
 
         } catch (GuzzleException $e) {

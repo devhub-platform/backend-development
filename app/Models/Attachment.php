@@ -9,6 +9,7 @@ class Attachment extends Model
 {
     protected $fillable = [
         'url',
+        's3_path',
         'text',
         'mime_type',
         'size',

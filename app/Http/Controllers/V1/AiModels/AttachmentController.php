@@ -12,6 +12,8 @@ use Illuminate\Support\Str;
 
 class AttachmentController extends Controller
 {
+    /** TTL in minutes for the short-lived presigned URL returned to the client for preview */
+    private const UPLOAD_PREVIEW_TTL_MINUTES = 10;
     public function upload(Request $request): JsonResponse
     {
         if (!$request->user()) {
@@ -59,11 +61,21 @@ class AttachmentController extends Controller
 
         // Upload file safely to S3
         Storage::disk('s3')->putFileAs('chat-attachments', $file, $filename);
-        $url = Storage::disk('s3')->url($s3Path);
+
+        // Permanent URL stored in DB — never expires (used as fallback if presign fails)
+        $permanentUrl = Storage::disk('s3')->url($s3Path);
+
+        // Short-lived presigned URL for the client upload response only (preview)
+        try {
+            $responseUrl = Storage::disk('s3')->temporaryUrl($s3Path, now()->addMinutes(self::UPLOAD_PREVIEW_TTL_MINUTES));
+        } catch (\Exception) {
+            $responseUrl = $permanentUrl;
+        }
 
         // Save metadata to DB
         $attachment = Attachment::create([
-            'url'        => $url,
+            'url'        => $permanentUrl,
+            's3_path'    => $s3Path,
             'filename'   => $file->getClientOriginalName(),
             'mime_type'  => $file->getMimeType(),
             'size'       => $file->getSize(),
@@ -85,7 +97,7 @@ class AttachmentController extends Controller
 
         return response()->json([
             'attachment_id' => $attachment->id,
-            'url'           => $url,
+            'url'           => $responseUrl,
             'filename'      => $file->getClientOriginalName(),
             'mime_type'     => $file->getMimeType(),
             'type'          => $isImage ? 'image' : 'document',

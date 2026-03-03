@@ -4,6 +4,8 @@ namespace App\Services\AI;
 
 class AIResponseParser
 {
+    public const EMPTY_RESPONSE_MESSAGE = 'I received an empty response. Please try again.';
+
     /**
      * Parse the raw API response and extract the text content.
      * Handles multiple response formats from different providers.
@@ -34,6 +36,6 @@ class AIResponseParser
             return (string) $body['data'][0]['content'];
         }
 
-        return 'I received an empty response. Please try again.';
+        return self::EMPTY_RESPONSE_MESSAGE;
     }
 }
