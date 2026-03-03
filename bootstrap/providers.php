@@ -5,4 +5,5 @@ return [
     App\Providers\TelescopeServiceProvider::class,
     App\Providers\AuthServiceProvider::class,
     App\Providers\BroadcastServiceProvider::class,
+    Ladumor\OneSignal\OneSignalServiceProvider::class,
 ];
