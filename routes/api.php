@@ -204,6 +204,10 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('notifications/preferences', 'getNotificationPreferences');
             Route::put('notifications/preferences', 'updateNotificationPreferences');
             Route::patch('notifications/preferences/{type}/toggle', 'toggleNotificationPreference');
+
+            // OneSignal player ID management
+            Route::post('notifications/onesignal/player-id', 'storePlayerId');
+            Route::delete('notifications/onesignal/player-id', 'removePlayerId');
         });
 
         Route::controller(TagFollowController::class)->group(function () {
@@ -361,6 +365,27 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
 
     });
+});
+
+Route::post('send-test-notification', function () {
+    $validated = request()->validate([
+        'player_id' => 'required|string',
+        'heading' => 'required|string|max:255',
+        'message' => 'required|string|max:1000',
+        'url' => 'nullable|url',
+    ]);
+
+    $service = app(\App\Services\OneSignalService::class);
+
+    $result = $service->sendToUser(
+        message: $validated['message'],
+        playerId: $validated['player_id'],
+        heading: $validated['heading'],
+        url: $validated['url'] ?? null,
+        data: ['sent_at' => now()->toISOString(), 'type' => 'test']
+    );
+
+    return response()->json($result);
 });
 
 Route::fallback(function () {

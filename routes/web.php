@@ -10,3 +10,8 @@ Route::get('/', function () {
 Route::get('/chats', function () {
     return view('Chat-users.test-pusher-chat');
 });
+
+Route::get('/send-notification', function () {
+    return view('send-notification');
+})->name('send.notification');
+

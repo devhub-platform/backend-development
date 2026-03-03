@@ -47,6 +47,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'avatar_url',
         'bio',
         'email',
+        'onesignal_player_id',
         'password',
         'email_verified_at',
         'remember_token',

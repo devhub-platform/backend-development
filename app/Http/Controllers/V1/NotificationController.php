@@ -210,4 +210,36 @@ class NotificationController
             'answers_notifications' => $notifications,
         ]);
     }
+
+    public function storePlayerId(Request $request)
+    {
+        $validated = $request->validate([
+            'player_id' => 'required|string|uuid',
+        ]);
+
+        $user = auth()->user();
+
+        $user->update([
+            'onesignal_player_id' => $validated['player_id'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OneSignal player ID saved successfully',
+        ]);
+    }
+
+    public function removePlayerId()
+    {
+        $user = auth()->user();
+
+        $user->update([
+            'onesignal_player_id' => null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OneSignal player ID removed successfully',
+        ]);
+    }
 }
