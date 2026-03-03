@@ -16,6 +16,7 @@
         "awssat/laravel-visits": "^6.2",
         "binafy/laravel-reactions": "^1.0",
         "cloudinary-labs/cloudinary-laravel": "^3.0",
+        "dusterio/laravel-aws-worker": "^1.0",
         "google/apiclient": "*",
         "google/apiclient-services": "*",
         "guzzlehttp/guzzle": "^7.10",

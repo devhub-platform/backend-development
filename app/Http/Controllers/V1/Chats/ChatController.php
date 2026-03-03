@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1\Chats;
 
 use App\Http\Controllers\V1\Controller;
+use App\Http\Resources\MessageResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -80,7 +81,9 @@ class ChatController extends Controller
             ->setParticipant($request->user())
             ->readAll();
 
-        return response()->json($messages);
+        return response()->json([
+            'messages' => MessageResource::collection($messages)->response()->getData(true),
+        ]);
     }
 
     public function sendMessage(Request $request, Conversation $conversation): JsonResponse
@@ -89,12 +92,18 @@ class ChatController extends Controller
 
         $validated = $request->validate([
             'message' => ['required', 'string', 'max:5000'],
-            'type' => ['nullable', 'string', 'in:text,image,video,file'],
+            'type' => ['nullable', 'string', 'in:text,image,video,file,attachment'],
+            'data' => ['nullable', 'array'],
         ]);
 
         $message = Chat::message($validated['message'])
-            ->type($validated['type'] ?? 'text')
-            ->from($request->user())
+            ->type($validated['type'] ?? 'text');
+
+        if (isset($validated['data'])) {
+            $message->data($validated['data']);
+        }
+
+        $message = $message->from($request->user())
             ->to($conversation)
             ->send();
 
@@ -108,9 +117,9 @@ class ChatController extends Controller
     {
         $this->authorize('view', $conversation);
 
-        Chat::messages()
+        $message = Chat::messages()->getById($messageId);
+        Chat::message($message)
             ->setParticipant($request->user())
-            ->setMessage(Chat::messages()->getById($messageId))
             ->delete();
 
         return response()->json(['message' => 'Message deleted.']);
@@ -135,4 +144,16 @@ class ChatController extends Controller
 
         return response()->json(['unread_count' => $count]);
     }
+
+    public function clearConversations(Conversation $conversation, Request $request)
+    {
+        $this->authorize('view', $conversation);
+
+        Chat::conversation($conversation)
+            ->setParticipant($request->user())
+            ->clear();
+
+        return response()->json(['message' => 'Conversation cleared successfully.']);
+    }
+
 }

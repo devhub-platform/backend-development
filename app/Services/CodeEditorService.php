@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Http\Client\PendingRequest;
 
 class CodeEditorService
 {
@@ -20,7 +21,7 @@ class CodeEditorService
         $this->pistonApiKey = config('services.piston.api_key');
     }
 
-    private function httpClient(int $timeout = 10): \Illuminate\Http\Client\PendingRequest
+    private function httpClient(int $timeout = 10): PendingRequest
     {
         $client = Http::timeout($timeout);
 
@@ -110,6 +111,7 @@ class CodeEditorService
                     'message' => $run['message'] ?? null,
                     'cpu_time' => $run['cpu_time'] ?? null,
                     'wall_time' => $run['wall_time'] ?? null,
+                    'status' => $run['status'] ?? null,
                 ],
             ]);
 
@@ -137,53 +139,113 @@ class CodeEditorService
             ?? $request->input('search')
             ?? $request->input('language');
 
-        if (!$searchTerm) {
+        $searchTerm = Str::trim(Str::lower((string)$searchTerm));
+
+        if ($searchTerm === '') {
             return response()->json([
                 'success' => false,
-                'message' => 'Search term is required'
+                'message' => 'Search term is required.',
             ], 400);
         }
 
-        $searchTerm = Str::trim(Str::lower($searchTerm));
+        if (Str::length($searchTerm) < 4) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Search term must be at least 4 characters.',
+            ], 422);
+        }
+
+        $perPage = max(1, min((int)$request->input('per_page', 20), 100));
+        $page = max(1, (int)$request->input('page', 1));
+        $grouped = filter_var($request->input('grouped', false), FILTER_VALIDATE_BOOLEAN);
 
         try {
             $response = $this->httpClient()->get($this->pistonBaseUrl . '/runtimes');
 
             if (!$response->successful()) {
-                throw new \Exception('Failed to fetch runtimes');
+                throw new \Exception('Failed to fetch runtimes from Piston API (HTTP ' . $response->status() . ')');
             }
 
             $runtimes = $response->json();
 
             if (!is_array($runtimes)) {
-                throw new \UnexpectedValueException('Invalid response format from runtimes API');
+                throw new \UnexpectedValueException('Invalid response format from runtimes API.');
             }
 
-            $filteredRuntimes = array_filter($runtimes, function ($runtime) use ($searchTerm) {
-                $language = strtolower($runtime['language'] ?? '');
-                $version = strtolower($runtime['version'] ?? '');
-                return str_contains($language, $searchTerm) || str_contains($version, $searchTerm);
-            });
 
-            if (empty($filteredRuntimes)) {
+            $filtered = array_values(array_filter($runtimes, function (array $runtime) use ($searchTerm) {
+                if (str_contains(strtolower($runtime['language'] ?? ''), $searchTerm)) {
+                    return true;
+                }
+
+                if (str_contains(strtolower($runtime['version'] ?? ''), $searchTerm)) {
+                    return true;
+                }
+
+                foreach ($runtime['aliases'] ?? [] as $alias) {
+                    if (str_contains(strtolower((string)$alias), $searchTerm)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }));
+
+            if (empty($filtered)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No runtimes found matching: ' . $searchTerm,
-                    'search_term' => $searchTerm
+                    'message' => "No runtimes found matching \"{$searchTerm}\".",
+                    'search_term' => $searchTerm,
                 ], 404);
             }
 
+            $totalCount = count($filtered);
+
+            if ($grouped) {
+                $groupedData = [];
+                foreach ($filtered as $runtime) {
+                    $lang = $runtime['language'] ?? 'unknown';
+                    $groupedData[$lang][] = [
+                        'version' => $runtime['version'] ?? null,
+                        'aliases' => $runtime['aliases'] ?? [],
+                    ];
+                }
+                ksort($groupedData);
+
+                return response()->json([
+                    'success' => true,
+                    'search_term' => $searchTerm,
+                    'total' => $totalCount,
+                    'data' => $groupedData,
+                ]);
+            }
+
+
+            $offset = ($page - 1) * $perPage;
+            $pageItems = array_slice($filtered, $offset, $perPage);
+            $lastPage = (int)ceil($totalCount / $perPage);
+
             return response()->json([
                 'success' => true,
-                'data' => array_values($filteredRuntimes),
-                'count' => count($filteredRuntimes)
+                'search_term' => $searchTerm,
+                'data' => $pageItems,
+                'meta' => [
+                    'total' => $totalCount,
+                    'per_page' => $perPage,
+                    'current_page' => $page,
+                    'last_page' => $lastPage,
+                    'from' => $totalCount > 0 ? $offset + 1 : null,
+                    'to' => $totalCount > 0 ? min($offset + $perPage, $totalCount) : null,
+                ],
             ]);
+
         } catch (\Exception $e) {
             Log::error('Error searching runtimes: ' . $e->getMessage());
+
             return response()->json([
                 'success' => false,
-                'message' => 'Error searching runtimes',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
+                'message' => 'Error searching runtimes.',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error',
             ], 500);
         }
     }
@@ -199,7 +261,6 @@ class CodeEditorService
 
             $runtimes = $response->json();
 
-            // Extract unique languages
             $languages = array_unique(array_column($runtimes, 'language'));
             sort($languages);
 

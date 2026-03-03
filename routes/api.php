@@ -30,50 +30,46 @@ use App\Http\Controllers\V1\VerifyAltEmailController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\V1\Chats\MessageController;
 
+//$chatRoutesPrefix = config('musonza_chat.routes.path_prefix', 'chat');
+//$middleware       = config('musonza_chat.routes.middleware', ['web']);
+
 Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
-    // ─── Social Auth ──────────────────────────────────────────────────────────
     Route::controller(SocialiteMediaController::class)->group(function () {
         Route::post('auth/google/login', 'loginGoogle');
         Route::get('auth/google/callback', 'callbackGoogle');
+        Route::post('auth/google/login-mobile', 'loginGoogleForMobile');
         Route::post('auth/github/login', 'loginGithub');
         Route::get('auth/github/callback', 'callbackGithub');
     });
 
-    // ─── Auth ─────────────────────────────────────────────────────────────────
     Route::controller(AuthController::class)->group(function () {
         Route::post('login', 'login');
         Route::post('register', 'register');
     });
 
-    // ─── Email Verification ───────────────────────────────────────────────────
     Route::controller(VerifyEmailController::class)->group(function () {
         Route::post('email/verify-otp', 'verifyEmailOtp');
         Route::post('email/send-otp', 'sendEmailOTP');
         Route::get('email/is-verified', 'isVerified');
     });
 
-    // ─── Forgot Password ──────────────────────────────────────────────────────
     Route::controller(ForgetPasswordController::class)->group(function () {
         Route::post('password/forgot', 'forgetPassword');
         Route::post('password/verify-otp', 'verifyOtp');
         Route::post('password/reset', 'resetPassword');
     });
 
-    // ─── Public AI Routes (no auth required) ──────────────────────────────────
     Route::get('ai-chat/models', [AIChatController::class, 'models']);
 
-    // ─── Protected Routes ─────────────────────────────────────────────────────
     Route::middleware(['auth:api', 'throttle:25,1'])->group(function () {
 
-        // Auth Actions
         Route::controller(AuthController::class)->group(function () {
             Route::post('logout', 'logout');
             Route::post('refresh', 'refreshToken');
             Route::get('me', 'user');
         });
 
-        // ─── Posts ────────────────────────────────────────────────────────────
         Route::controller(PostController::class)->group(function () {
             Route::get('user/posts', 'userPosts');
             Route::delete('posts/{post}/force', 'forceDelete');
@@ -92,16 +88,13 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         });
         Route::apiResource('posts', PostController::class);
 
-        // AI Chat inside a post context
         Route::post('posts/{post}/ai-chat', [PostChatController::class, 'chat']);
 
-        // ─── Post Views ───────────────────────────────────────────────────────
         Route::controller(PostViewController::class)->group(function () {
             Route::get('posts/viewed/recent', 'getRecentViewedPosts');
             Route::delete('posts/viewed/clear', 'clearViewedPosts');
         });
 
-        // ─── Users ────────────────────────────────────────────────────────────
         Route::controller(UserController::class)->group(function () {
             Route::get('users', 'index');
             Route::get('users/recommended', 'getRecommendedUsers');
@@ -117,7 +110,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('users/{user}/mutual-following', 'checkMutualFollowing');
         });
 
-        // ─── Search ───────────────────────────────────────────────────────────
         Route::controller(SearchController::class)->group(function () {
             Route::get('search/posts', 'searchPosts');
             Route::get('search/users', 'searchUsersByUsername');
@@ -126,7 +118,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::delete('search/clear', 'clearSearchHistory');
         });
 
-        // ─── Comments ─────────────────────────────────────────────────────────
         Route::middleware('blocked.user')->controller(CommentController::class)->group(function () {
             Route::post('posts/{post}/comments', 'store');
             Route::post('posts/{post}/comments/{parentComment}/reply', 'reply');
@@ -149,7 +140,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('my/comments/stats', 'myCommentStats');
         });
 
-        // ─── Tags ─────────────────────────────────────────────────────────────
         Route::controller(TagController::class)->group(function () {
             Route::get('tags/popular', 'popularTag');
             Route::get('tags', 'allTags');
@@ -158,7 +148,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::delete('posts/{post}/tags/{tag}', 'detachTagFromPost');
         });
 
-        // ─── Profile ──────────────────────────────────────────────────────────
         Route::controller(ProfileController::class)->group(function () {
             Route::get('profile', 'show');
             Route::patch('profile', 'update');
@@ -171,7 +160,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('profile/details', 'details');
         });
 
-        // ─── Followers ────────────────────────────────────────────────────────
         Route::middleware('blocked.user')->controller(FollowersController::class)->group(function () {
             Route::post('users/{user}/follow', 'follow');
             Route::post('users/{user}/unfollow', 'unfollow');
@@ -184,7 +172,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('followers/my-following', 'myFollowing');
         });
 
-        // ─── Reactions ────────────────────────────────────────────────────────
         Route::middleware('blocked.user')->controller(ReactionController::class)->group(function () {
             Route::post('posts/{post}/react', 'reactToPost');
             Route::delete('posts/{post}/remove-react', 'removeReaction');
@@ -197,14 +184,12 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('posts/{post}/reactions-count', 'reactionCounts');
         });
 
-        // ─── Saved Posts ──────────────────────────────────────────────────────
         Route::controller(SavedPostController::class)->group(function () {
             Route::get('saved-posts', 'index');
             Route::post('saved-posts/{post}', 'store');
             Route::delete('saved-posts/{post}', 'destroy');
         });
 
-        // ─── Notifications ────────────────────────────────────────────────────
         Route::controller(NotificationController::class)->group(function () {
             Route::get('notifications/comments', 'showNewCommentNotify');
             Route::get('notifications/all', 'showAllNotifications');
@@ -221,14 +206,12 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::patch('notifications/preferences/{type}/toggle', 'toggleNotificationPreference');
         });
 
-        // ─── Tags Follow ──────────────────────────────────────────────────────
         Route::controller(TagFollowController::class)->group(function () {
             Route::post('tags/{tag}/follow', 'follow');
             Route::delete('tags/{tag}/unfollow', 'unfollow');
             Route::get('tags/{tag}/followers', 'listFollowing');
         });
 
-        // ─── User Statuses ────────────────────────────────────────────────────
         Route::controller(UserStatusesController::class)->group(function () {
             Route::get('user/statuses', 'getStatuses');
             Route::post('user/statuses', 'store');
@@ -240,7 +223,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('users/{username}/status', 'getUserStatus');
         });
 
-        // ─── Reading Lists ────────────────────────────────────────────────────
         Route::controller(ReadingListController::class)->group(function () {
             Route::get('reading-lists/lists/posts', 'index');
             Route::post('reading-lists', 'store');
@@ -259,7 +241,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('reading-lists/{readingList}/show-notes/{post}', 'showNotesInReadingList');
         });
 
-        // ─── Code Editor ──────────────────────────────────────────────────────
         Route::controller(CodeEditorController::class)->group(function () {
             Route::get('code/runtimes', 'runtimes');
             Route::post('code/execute', 'execute');
@@ -267,7 +248,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('code/languages', 'languages');
         });
 
-        // ─── Reports & Blocking ───────────────────────────────────────────────
         Route::controller(ReportController::class)->group(function () {
             Route::post('reports/block/{target}', 'block');
             Route::post('reports/report/{target}', 'report');
@@ -276,7 +256,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('reports/reasons', 'reason');
         });
 
-        // ─── Settings ─────────────────────────────────────────────────────────
         Route::controller(SettingController::class)->group(function () {
             Route::patch('settings/update-password', 'updatePassword');
             Route::post('settings/social-accounts', 'addSocialAccounts');
@@ -288,44 +267,43 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('settings/alt-email/send-otp', 'addAltEmail');
             Route::post('settings/alt-email/verify-otp', 'verifyAltEmail');
             Route::delete('settings/alt-email/remove', 'removeAltEmail');
+            Route::post('settings/alt-email/make-primary' , 'makeAsPrimaryEmail');
         });
 
         Route::prefix('chat')->controller(ChatController::class)->group(function () {
-            // Conversations
+
             Route::get('conversations', 'index');
             Route::post('conversations', 'createOrGetConversation');
             Route::get('conversations/{conversation}', 'show');
             Route::delete('conversations/{conversation}', 'destroy');
 
-            // Messages
             Route::get('conversations/{conversation}/messages', 'getMessages');
             Route::post('conversations/{conversation}/messages', 'sendMessage');
             Route::delete('conversations/{conversation}/messages/{messageId}', 'deleteMessage');
             Route::post('conversations/{conversation}/messages/read', 'markAsRead');
+            Route::delete('conversations/{conversation}/clear', 'clearConversations');
 
-            // Unread count
             Route::get('unread-count', 'unreadCount');
         });
 
         Route::prefix('messages')->controller(MessageController::class)->group(function () {
             Route::post('{conversation}/send', 'sendMessage');
             Route::post('{conversation}/send-attachment', 'sendMessageWithAttachment');
-            Route::delete('{conversation}/{messageId}', 'deleteMessage');
+            Route::delete('{messageId}/conversation/{conversation}', 'deleteMessage');
             Route::post('{conversation}/mark-as-read', 'markAsRead');
             Route::put('{conversation}/{messageId}', 'updateMessage');
-            Route::post('{conversation}/{messageId}/reaction', 'addReactionToMessage');
+            Route::post('{conversation}/{messageId}/reaction', 'reactToMessage');
+            Route::post('{conversation}/{messageId}/toggle-reaction', 'toggleReaction');
+            Route::delete('{conversation}/{messageId}/reaction', 'unreactToMessage');
+            Route::get('{conversation}/{messageId}/reactions-summary', 'getReactionsSummary');
             Route::post('{conversation}/{messageId}/flag', 'makeMessageAsFlagged');
         });
 
-        // ─── AI Chat ──────────────────────────────────────────────────────────
         Route::prefix('ai-chat')->group(function () {
-            // General chat - send message
             Route::post('send', [AIChatController::class, 'chat']);
 
-            // Upload file attachment
             Route::post('attachments/upload', [AttachmentController::class, 'upload']);
 
-            // Chat history & sessions management
             Route::prefix('history')->controller(HistoryController::class)->group(function () {
                 Route::get('sessions', 'sessions');
                 Route::post('sessions/create', 'create');
@@ -339,14 +317,59 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             });
         });
 
+//        $chatRoutesPrefix = config('musonza_chat.routes.path_prefix');
+//        $middleware = config('musonza_chat.routes.middleware');
+//
+//        Route::group([
+//            'middleware' => $middleware ?? ['auth:api'],
+//            'namespace' => 'Musonza\Chat\Http\Controllers',
+//            'prefix' => $chatRoutesPrefix,
+//        ], function () {
+//            /* Conversation */
+//            Route::get('/conversations', 'ConversationController@index')->name('conversations.index');
+//            Route::post('/conversations', 'ConversationController@store')->name('conversations.store');
+//            Route::get('/conversations/{id}', 'ConversationController@show')->name('conversations.show');
+//            Route::put('/conversations/{id}', 'ConversationController@update')->name('conversations.update');
+//            Route::delete('/conversations/{id}', 'ConversationController@destroy')->name('conversations.destroy');
+//
+//            /* Conversation Participation */
+//            Route::post('/conversations/{id}/participants', 'ConversationParticipationController@store')
+//                ->name('conversations.participation.store');
+//            Route::delete('/conversations/{id}/participants/{participation_id}', 'ConversationParticipationController@destroy')
+//                ->name('conversations.participation.destroy');
+//            Route::get('/conversations/{id}/participants/{participation_id}', 'ConversationParticipationController@show')
+//                ->name('conversations.participation.show');
+//            Route::put('/conversations/{id}/participants/{participation_id}', 'ConversationParticipationController@update')
+//                ->name('conversations.participation.update');
+//            Route::get('/conversations/{id}/participants', 'ConversationParticipationController@index')
+//                ->name('conversations.participation.index');
+//
+//            /* Messaging */
+//            Route::post('/conversations/{id}/messages', 'ConversationMessageController@store')
+//                ->name('conversations.messages.store');
+//            Route::get('/conversations/{id}/messages', 'ConversationMessageController@index')
+//                ->name('conversations.messages.index');
+//            Route::get('/conversations/{id}/messages-cursor', 'ConversationMessageController@indexWithCursor')
+//                ->name('conversations.messages.index.cursor');
+//            Route::get('/conversations/{id}/messages/{message_id}', 'ConversationMessageController@show')
+//                ->name('conversations.messages.show');
+//            Route::delete('/conversations/{id}/messages', 'ConversationMessageController@deleteAll')
+//                ->name('conversations.messages.destroy.all');
+//            Route::delete('/conversations/{id}/messages/{message_id}', 'ConversationMessageController@destroy')
+//                ->name('conversations.messages.destroy');
+//        });
+
+
     });
 });
 
 Route::fallback(function () {
     return response()->json([
-        'Hey_there!' => 'Ramadan Mubarak!!',
+        'Hey_there!' => 'Ramadan Kareem ❤! Welcome to Devhub API.',
         'message' => 'Resource not found, the API endpoint does not exist',
         'documentation' => 'https://0yviq6a5i5.apidog.io/',
         'version' => 'API v1 - Devhub is a platform for developers to share knowledge, collaborate on projects, and connect with other developers.',
     ], 404);
 });
+// for testing
+Route::post('broadcast-test', [MessageController::class, 'broadcastTest']);

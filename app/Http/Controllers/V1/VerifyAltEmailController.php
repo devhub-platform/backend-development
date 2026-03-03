@@ -35,11 +35,6 @@ class VerifyAltEmailController
                 ], 400);
             }
 
-            if ($user->isLoginViaAltEmail()) {
-                return response()->json([
-                    'message' => 'You cannot add a new alternative email while logged in via your alternative email. Please log in with your primary email address first.',
-                ], 403);
-            }
 
             $altEmail = $request->validated()['alt_email'];
 
@@ -135,7 +130,6 @@ class VerifyAltEmailController
                 ], 404);
             }
 
-            // Check if alt email exists
             if (!$user->alt_email) {
                 return response()->json([
                     'message' => 'No alternative email to verify. Please add one first.',
@@ -238,6 +232,54 @@ class VerifyAltEmailController
             Log::error("Get alt email status failed for user: " . Auth::user()->email . " - " . $e->getMessage());
             return response()->json([
                 'message' => 'Failed to get alternative email status.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function makeAsPrimaryEmail()
+    {
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json([
+                    'message' => 'User not found',
+                ], 404);
+            }
+
+            if (!$user->alt_email) {
+                return response()->json([
+                    'message' => 'No alternative email to make primary.',
+                ], 400);
+            }
+
+            if (!$user->alt_email_verified_at) {
+                return response()->json([
+                    'message' => 'Alternative email must be verified before making it primary.',
+                ], 400);
+            }
+
+            $oldPrimaryEmail = $user->email;
+            $newPrimaryEmail = $user->alt_email;
+
+            $user->update([
+                'email' => $newPrimaryEmail,
+                'alt_email' => $oldPrimaryEmail,
+                'alt_email_verified_at' => Carbon::now(),
+                'alt_email_otp' => null,
+                'alt_email_otp_expires_at' => null,
+            ]);
+
+            Log::info("Alternative email made primary for user: {$user->email}, old primary: {$oldPrimaryEmail}");
+
+            return response()->json([
+                'message' => 'Alternative email is now your primary email address.',
+                'data' => new UserResource($user->fresh()),
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error("Make alt email as primary failed for user: " . Auth::user()->email . " - " . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to make alternative email as primary. Please try again.',
                 'error' => $e->getMessage()
             ], 500);
         }
