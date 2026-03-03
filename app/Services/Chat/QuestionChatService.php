@@ -2,41 +2,43 @@
 
 namespace App\Services\Chat;
 
-use App\Models\Post;
+use App\Models\Question;
 use App\Services\AI\AIResponseParser;
 use App\Services\AI\HackAIService;
 
-class PostChatService
+class QuestionChatService
 {
     private const MODEL = 'google/gemini-2.5-flash';
 
     public function __construct(
-        protected HackAIService      $ai,
-        protected AIResponseParser   $parser,
-        protected ChatHistoryService $history,
-        protected ChatContextCache   $cache,
-        protected PostContextBuilder $contextBuilder,
+        protected HackAIService          $ai,
+        protected AIResponseParser       $parser,
+        protected ChatHistoryService     $history,
+        protected ChatContextCache       $cache,
+        protected QuestionContextBuilder $contextBuilder,
     ) {}
 
     /**
-     * Handle a chat message in the context of a specific post.
+     * Handle a chat message in the context of a specific Q&A question.
      *
-     * The post content is injected as a system prompt on the first turn,
-     * then cached for subsequent turns in the same session.
+     * Answers and votes are eager-loaded once to avoid N+1 queries.
+     * The question context is injected as a system prompt on the first turn only.
      */
-    public function handle(Post $post, string $message, ?int $sessionId, int $userId): array
+    public function handle(Question $question, string $message, ?int $sessionId, int $userId): array
     {
         $startTime = microtime(true);
-        $model     = config('ai_models.post_chat', self::MODEL);
+        $model     = config('ai_models.question_chat', self::MODEL);
 
         try {
+            $question->loadMissing(['answers', 'answers.votes']);
+
             $session = $this->history->resolveSession($sessionId, $model, $userId);
             $context = $this->cache->get($session->id);
 
             if (empty($context)) {
                 $context[] = [
                     'role'    => 'system',
-                    'content' => $this->contextBuilder->build($post),
+                    'content' => $this->contextBuilder->build($question),
                 ];
             }
 
@@ -54,9 +56,9 @@ class PostChatService
                 'session_id'         => $session->id,
                 'content'            => $content,
                 'model_used'         => $model,
-                'post_id'            => $post->id,
+                'question_id'        => $question->id,
                 'processing_time_ms' => round((microtime(true) - $startTime) * 1000, 2),
-                'success'            => !empty($content),
+                'success'            => true,
             ];
 
         } catch (\Exception $e) {
@@ -64,7 +66,7 @@ class PostChatService
                 'session_id'         => $sessionId,
                 'content'            => 'Error: ' . $e->getMessage(),
                 'model_used'         => $model,
-                'post_id'            => $post->id,
+                'question_id'        => $question->id,
                 'processing_time_ms' => 0,
                 'success'            => false,
             ];

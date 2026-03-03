@@ -18,9 +18,10 @@ class AnswerVote extends Model
         'vote_type',
     ];
 
-    public $timestamps = true;
+    protected $casts = [
+        'vote_type' => 'string',
+    ];
 
-    // Relationships
     public function answer(): BelongsTo
     {
         return $this->belongsTo(Answer::class);
@@ -31,4 +32,3 @@ class AnswerVote extends Model
         return $this->belongsTo(User::class);
     }
 }
-

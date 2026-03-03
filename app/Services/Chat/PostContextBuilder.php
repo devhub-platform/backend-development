@@ -2,22 +2,27 @@
 
 namespace App\Services\Chat;
 
-use App\Models\Post;
 use App\Models\Comment;
+use App\Models\Post;
+use Illuminate\Support\Facades\Cache;
 
 class PostContextBuilder
 {
-    // Max chars for post content before truncation
-    private const MAX_POST_CHARS     = 1500;
-    // Max chars per comment
-    private const MAX_COMMENT_CHARS  = 200;
-    // Max number of top-level comments to include
-    private const MAX_COMMENTS       = 5;
+    private const MAX_POST_CHARS    = 1500;
+    private const MAX_COMMENT_CHARS = 200;
+    private const MAX_COMMENTS      = 5;
+    private const CACHE_TTL         = 60 * 10; // 10 minutes
 
-    /**
-     * Build a token-efficient system prompt from the post and its top comments.
-     */
     public function build(Post $post): string
+    {
+        return Cache::remember(
+            "post:context:{$post->id}",
+            self::CACHE_TTL,
+            fn() => $this->buildPrompt($post)
+        );
+    }
+
+    private function buildPrompt(Post $post): string
     {
         $content  = $this->truncate($post->content ?? '', self::MAX_POST_CHARS);
         $comments = $this->buildCommentsBlock($post->id);
@@ -49,14 +54,11 @@ PROMPT;
             ->limit(self::MAX_COMMENTS)
             ->get();
 
-        if ($comments->isEmpty()) {
-            return '';
-        }
+        if ($comments->isEmpty()) return '';
 
         $lines = ["=== TOP COMMENTS ==="];
         foreach ($comments as $i => $comment) {
-            $text    = $this->truncate($comment->content, self::MAX_COMMENT_CHARS);
-            $lines[] = ($i + 1) . ". {$text}";
+            $lines[] = ($i + 1) . ". " . $this->truncate($comment->content, self::MAX_COMMENT_CHARS);
         }
         $lines[] = '';
 

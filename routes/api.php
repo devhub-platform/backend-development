@@ -5,6 +5,9 @@ use App\Http\Controllers\V1\Chats\ChatController;
 use App\Http\Controllers\V1\AiModels\AttachmentController;
 use App\Http\Controllers\V1\AiModels\HistoryController;
 use App\Http\Controllers\V1\AiModels\PostChatController;
+use App\Http\Controllers\V1\AiModels\QuestionChatController;
+use App\Http\Controllers\V1\QuestionController;
+use App\Http\Controllers\V1\AnswerController;
 use App\Http\Controllers\V1\Auth\AuthController;
 use App\Http\Controllers\V1\Auth\ForgetPasswordController;
 use App\Http\Controllers\V1\Auth\SocialiteMediaController;
@@ -30,15 +33,11 @@ use App\Http\Controllers\V1\VerifyAltEmailController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\V1\Chats\MessageController;
 
-//$chatRoutesPrefix = config('musonza_chat.routes.path_prefix', 'chat');
-//$middleware       = config('musonza_chat.routes.middleware', ['web']);
-
 Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
     Route::controller(SocialiteMediaController::class)->group(function () {
         Route::post('auth/google/login', 'loginGoogle');
         Route::get('auth/google/callback', 'callbackGoogle');
-        Route::post('auth/google/login-mobile', 'loginGoogleForMobile');
         Route::post('auth/github/login', 'loginGithub');
         Route::get('auth/github/callback', 'callbackGithub');
     });
@@ -64,6 +63,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
     Route::middleware(['auth:api', 'throttle:25,1'])->group(function () {
 
+        // Auth Actions
         Route::controller(AuthController::class)->group(function () {
             Route::post('logout', 'logout');
             Route::post('refresh', 'refreshToken');
@@ -73,7 +73,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::controller(PostController::class)->group(function () {
             Route::get('user/posts', 'userPosts');
             Route::delete('posts/{post}/force', 'forceDelete');
-            Route::post('posts/{id}/restore', 'restore');
+            Route::post('posts/{post}/restore', 'restore');
             Route::get('posts/recent', 'recentPosts');
             Route::get('posts/top-views', 'topPostsViews');
             Route::get('posts/drafts', 'drafts');
@@ -83,8 +83,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('posts/{post}/tags-list', 'postsTagsList');
             Route::get('posts/{post}/comments', 'postComments');
             Route::post('posts/{post}/report', 'reportPost');
-            Route::post('posts/{post}/restore', 'restore');
-            Route::delete('posts/{post}/force', 'forceDelete');
         });
         Route::apiResource('posts', PostController::class);
 
@@ -94,6 +92,29 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('posts/viewed/recent', 'getRecentViewedPosts');
             Route::delete('posts/viewed/clear', 'clearViewedPosts');
         });
+
+        Route::controller(QuestionController::class)->group(function () {
+            Route::get('questions',                  'index');
+            Route::post('questions/create',          'store');
+            Route::get('questions/hot',              'trending');
+            Route::get('questions/{question}',       'show');
+            Route::put('questions/{question}',       'update');
+            Route::delete('questions/{question}',    'destroy');
+            Route::post('questions/{question}/vote', 'vote');
+        });
+
+        Route::controller(AnswerController::class)->group(function () {
+            Route::get('questions/{question}/answers',                    'index');
+            Route::post('questions/{question}/answers/create',            'store');
+            Route::get('questions/{question}/answers/{answer}',           'show');
+            Route::put('questions/{question}/answers/{answer}',           'update');
+            Route::delete('questions/{question}/answers/{answer}',        'destroy');
+            Route::post('questions/{question}/answers/{answer}/vote',     'vote');
+            Route::post('questions/{question}/answers/{answer}/accept',   'accept');
+            Route::post('questions/{question}/answers/{answer}/unaccept', 'unaccept');
+        });
+
+        Route::post('questions/{question}/ai-chat', [QuestionChatController::class, 'chat']);
 
         Route::controller(UserController::class)->group(function () {
             Route::get('users', 'index');
@@ -204,10 +225,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('notifications/preferences', 'getNotificationPreferences');
             Route::put('notifications/preferences', 'updateNotificationPreferences');
             Route::patch('notifications/preferences/{type}/toggle', 'toggleNotificationPreference');
-
-            // OneSignal player ID management
-            Route::post('notifications/onesignal/player-id', 'storePlayerId');
-            Route::delete('notifications/onesignal/player-id', 'removePlayerId');
         });
 
         Route::controller(TagFollowController::class)->group(function () {
@@ -252,6 +269,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('code/languages', 'languages');
         });
 
+
         Route::controller(ReportController::class)->group(function () {
             Route::post('reports/block/{target}', 'block');
             Route::post('reports/report/{target}', 'report');
@@ -271,130 +289,64 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('settings/alt-email/send-otp', 'addAltEmail');
             Route::post('settings/alt-email/verify-otp', 'verifyAltEmail');
             Route::delete('settings/alt-email/remove', 'removeAltEmail');
-            Route::post('settings/alt-email/make-primary' , 'makeAsPrimaryEmail');
         });
 
         Route::prefix('chat')->controller(ChatController::class)->group(function () {
-
             Route::get('conversations', 'index');
             Route::post('conversations', 'createOrGetConversation');
             Route::get('conversations/{conversation}', 'show');
             Route::delete('conversations/{conversation}', 'destroy');
-
             Route::get('conversations/{conversation}/messages', 'getMessages');
             Route::post('conversations/{conversation}/messages', 'sendMessage');
             Route::delete('conversations/{conversation}/messages/{messageId}', 'deleteMessage');
             Route::post('conversations/{conversation}/messages/read', 'markAsRead');
-            Route::delete('conversations/{conversation}/clear', 'clearConversations');
-
             Route::get('unread-count', 'unreadCount');
         });
 
         Route::prefix('messages')->controller(MessageController::class)->group(function () {
             Route::post('{conversation}/send', 'sendMessage');
             Route::post('{conversation}/send-attachment', 'sendMessageWithAttachment');
-            Route::delete('{messageId}/conversation/{conversation}', 'deleteMessage');
+            Route::delete('{conversation}/{messageId}', 'deleteMessage');
             Route::post('{conversation}/mark-as-read', 'markAsRead');
             Route::put('{conversation}/{messageId}', 'updateMessage');
-            Route::post('{conversation}/{messageId}/reaction', 'reactToMessage');
-            Route::post('{conversation}/{messageId}/toggle-reaction', 'toggleReaction');
-            Route::delete('{conversation}/{messageId}/reaction', 'unreactToMessage');
-            Route::get('{conversation}/{messageId}/reactions-summary', 'getReactionsSummary');
+            Route::post('{conversation}/{messageId}/reaction', 'addReactionToMessage');
             Route::post('{conversation}/{messageId}/flag', 'makeMessageAsFlagged');
         });
 
+        // ─── AI Chat ──────────────────────────────────────────────────────────
         Route::prefix('ai-chat')->group(function () {
+
             Route::post('send', [AIChatController::class, 'chat']);
 
-            Route::post('attachments/upload', [AttachmentController::class, 'upload']);
+            // Separate throttle (10/min) — upload is heavier than regular requests
+            Route::controller(AttachmentController::class)
+                ->prefix('attachments')
+                ->middleware('throttle:10,1')
+                ->group(function () {
+                    Route::post('upload', 'upload');
+                    Route::delete('{attachmentId}', 'destroy');
+                    Route::get('{attachmentId}/status', 'status');
+                });
 
-            Route::prefix('history')->controller(HistoryController::class)->group(function () {
-                Route::get('sessions', 'sessions');
-                Route::post('sessions/create', 'create');
-                Route::get('sessions/{sessionId}', 'show');
-                Route::delete('sessions/{sessionId}', 'delete');
-                Route::post('sessions/{sessionId}/pin', 'pin');
-                Route::post('sessions/{sessionId}/unpin', 'unpin');
-                Route::post('sessions/{sessionId}/close', 'close');
-                Route::post('sessions/{sessionId}/activate', 'activate');
-                Route::put('sessions/{sessionId}/title', 'updateTitle');
+            Route::prefix('sessions')->controller(HistoryController::class)->group(function () {
+                Route::get('/', 'sessions');
+                Route::post('create', 'create');
+                Route::get('{sessionId}', 'show');
+                Route::delete('{sessionId}', 'delete');
+                Route::post('{sessionId}/pin', 'pin');
+                Route::post('{sessionId}/unpin', 'unpin');
+                Route::put('{sessionId}/title', 'updateTitle');
             });
         });
-
-//        $chatRoutesPrefix = config('musonza_chat.routes.path_prefix');
-//        $middleware = config('musonza_chat.routes.middleware');
-//
-//        Route::group([
-//            'middleware' => $middleware ?? ['auth:api'],
-//            'namespace' => 'Musonza\Chat\Http\Controllers',
-//            'prefix' => $chatRoutesPrefix,
-//        ], function () {
-//            /* Conversation */
-//            Route::get('/conversations', 'ConversationController@index')->name('conversations.index');
-//            Route::post('/conversations', 'ConversationController@store')->name('conversations.store');
-//            Route::get('/conversations/{id}', 'ConversationController@show')->name('conversations.show');
-//            Route::put('/conversations/{id}', 'ConversationController@update')->name('conversations.update');
-//            Route::delete('/conversations/{id}', 'ConversationController@destroy')->name('conversations.destroy');
-//
-//            /* Conversation Participation */
-//            Route::post('/conversations/{id}/participants', 'ConversationParticipationController@store')
-//                ->name('conversations.participation.store');
-//            Route::delete('/conversations/{id}/participants/{participation_id}', 'ConversationParticipationController@destroy')
-//                ->name('conversations.participation.destroy');
-//            Route::get('/conversations/{id}/participants/{participation_id}', 'ConversationParticipationController@show')
-//                ->name('conversations.participation.show');
-//            Route::put('/conversations/{id}/participants/{participation_id}', 'ConversationParticipationController@update')
-//                ->name('conversations.participation.update');
-//            Route::get('/conversations/{id}/participants', 'ConversationParticipationController@index')
-//                ->name('conversations.participation.index');
-//
-//            /* Messaging */
-//            Route::post('/conversations/{id}/messages', 'ConversationMessageController@store')
-//                ->name('conversations.messages.store');
-//            Route::get('/conversations/{id}/messages', 'ConversationMessageController@index')
-//                ->name('conversations.messages.index');
-//            Route::get('/conversations/{id}/messages-cursor', 'ConversationMessageController@indexWithCursor')
-//                ->name('conversations.messages.index.cursor');
-//            Route::get('/conversations/{id}/messages/{message_id}', 'ConversationMessageController@show')
-//                ->name('conversations.messages.show');
-//            Route::delete('/conversations/{id}/messages', 'ConversationMessageController@deleteAll')
-//                ->name('conversations.messages.destroy.all');
-//            Route::delete('/conversations/{id}/messages/{message_id}', 'ConversationMessageController@destroy')
-//                ->name('conversations.messages.destroy');
-//        });
-
 
     });
 });
 
-Route::post('send-test-notification', function () {
-    $validated = request()->validate([
-        'player_id' => 'required|string',
-        'heading' => 'required|string|max:255',
-        'message' => 'required|string|max:1000',
-        'url' => 'nullable|url',
-    ]);
-
-    $service = app(\App\Services\OneSignalService::class);
-
-    $result = $service->sendToUser(
-        message: $validated['message'],
-        playerId: $validated['player_id'],
-        heading: $validated['heading'],
-        url: $validated['url'] ?? null,
-        data: ['sent_at' => now()->toISOString(), 'type' => 'test']
-    );
-
-    return response()->json($result);
-});
-
 Route::fallback(function () {
     return response()->json([
-        'Hey_there!' => 'Ramadan Kareem ❤! Welcome to Devhub API.',
+        'Hey_there!' => 'Ramadan Mubarak!!',
         'message' => 'Resource not found, the API endpoint does not exist',
         'documentation' => 'https://0yviq6a5i5.apidog.io/',
-        'version' => 'API v1 - Devhub is a platform for developers to share knowledge, collaborate on projects, and connect with other developers.',
+        'version' => 'API v1 - DevHub is a platform for developers to share knowledge, collaborate on projects, and connect with other developers.',
     ], 404);
 });
-// for testing
-Route::post('broadcast-test', [MessageController::class, 'broadcastTest']);

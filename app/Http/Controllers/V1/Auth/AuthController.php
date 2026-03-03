@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\V1\Auth;
 
-use App\Http\Controllers\V1\Controller;
+use App\Http\Controllers\Controller;
 use App\Http\Requests\AuthRequests\LoginRequest;
 use App\Http\Requests\AuthRequests\RegisteredRequest;
 use App\Http\Resources\UserResource;

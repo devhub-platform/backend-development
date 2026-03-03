@@ -17,14 +17,15 @@ class Attachment extends Model
         'filename',
         'user_id',
         'session_id',
+        's3_path',
+        'extension',
     ];
 
-    protected static function boot()
+    protected static function boot(): void
     {
         parent::boot();
 
-        // Ensure every attachment is linked to a user
-        static::creating(function ($attachment) {
+        static::creating(function (self $attachment) {
             if (!$attachment->user_id) {
                 throw new \Exception('Attachment must have a user_id');
             }

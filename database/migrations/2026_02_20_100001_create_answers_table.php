@@ -13,9 +13,9 @@ return new class extends Migration {
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->text('content');
             $table->boolean('is_accepted')->default(false);
-            $table->integer('helpful_count')->default(0);
-            $table->timestamps();
+            $table->unsignedInteger('helpful_count')->default(0);
             $table->softDeletes();
+            $table->timestamps();
 
             $table->index('question_id');
             $table->index('user_id');
@@ -28,4 +28,3 @@ return new class extends Migration {
         Schema::dropIfExists('answers');
     }
 };
-
