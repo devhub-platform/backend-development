@@ -35,12 +35,9 @@ class SocialiteMediaController
             $token = JWTAuth::fromUser($user);
 
             return response()->json([
-                'message' => 'Google login successful',
-                'data' => [
-                    'user' => new UserResource($user),
-                    'token' => $token,
-                    'token_type' => 'bearer',
-                ],
+                'message' => 'Google login successful with mobile',
+                'user' => new UserResource($user),
+                'token' => $token,
             ], 200);
         } catch (ValidationException $e) {
             return response()->json([

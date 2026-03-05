@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\V1\Chats;
 
+use App\Events\MessageDeleted;
+use App\Events\MessageUpdated;
 use App\Http\Controllers\V1\Controller;
 use App\Http\Resources\MessageResource;
 use App\Http\Requests\MessagesRequests\SendMessageAttchmentRequest;
@@ -53,7 +55,7 @@ class MessageController extends Controller
 
         $fileUrl = $this->awsS3Service->uploadFile($file, 'chat_attachments');
 
-        $message = Chat::message('Attachment')
+        $attachmentMessage = Chat::message('Attachment')
             ->type('attachment')
             ->data([
                 'file_name' => $fileName,
@@ -63,13 +65,27 @@ class MessageController extends Controller
             ->to($conversation)
             ->send();
 
+        $messages = [
+            'attachment' => new MessageResource($attachmentMessage)
+        ];
+
+        if (!empty($validated['message'])) {
+            $textMessage = Chat::message($validated['message'])
+                ->type('text')
+                ->from(auth()->user())
+                ->to($conversation)
+                ->send();
+
+            $messages['text'] = new MessageResource($textMessage);
+        }
+
         return response()->json([
-            'message' => 'Attachment sent successfully.',
-            'data' => new MessageResource($message),
+            'message' => 'Attachment sent successfully.' . (!empty($validated['message']) ? ' Text message also sent.' : ''),
+            'data' => $messages,
         ], 201);
     }
 
-    public function deleteMessage(int $messageId, Conversation $conversation): JsonResponse
+    public function deleteMessage(Conversation $conversation, int $messageId): JsonResponse
     {
         $this->authorize('view', $conversation);
 
@@ -77,6 +93,8 @@ class MessageController extends Controller
         Chat::message($message)
             ->setParticipant(auth()->user())
             ->delete();
+
+        event(new MessageDeleted($messageId, $conversation->id));
 
         return response()->json([
             'message' => 'Message deleted successfully.',
@@ -121,9 +139,13 @@ class MessageController extends Controller
             'type' => $validated['type'] ?? 'text',
         ]);
 
+        $updatedMessage = $message->fresh();
+
+        broadcast(new MessageUpdated($updatedMessage, $conversation->id))->toOthers();
+
         return response()->json([
             'message' => 'Message updated successfully.',
-            'data' => $message->fresh()
+            'data' => new MessageResource($updatedMessage),
         ], 200);
     }
 
