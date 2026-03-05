@@ -60,8 +60,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::post('password/reset', 'resetPassword');
     });
 
-    Route::get('ai-chat/models', [AIChatController::class, 'models']);
-
     Route::middleware(['auth:api', 'throttle:25,1'])->group(function () {
 
         // Auth Actions
@@ -305,20 +303,33 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('unread-count', 'unreadCount');
         });
 
+//        Route::prefix('messages')->controller(MessageController::class)->group(function () {
+//            Route::post('{conversation}/send', 'sendMessage');
+//            Route::post('{conversation}/send-attachment', 'sendMessageWithAttachment');
+//            Route::delete('{conversation}/{messageId}', 'deleteMessage');
+//            Route::post('{conversation}/mark-as-read', 'markAsRead');
+//            Route::put('{conversation}/{messageId}', 'updateMessage');
+//            Route::post('{conversation}/{messageId}/reaction', 'addReactionToMessage');
+//            Route::post('{conversation}/{messageId}/flag', 'makeMessageAsFlagged');
+//        });
+
         Route::prefix('messages')->controller(MessageController::class)->group(function () {
-            Route::post('{conversation}/send', 'sendMessage');
-            Route::post('{conversation}/send-attachment', 'sendMessageWithAttachment');
-            Route::delete('{conversation}/{messageId}', 'deleteMessage');
-            Route::post('{conversation}/mark-as-read', 'markAsRead');
-            Route::put('{conversation}/{messageId}', 'updateMessage');
-            Route::post('{conversation}/{messageId}/reaction', 'addReactionToMessage');
-            Route::post('{conversation}/{messageId}/flag', 'makeMessageAsFlagged');
+            Route::post('/conversation/{conversation}/send', 'sendMessage');
+            Route::post('/conversation/{conversation}/send-attachment', 'sendMessageWithAttachment');
+            Route::delete('{messageId}/conversation/{conversation}', 'deleteMessage');
+            Route::post('/conversation{conversation}/mark-as-read', 'markAsRead');
+            Route::put('{messageId}/conversation/{conversation}', 'updateMessage');
+            Route::post('{messageId}/conversation/{conversation}/reaction', 'addReactionToMessage');
+            Route::post('{messageId}/conversation/{conversation}/flag', 'makeMessageAsFlagged');
         });
 
         // ─── AI Chat ──────────────────────────────────────────────────────────
         Route::prefix('ai-chat')->group(function () {
 
-            Route::post('send', [AIChatController::class, 'chat']);
+            Route::controller(AIChatController::class)->group(function () {
+                Route::post('send', 'chat');
+                Route::get('ai-chat/models', 'models');
+            });
 
             // Separate throttle (10/min) — upload is heavier than regular requests
             Route::controller(AttachmentController::class)

@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\V1\Chats;
 
+use App\Events\MessageDeleted;
 use App\Http\Controllers\V1\Controller;
+use App\Http\Resources\ConversationResource;
 use App\Http\Resources\MessageResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -121,6 +123,8 @@ class ChatController extends Controller
         Chat::message($message)
             ->setParticipant($request->user())
             ->delete();
+
+        event(new MessageDeleted($messageId, $conversation->id));
 
         return response()->json(['message' => 'Message deleted.']);
     }

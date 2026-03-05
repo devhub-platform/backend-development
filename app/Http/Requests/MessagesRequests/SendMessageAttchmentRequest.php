@@ -11,6 +11,7 @@ class SendMessageAttchmentRequest extends FormRequest
         return [
             'file' => ['required', 'file', 'max:10240'],
             'file_name' => ['nullable', 'string', 'max:255'],
+            'message' => ['nullable', 'string', 'max:5000'],
         ];
     }
 
