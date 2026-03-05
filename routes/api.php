@@ -38,6 +38,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
     Route::controller(SocialiteMediaController::class)->group(function () {
         Route::post('auth/google/login', 'loginGoogle');
         Route::get('auth/google/callback', 'callbackGoogle');
+        Route::post('auth/google/login-mobile', 'loginGoogleForMobile');
         Route::post('auth/github/login', 'loginGithub');
         Route::get('auth/github/callback', 'callbackGithub');
     });
@@ -94,23 +95,23 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         });
 
         Route::controller(QuestionController::class)->group(function () {
-            Route::get('questions',                  'index');
-            Route::post('questions/create',          'store');
-            Route::get('questions/hot',              'trending');
-            Route::get('questions/{question}',       'show');
-            Route::put('questions/{question}',       'update');
-            Route::delete('questions/{question}',    'destroy');
+            Route::get('questions', 'index');
+            Route::post('questions/create', 'store');
+            Route::get('questions/hot', 'trending');
+            Route::get('questions/{question}', 'show');
+            Route::put('questions/{question}', 'update');
+            Route::delete('questions/{question}', 'destroy');
             Route::post('questions/{question}/vote', 'vote');
         });
 
         Route::controller(AnswerController::class)->group(function () {
-            Route::get('questions/{question}/answers',                    'index');
-            Route::post('questions/{question}/answers/create',            'store');
-            Route::get('questions/{question}/answers/{answer}',           'show');
-            Route::put('questions/{question}/answers/{answer}',           'update');
-            Route::delete('questions/{question}/answers/{answer}',        'destroy');
-            Route::post('questions/{question}/answers/{answer}/vote',     'vote');
-            Route::post('questions/{question}/answers/{answer}/accept',   'accept');
+            Route::get('questions/{question}/answers', 'index');
+            Route::post('questions/{question}/answers/create', 'store');
+            Route::get('questions/{question}/answers/{answer}', 'show');
+            Route::put('questions/{question}/answers/{answer}', 'update');
+            Route::delete('questions/{question}/answers/{answer}', 'destroy');
+            Route::post('questions/{question}/answers/{answer}/vote', 'vote');
+            Route::post('questions/{question}/answers/{answer}/accept', 'accept');
             Route::post('questions/{question}/answers/{answer}/unaccept', 'unaccept');
         });
 
@@ -269,7 +270,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('code/languages', 'languages');
         });
 
-
         Route::controller(ReportController::class)->group(function () {
             Route::post('reports/block/{target}', 'block');
             Route::post('reports/report/{target}', 'report');
@@ -289,6 +289,8 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('settings/alt-email/send-otp', 'addAltEmail');
             Route::post('settings/alt-email/verify-otp', 'verifyAltEmail');
             Route::delete('settings/alt-email/remove', 'removeAltEmail');
+            Route::post('settings/alt-email/send-reset-otp', 'resendAltEmailOtp');
+            Route::post('settings/alt-email/make-as-primary', 'makeAsPrimaryEmail');
         });
 
         Route::prefix('chat')->controller(ChatController::class)->group(function () {
@@ -347,6 +349,6 @@ Route::fallback(function () {
         'Hey_there!' => 'Ramadan Mubarak!!',
         'message' => 'Resource not found, the API endpoint does not exist',
         'documentation' => 'https://0yviq6a5i5.apidog.io/',
-        'version' => 'API v1 - DevHub is a platform for developers to share knowledge, collaborate on projects, and connect with other developers.',
+        'version' => 'API v1',
     ], 404);
 });

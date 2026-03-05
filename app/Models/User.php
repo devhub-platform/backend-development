@@ -273,6 +273,17 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             ->first();
     }
 
+    /**
+     * Determine if the currently authenticated user logged in via their alternative email.
+     */
+    public function isLoginViaAltEmail(): bool
+    {
+        $authEmail = auth()->payload()?->get('email') ?? auth()->user()?->email;
+
+        return $this->alt_email !== null
+            && $authEmail === $this->alt_email;
+    }
+
     public function updateReaction(string $type, $reactable): ?\Binafy\LaravelReaction\Models\Reaction
     {
         $userForeignName = config('laravel-reaction.user.foreign_key', 'user_id');
