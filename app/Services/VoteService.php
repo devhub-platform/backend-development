@@ -80,16 +80,6 @@ class VoteService
     public function markAnswerHelpful(Answer $answer): Answer
     {
         $answer->increment('helpful_count');
-        return $answer->fresh();
-    }
-
-    public function getQuestionVoteScore(Question $question): int
-    {
-        return $question->voteScore();
-    }
-
-    public function getAnswerVoteScore(Answer $answer): int
-    {
-        return $answer->voteScore();
+        return $answer->fresh()->load(['user', 'votes']);
     }
 }

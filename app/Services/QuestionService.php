@@ -137,11 +137,12 @@ class QuestionService
             ->paginate($perPage);
     }
 
-    public function getTrendingQuestions(int $perPage = 15): LengthAwarePaginator
+    public function getTrendingQuestions(int $limit = 5): \Illuminate\Database\Eloquent\Collection
     {
-        return Question::with(['user', 'post', 'votes', 'answers'])
+        return Question::with(['user', 'votes', 'answers'])
             ->hot()
-            ->paginate($perPage);
+            ->limit($limit)
+            ->get();
     }
 
     private function trackView(Question $question, ?int $userId): void
