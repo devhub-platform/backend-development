@@ -35,12 +35,13 @@ class QuestionService
     }
 
     public function getQuestions(
-        int    $perPage    = 15,
-        string $sortBy     = 'recent',
-        ?bool  $isResolved = null,
-        ?int   $postId     = null
+        int     $perPage    = 15,
+        string  $sortBy     = 'recent',
+        ?bool   $isResolved = null,
+        ?int    $postId     = null,
+        ?string $tag        = null
     ): LengthAwarePaginator {
-        $query = Question::query()->with(['user', 'post']);
+        $query = Question::query()->with(['user', 'post', 'votes', 'answers']);
 
         if ($isResolved !== null) {
             $query->where('is_resolved', $isResolved);
@@ -50,8 +51,13 @@ class QuestionService
             $query->where('post_id', $postId);
         }
 
+        if ($tag) {
+            $query->whereHas('tags', fn($q) => $q->where('name', $tag));
+        }
+
         match ($sortBy) {
-            'popular'    => $query->popular(),
+            'votes'      => $query->orderByRaw('(SELECT COUNT(*) FROM question_votes WHERE question_votes.question_id = questions.id AND vote_type = "upvote") - (SELECT COUNT(*) FROM question_votes WHERE question_votes.question_id = questions.id AND vote_type = "downvote") DESC'),
+            'views'      => $query->popular(),
             'unanswered' => $query->unanswered()->recent(),
             'hot'        => $query->hot(),
             default      => $query->recent(),
@@ -67,6 +73,7 @@ class QuestionService
         return $question->load([
             'user',
             'post',
+            'votes',
             'answers' => fn($q) => $q
                 ->orderByRaw('is_accepted DESC')
                 ->orderByRaw('helpful_count DESC')
@@ -76,14 +83,10 @@ class QuestionService
         ]);
     }
 
-    /**
-     * Accept an answer - multiple answers can be accepted
-     */
     public function acceptAnswer(Question $question, int $answerId): Question
     {
         $question->answers()->where('id', $answerId)->update(['is_accepted' => true]);
 
-        // Mark question as resolved if not already
         if (!$question->is_resolved) {
             $question->update(['is_resolved' => true]);
         }
@@ -91,15 +94,10 @@ class QuestionService
         return $question->fresh();
     }
 
-    /**
-     * Unaccept a specific answer
-     * If no more accepted answers → mark question as unresolved
-     */
     public function unacceptAnswer(Question $question, int $answerId): Question
     {
         $question->answers()->where('id', $answerId)->update(['is_accepted' => false]);
 
-        // Check if any accepted answers remain
         $hasAccepted = $question->answers()->where('is_accepted', true)->exists();
 
         if (!$hasAccepted) {
@@ -116,7 +114,7 @@ class QuestionService
                 ->orWhere('title', 'like', "%{$query}%")
                 ->orWhere('content', 'like', "%{$query}%");
         })
-            ->with(['user', 'post'])
+            ->with(['user', 'post', 'votes', 'answers'])
             ->recent()
             ->paginate($perPage);
     }
@@ -124,7 +122,7 @@ class QuestionService
     public function getUserQuestions(User $user, int $perPage = 15): LengthAwarePaginator
     {
         return $user->questions()
-            ->with(['user', 'post'])
+            ->with(['user', 'post', 'votes', 'answers'])
             ->recent()
             ->paginate($perPage);
     }
@@ -134,16 +132,17 @@ class QuestionService
         return Question::whereIn('id', function ($query) use ($user) {
             $query->select('question_id')->from('answers')->where('user_id', $user->id);
         })
-            ->with(['user', 'post'])
+            ->with(['user', 'post', 'votes', 'answers'])
             ->recent()
             ->paginate($perPage);
     }
 
-    public function getTrendingQuestions(int $perPage = 15): LengthAwarePaginator
+    public function getTrendingQuestions(int $limit = 5): \Illuminate\Database\Eloquent\Collection
     {
-        return Question::with(['user', 'post'])
+        return Question::with(['user', 'votes', 'answers'])
             ->hot()
-            ->paginate($perPage);
+            ->limit($limit)
+            ->get();
     }
 
     private function trackView(Question $question, ?int $userId): void
@@ -153,14 +152,10 @@ class QuestionService
             return;
         }
 
-        // firstOrCreate is atomic - prevents race condition
-        [$view, $created] = [
-            null,
-            false,
-        ];
+        $created = false;
 
         DB::transaction(function () use ($question, $userId, &$created) {
-            $result = QuestionView::firstOrCreate(
+            $result  = QuestionView::firstOrCreate(
                 ['question_id' => $question->id, 'user_id' => $userId],
                 ['viewed_at'   => now()]
             );
