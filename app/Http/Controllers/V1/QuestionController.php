@@ -22,10 +22,6 @@ class QuestionController extends \Illuminate\Routing\Controller
         private VoteService     $voteService
     ) {}
 
-    /**
-     * List questions with filters & sorting
-     * Query params: per_page, sort_by (recent|popular|unanswered|hot), resolved, post_id
-     */
     public function index(Request $request): JsonResponse
     {
         $questions = $this->questionService->getQuestions(
@@ -96,9 +92,6 @@ class QuestionController extends \Illuminate\Routing\Controller
         ]);
     }
 
-    /**
-     * Vote on a question (upvote/downvote - toggleable)
-     */
     public function vote(VoteQuestionRequest $request, Question $question): JsonResponse
     {
         $this->authorize('vote', $question);
@@ -109,48 +102,19 @@ class QuestionController extends \Illuminate\Routing\Controller
             $request->input('vote_type')
         );
 
+        // Reload votes from DB after voting - single query
+        $question->load('votes');
+        $upvotes   = $question->votes->where('vote_type', 'upvote')->count();
+        $downvotes = $question->votes->where('vote_type', 'downvote')->count();
+
         return response()->json([
             'success'           => true,
             'message'           => $vote ? 'Vote recorded' : 'Vote removed',
             'data'              => [
                 'question_id'       => $question->id,
-                'vote_score'        => $question->fresh()->voteScore(),
+                'vote_score'        => $upvotes - $downvotes,
                 'current_user_vote' => $vote?->vote_type,
             ],
-        ]);
-    }
-
-    /**
-     * Accept an answer as the best solution
-     */
-    public function acceptAnswer(Request $request, Question $question): JsonResponse
-    {
-        $this->authorize('update', $question);
-
-        $request->validate(['answer_id' => 'required|integer|exists:answers,id']);
-
-        $question = $this->questionService->acceptAnswer($question, $request->integer('answer_id'));
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Answer accepted successfully',
-            'data'    => new QuestionResource($question),
-        ]);
-    }
-
-    /**
-     * Unaccept the current accepted answer
-     */
-    public function unacceptAnswer(Question $question): JsonResponse
-    {
-        $this->authorize('update', $question);
-
-        $question = $this->questionService->unacceptAnswer($question);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Answer unaccepted successfully',
-            'data'    => new QuestionResource($question),
         ]);
     }
 
@@ -191,17 +155,13 @@ class QuestionController extends \Illuminate\Routing\Controller
         ]);
     }
 
-    /**
-     * Hot/Trending questions
-     */
     public function trending(): JsonResponse
     {
-        $questions = $this->questionService->getTrendingQuestions();
+        $questions = $this->questionService->getTrendingQuestions(limit: 5);
 
         return response()->json([
             'success' => true,
             'data'    => QuestionResource::collection($questions),
-            'meta'    => $this->paginationMeta($questions),
         ]);
     }
 

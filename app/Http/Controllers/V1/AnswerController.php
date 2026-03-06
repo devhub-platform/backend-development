@@ -120,6 +120,7 @@ class AnswerController extends \Illuminate\Routing\Controller
 
     public function accept(Question $question, Answer $answer): JsonResponse
     {
+        $answer->loadMissing('question');
         $this->authorize('accept', $answer);
 
         if ($answer->question_id !== $question->id) {
@@ -143,6 +144,7 @@ class AnswerController extends \Illuminate\Routing\Controller
 
     public function unaccept(Question $question, Answer $answer): JsonResponse
     {
+        $answer->loadMissing('question');
         $this->authorize('accept', $answer);
 
         if ($answer->question_id !== $question->id) {
