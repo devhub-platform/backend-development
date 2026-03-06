@@ -303,16 +303,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('unread-count', 'unreadCount');
         });
 
-//        Route::prefix('messages')->controller(MessageController::class)->group(function () {
-//            Route::post('{conversation}/send', 'sendMessage');
-//            Route::post('{conversation}/send-attachment', 'sendMessageWithAttachment');
-//            Route::delete('{conversation}/{messageId}', 'deleteMessage');
-//            Route::post('{conversation}/mark-as-read', 'markAsRead');
-//            Route::put('{conversation}/{messageId}', 'updateMessage');
-//            Route::post('{conversation}/{messageId}/reaction', 'addReactionToMessage');
-//            Route::post('{conversation}/{messageId}/flag', 'makeMessageAsFlagged');
-//        });
-
         Route::prefix('messages')->controller(MessageController::class)->group(function () {
             Route::post('/conversation/{conversation}/send', 'sendMessage');
             Route::post('/conversation/{conversation}/send-attachment', 'sendMessageWithAttachment');
