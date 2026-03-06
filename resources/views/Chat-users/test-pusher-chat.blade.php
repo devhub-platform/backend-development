@@ -34,7 +34,7 @@
 
     const pusher = new Pusher(APP_KEY, {
         cluster: CLUSTER,
-        authEndpoint: "https://devhub.test/api/broadcasting/auth",
+        authEndpoint: "http://devhub.eu-north-1.elasticbeanstalk.com/api/broadcasting/auth",
         auth: {
             headers: {
                 Authorization: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZGV2aHViLmV1LW5vcnRoLTEuZWxhc3RpY2JlYW5zdGFsay5jb20vYXBpL3YxL2F1dGgvZ29vZ2xlL2NhbGxiYWNrIiwiaWF0IjoxNzcyNzAyODI1LCJleHAiOjE3NzMzMDc2MjUsIm5iZiI6MTc3MjcwMjgyNSwianRpIjoiRENZQlFWUXNzcmhGc3o0TyIsInN1YiI6IjQwNiIsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.aWZULxafPyPgNvcR5E0bbOP0f3dI3hLsrrkP_cS9mkk"
