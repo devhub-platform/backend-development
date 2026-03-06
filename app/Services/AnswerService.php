@@ -18,13 +18,13 @@ class AnswerService
 
         $question->increment('answers_count');
 
-        return $answer->load('user');
+        return $answer->load(['user', 'votes']);
     }
 
     public function updateAnswer(Answer $answer, string $content): Answer
     {
         $answer->update(['content' => $content]);
-        return $answer->fresh();
+        return $answer->fresh()->load(['user', 'votes']);
     }
 
     public function deleteAnswer(Answer $answer): bool
@@ -49,7 +49,7 @@ class AnswerService
     public function getUserAnswers(User $user, int $perPage = 15): LengthAwarePaginator
     {
         return $user->answers()
-            ->with(['user', 'question'])
+            ->with(['user', 'question', 'votes'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
@@ -58,7 +58,7 @@ class AnswerService
     {
         return $user->answers()
             ->where('is_accepted', true)
-            ->with(['user', 'question'])
+            ->with(['user', 'question', 'votes'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }

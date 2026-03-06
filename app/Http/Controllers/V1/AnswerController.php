@@ -75,7 +75,7 @@ class AnswerController extends \Illuminate\Routing\Controller
 
         return response()->json([
             'success' => true,
-            'data'    => new AnswerResource($answer->load('user')),
+            'data'    => new AnswerResource($answer->load(['user', 'votes'])),
         ]);
     }
 
@@ -118,9 +118,6 @@ class AnswerController extends \Illuminate\Routing\Controller
         ]);
     }
 
-    /**
-     * Accept an answer - question owner can accept multiple answers
-     */
     public function accept(Question $question, Answer $answer): JsonResponse
     {
         $this->authorize('accept', $answer);
@@ -134,18 +131,16 @@ class AnswerController extends \Illuminate\Routing\Controller
 
         $this->questionService->acceptAnswer($question, $answer->id);
 
-        $answer->user->notify(new AnswerAcceptedNotification($answer->fresh()));
+        $fresh = $answer->fresh()->load(['user', 'votes']);
+        $fresh->user->notify(new AnswerAcceptedNotification($fresh));
 
         return response()->json([
             'success' => true,
             'message' => 'Answer accepted successfully',
-            'data'    => new AnswerResource($answer->fresh()),
+            'data'    => new AnswerResource($fresh),
         ]);
     }
 
-    /**
-     * Unaccept a specific answer
-     */
     public function unaccept(Question $question, Answer $answer): JsonResponse
     {
         $this->authorize('accept', $answer);
@@ -162,13 +157,10 @@ class AnswerController extends \Illuminate\Routing\Controller
         return response()->json([
             'success' => true,
             'message' => 'Answer unaccepted successfully',
-            'data'    => new AnswerResource($answer->fresh()),
+            'data'    => new AnswerResource($answer->fresh()->load(['user', 'votes'])),
         ]);
     }
 
-    /**
-     * Vote on an answer (upvote/downvote - toggleable)
-     */
     public function vote(VoteAnswerRequest $request, Question $question, Answer $answer): JsonResponse
     {
         $this->authorize('vote', $answer);
@@ -186,12 +178,17 @@ class AnswerController extends \Illuminate\Routing\Controller
             $request->input('vote_type')
         );
 
+        // Reload votes from DB after voting to get accurate score
+        $answer->load('votes');
+        $upvotes   = $answer->votes->where('vote_type', 'upvote')->count();
+        $downvotes = $answer->votes->where('vote_type', 'downvote')->count();
+
         return response()->json([
-            'success' => true,
-            'message' => $vote ? 'Vote recorded' : 'Vote removed',
-            'data'    => [
+            'success'           => true,
+            'message'           => $vote ? 'Vote recorded' : 'Vote removed',
+            'data'              => [
                 'answer_id'         => $answer->id,
-                'vote_score'        => $answer->fresh()->voteScore(),
+                'vote_score'        => $upvotes - $downvotes,
                 'current_user_vote' => $vote?->vote_type,
             ],
         ]);

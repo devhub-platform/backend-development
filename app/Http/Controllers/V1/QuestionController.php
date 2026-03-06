@@ -31,8 +31,9 @@ class QuestionController extends \Illuminate\Routing\Controller
         $questions = $this->questionService->getQuestions(
             perPage:    $request->integer('per_page', 15),
             sortBy:     $request->query('sort_by', 'recent'),
-            isResolved: $request->has('resolved') ? $request->boolean('resolved') : null,
+            isResolved: $request->has('is_resolved') ? $request->boolean('is_resolved') : null,
             postId:     $request->integer('post_id') ?: null,
+            tag:        $request->query('tag'),
         );
 
         return response()->json([
