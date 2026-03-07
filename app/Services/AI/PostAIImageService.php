@@ -12,7 +12,9 @@ class PostAIImageService
     public function __construct(
         private HackClubImageService         $imageGenerator,
         private ImageUploadCloudinaryService $cloudinary,
-    ) {}
+    )
+    {
+    }
 
     /**
      * Generate an image from a prompt and upload it to Cloudinary.
@@ -30,7 +32,7 @@ class PostAIImageService
 
         // 2. Convert base64 to a temp file and upload to Cloudinary
         $imageData = base64_decode($base64);
-        $tempPath  = sys_get_temp_dir() . '/ai_img_' . Str::uuid() . '.png';
+        $tempPath = sys_get_temp_dir() . '/ai_img_' . Str::uuid() . '.png';
 
         try {
             file_put_contents($tempPath, $imageData);
@@ -59,11 +61,11 @@ class PostAIImageService
 
         // 3. Store as pending — not attached to any post yet
         return GeneratedPostImage::create([
-            'user_id'    => $userId,
-            'prompt'     => $prompt,
+            'user_id' => $userId,
+            'prompt' => $prompt,
             'secure_url' => $secureUrl,
-            'public_id'  => $publicId,
-            'status'     => 'pending',
+            'public_id' => $publicId,
+            'status' => 'pending',
         ]);
     }
 
@@ -82,7 +84,7 @@ class PostAIImageService
 
         $image->update([
             'post_id' => $postId,
-            'status'  => 'confirmed',
+            'status' => 'confirmed',
         ]);
 
         return $image->secure_url;

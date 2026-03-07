@@ -60,6 +60,11 @@ class HackClubImageService
             $data   = json_decode($response->getBody()->getContents(), true);
             $base64 = $data['data'][0]['b64_json'] ?? null;
 
+            Log::info('HackClub image generation response', [
+                'model' => $model,
+                'data'  => isset($data['data'][0]) ? 'b64_json present' : 'b64_json missing',
+            ]);
+
             if (!$base64) {
                 throw new \Exception('Image response missing b64_json field');
             }
