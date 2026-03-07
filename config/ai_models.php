@@ -2,14 +2,14 @@
 
 return [
 
-    'post_chat' => 'google/gemini-2.5-flash',
+    'post_chat'     => 'google/gemini-2.5-flash',
     'question_chat' => 'google/gemini-2.5-flash',
-
     'default'       => 'google/gemini-2.5-flash',
+
     'chat' => [
         [
             'id'       => 'openai/gpt-oss-120b',
-            'title'    => 'GPT OSS 120B',
+            'title'    => 'ChatGPT OSS',
             'best_for' => 'General Chat',
             'fallback' => 'openai/gpt-5-mini',
             'vision'   => true,
@@ -46,6 +46,23 @@ return [
             'best_for' => 'Long Reasoning',
             'fallback' => 'deepseek/deepseek-r1-0528',
         ],
-
     ],
+
+    'image' => [
+        [
+            'id'       => 'google/gemini-2.5-flash-image',
+            'title'    => 'Nano Banana',
+            'best_for' => 'Fast image generation',
+            'cost'     => 0.04,
+            'default'  => true,
+        ],
+        [
+            'id'       => 'google/gemini-3.1-flash-image-preview',
+            'title'    => 'Nano Banana 2',
+            'best_for' => 'High quality image generation',
+            'cost'     => 0.07,
+            'default'  => false,
+        ],
+    ],
+
 ];
