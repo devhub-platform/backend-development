@@ -16,6 +16,7 @@ class PostContentGeneratorService
         $this->client = new Client([
             'base_uri'        => rtrim(config('services.llama.base_url'), '/') . '/',
             'headers'         => [
+                'Authorization'   => 'Bearer ' . config('services.llama.api_key'),
                 'x-rapidapi-key'  => config('services.llama.api_key'),
                 'x-rapidapi-host' => config('services.llama.host'),
                 'Content-Type'    => 'application/json',

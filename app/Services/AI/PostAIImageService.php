@@ -23,10 +23,10 @@ class PostAIImageService
      *
      * @throws \Exception if generation or upload fails.
      */
-    public function generate(string $prompt, int $userId): GeneratedPostImage
+    public function generate(string $prompt, int $userId, ?string $model = null): GeneratedPostImage
     {
         // 1. Call HackClub Nanobanana → get base64
-        $base64 = $this->imageGenerator->generateBase64($prompt);
+        $base64 = $this->imageGenerator->generateBase64($prompt, $model);
 
         // 2. Convert base64 to a temp file and upload to Cloudinary
         $imageData = base64_decode($base64);

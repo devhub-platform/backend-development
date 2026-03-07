@@ -102,7 +102,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             ->group(function () {
                 Route::post('generate-image',        'generateImage');
                 Route::post('generate-content',      'generateContent');
-                Route::post('confirm-image',         'confirmImage');
                 Route::delete('generated-images/{id}', 'discardImage');
             });
 

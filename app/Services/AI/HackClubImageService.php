@@ -11,19 +11,15 @@ class HackClubImageService
 {
     private Client $client;
 
-    /**
-     * Nanobanana is HackClub's image generation model.
-     * It returns a base64-encoded PNG in the response body.
-     */
-    private const MODEL    = 'nanobanana';
     private const ENDPOINT = 'images/generations';
 
-    public function __construct()
-    {
+    public function __construct(
+        private ModelResolver $resolver,
+    ) {
         $this->client = new Client([
-            'base_uri'        => rtrim(config('services.hackClub.base_url', 'https://ai.hackclub.com/proxy/v1'), '/') . '/',
+            'base_uri'        => rtrim(config('services.hackai.base_url', 'https://ai.hackclub.com/proxy/v1'), '/') . '/',
             'headers'         => [
-                'Authorization' => 'Bearer ' . config('services.hackClub.api_key'),
+                'Authorization' => 'Bearer ' . config('services.hackai.token'),
                 'Content-Type'  => 'application/json',
             ],
             'connect_timeout' => 10,
@@ -33,30 +29,35 @@ class HackClubImageService
 
     /**
      * Generate an image from a text prompt.
+     * Model is resolved automatically based on prompt complexity unless explicitly passed.
      * Returns the raw base64 string (without the data URI prefix).
      *
      * @throws \Exception on API failure or unexpected response format.
      */
-    public function generateBase64(string $prompt): string
+    public function generateBase64(string $prompt, ?string $model = null): string
     {
-        Log::info('HackClub image generation request', ['prompt' => $prompt]);
+        $model = $this->resolver->resolveImageModel($prompt, $model);
+
+        Log::info('HackClub image generation request', [
+            'model'  => $model,
+            'prompt' => $prompt,
+            'cost'   => $this->resolver->imageModelCost($model),
+        ]);
 
         try {
             $response = $this->client->post(self::ENDPOINT, [
                 'json' => [
-                    'model'  => self::MODEL,
+                    'model'  => $model,
                     'prompt' => $prompt,
                     'n'      => 1,
                 ],
             ]);
 
-            $data = json_decode($response->getBody()->getContents(), true);
-
-            // Response format: { data: [{ b64_json: "..." }] }
+            $data   = json_decode($response->getBody()->getContents(), true);
             $base64 = $data['data'][0]['b64_json'] ?? null;
 
             if (!$base64) {
-                throw new \Exception('HackClub image response missing b64_json field');
+                throw new \Exception('Image response missing b64_json field');
             }
 
             return $base64;
@@ -74,6 +75,7 @@ class HackClubImageService
             }
 
             Log::error('HackClub image generation: API error', [
+                'model'   => $model,
                 'code'    => $e->getCode(),
                 'message' => $e->getMessage(),
                 'body'    => $body,
