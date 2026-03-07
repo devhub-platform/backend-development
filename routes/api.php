@@ -317,8 +317,8 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::prefix('ai-chat')->group(function () {
 
             Route::controller(AIChatController::class)->group(function () {
-                Route::post('send', 'chat');
-                Route::get('ai-chat/models', 'models');
+                Route::post('/send', 'chat');
+                Route::get('/models', 'models');
             });
 
             // Separate throttle (10/min) — upload is heavier than regular requests
@@ -341,7 +341,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
                 Route::put('{sessionId}/title', 'updateTitle');
             });
         });
-
     });
 });
 
