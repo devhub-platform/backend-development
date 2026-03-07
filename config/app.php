@@ -135,7 +135,7 @@ return [
     */
 
     'aliases' => [
-        'OneSignal' => \Berkayk\OneSignal\OneSignalFacade::class,
+//        'OneSignal' => \Berkayk\OneSignal\OneSignalFacade::class,
     ],
 
 ];
