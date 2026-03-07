@@ -15,6 +15,7 @@ class GenerateImageRequest extends FormRequest
     {
         return [
             'prompt' => ['required', 'string', 'min:10', 'max:500'],
+            'model'  => ['nullable', 'string', 'in:google/gemini-2.5-flash-image,google/gemini-3.1-flash-image-preview'],
         ];
     }
 
@@ -24,6 +25,7 @@ class GenerateImageRequest extends FormRequest
             'prompt.required' => 'A prompt is required to generate an image.',
             'prompt.min'      => 'Prompt must be at least 10 characters.',
             'prompt.max'      => 'Prompt must not exceed 500 characters.',
+            'model.in'        => 'Invalid model. Use google/gemini-2.5-flash-image or google/gemini-3.1-flash-image-preview.',
         ];
     }
 }
