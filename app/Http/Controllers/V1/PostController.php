@@ -13,6 +13,7 @@ use App\Models\Report;
 use App\Models\Tag;
 use App\Notifications\PostReportedNotification;
 use App\Notifications\NewPostNotification;
+use App\Services\AI\PostAIImageService;
 use App\Services\ImageUploadCloudinaryService;
 use App\Services\ModerationService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -27,7 +28,8 @@ class PostController
     use AuthorizesRequests;
 
     public function __construct(
-        private ImageUploadCloudinaryService $cloudinaryService
+        private ImageUploadCloudinaryService $cloudinaryService,
+        private PostAIImageService           $aiImageService,
     ) {}
 
     public function topPostsViews(): JsonResponse
@@ -123,6 +125,7 @@ class PostController
                 $validated['slug']
             );
         }
+        // If image_url is a plain URL string (e.g. from AI generation), keep it as-is
 
         $contentToModerate = $validated['content'] . ' ' . $validated['title'];
         $moderationResult = $moderationService->moderateContent($contentToModerate);
@@ -137,7 +140,29 @@ class PostController
             ], 422);
         }
 
+        // Remove generated_image_id before creating post — not a DB column
+        $generatedImageId = $validated['generated_image_id'] ?? null;
+        unset($validated['generated_image_id']);
+
         $post = Post::create($validated);
+
+        // If user passed a generated_image_id, confirm it and attach to the post
+        if ($generatedImageId) {
+            try {
+                $secureUrl = $this->aiImageService->confirm(
+                    generatedImageId: $generatedImageId,
+                    postId:           $post->id,
+                    userId:           auth()->id(),
+                );
+                $post->update(['cover_image' => $secureUrl]);
+            } catch (\Exception $e) {
+                Log::warning('Could not attach generated image to post', [
+                    'post_id'            => $post->id,
+                    'generated_image_id' => $generatedImageId,
+                    'error'              => $e->getMessage(),
+                ]);
+            }
+        }
 
         if ($post->status !== 'draft') {
             $followers = auth()->user()->followers
@@ -153,17 +178,6 @@ class PostController
             'data' => new PostResource($post)
         ], 201);
     }
-
-    //    public function generateCoverImage(GeminiImageService $geminiImage, Request $request)
-    //    {
-    //        $prompt = $request->input('prompt');
-    //        $imageUrl = $geminiImage->generateImage($prompt);
-    //
-    //        return response()->json([
-    //            'cover_image' => $imageUrl
-    //        ]);
-    //    }
-
 
     public function show(Post $post): JsonResponse
     {
@@ -228,7 +242,7 @@ class PostController
         ]);
     }
 
-    public function destroy(Post $post): JsonResponse // make soft delete (archive)
+    public function destroy(Post $post): JsonResponse
     {
         $this->authorize('delete', $post);
 
@@ -383,13 +397,13 @@ class PostController
         $validated = $request->validated();
 
         $report = Report::create([
-            'reporter_id' => $user->id,
+            'reporter_id'      => $user->id,
             'reported_user_id' => $post->user_id,
             'reported_post_id' => $post->id,
-            'type' => 'post',
-            'reason' => $validated['reason'],
-            'message' => $validated['message'] ?? null,
-            'report' => true,
+            'type'             => 'post',
+            'reason'           => $validated['reason'],
+            'message'          => $validated['message'] ?? null,
+            'report'           => true,
         ]);
 
         $adminEmail = config('services.mail.admin_email_2', 'youssef.ahmed.fci@gmail.com');
@@ -402,12 +416,11 @@ class PostController
             'message' => 'Post reported successfully. Our team will review it shortly.',
             'data' => [
                 'report_id' => $report->id,
-                'post_id' => $post->id,
-                'reason' => Report::REASONS[$validated['reason']] ?? $validated['reason'],
+                'post_id'   => $post->id,
+                'reason'    => Report::REASONS[$validated['reason']] ?? $validated['reason'],
             ],
         ], 201);
     }
-
 
     public function reasonsToReport(): JsonResponse
     {
@@ -423,7 +436,7 @@ class PostController
             return [];
         }
 
-        $blocked = $user->blockedUsers()->pluck('users.id');
+        $blocked  = $user->blockedUsers()->pluck('users.id');
         $blockers = $user->blockers()->pluck('users.id');
 
         return $blocked->merge($blockers)->unique()->values()->all();
