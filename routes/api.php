@@ -354,6 +354,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
         // ─── AI Chat ──────────────────────────────────────────────────────────
         Route::prefix('ai-chat')->group(function () {
+            // ai-chat/models is public, defined above
             Route::post('send', [AIChatController::class, 'chat']);
 
             Route::controller(AttachmentController::class)
