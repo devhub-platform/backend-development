@@ -57,11 +57,6 @@ return [
         'token'    => env('HACKAI_API_KEY'),
     ],
 
-
-    'hackClub' => [
-        'api_key' => env('HACKCLUB_API_KEY'),
-    ],
-
     'llama' => [
         'api_key' => env('LLAMA_KEY'),
         'base_url' => env('LLAMA_API_URL'),
