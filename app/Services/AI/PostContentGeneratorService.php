@@ -14,9 +14,8 @@ class PostContentGeneratorService
     public function __construct()
     {
         $this->client = new Client([
-            'base_uri'        => rtrim(config('services.llama.base_url'), '/') . '/',
+            'base_uri'        => config('services.llama.base_url'),
             'headers'         => [
-                'Authorization'   => 'Bearer ' . config('services.llama.api_key'),
                 'x-rapidapi-key'  => config('services.llama.api_key'),
                 'x-rapidapi-host' => config('services.llama.host'),
                 'Content-Type'    => 'application/json',
@@ -37,8 +36,9 @@ class PostContentGeneratorService
         Log::info('Llama content generation request', ['prompt' => substr($prompt, 0, 100)]);
 
         try {
-            $response = $this->client->post('chat_completions', [
+            $response = $this->client->post('', [
                 'json' => [
+                    'model'    => 'meta-llama/Llama-3.2-3B-Instruct',
                     'messages' => [
                         [
                             'role'    => 'system',

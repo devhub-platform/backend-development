@@ -15,7 +15,9 @@ class PostAIController extends Controller
     public function __construct(
         private PostAIImageService          $imageService,
         private PostContentGeneratorService $contentService,
-    ) {}
+    )
+    {
+    }
 
     /**
      * Generate a cover image for a post using HackClub Nanobanana.
@@ -30,14 +32,14 @@ class PostAIController extends Controller
             $generated = $this->imageService->generate(
                 prompt: $request->input('prompt'),
                 userId: $request->user()->id,
-                model:  $request->input('model'),
+                model: $request->input('model'),
             );
 
             return response()->json([
-                'success'            => true,
+                'success' => true,
                 'generated_image_id' => $generated->id,
-                'secure_url'         => $generated->secure_url,
-                'message'            => 'Image generated. Pass generated_image_id when creating your post.',
+                'secure_url' => $generated->secure_url,
+                'message' => 'Image generated. Pass generated_image_id when creating your post.',
             ], 201);
 
         } catch (\Exception $e) {
