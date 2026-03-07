@@ -16,14 +16,18 @@ class HackClubImageService
     public function __construct(
         private ModelResolver $resolver,
     ) {
+        if (function_exists('set_time_limit')) {
+            set_time_limit(500);
+        }
         $this->client = new Client([
             'base_uri'        => rtrim(config('services.hackai.base_url', 'https://ai.hackclub.com/proxy/v1'), '/') . '/',
             'headers'         => [
                 'Authorization' => 'Bearer ' . config('services.hackai.token'),
                 'Content-Type'  => 'application/json',
             ],
+            'timeout' => 300,
             'connect_timeout' => 10,
-            'timeout'         => 60,
+            'read_timeout' => 90,
         ]);
     }
 
