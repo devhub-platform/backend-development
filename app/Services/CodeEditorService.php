@@ -148,10 +148,10 @@ class CodeEditorService
             ], 400);
         }
 
-        if (Str::length($searchTerm) < 4) {
+        if (Str::length($searchTerm) < 2) {
             return response()->json([
                 'success' => false,
-                'message' => 'Search term must be at least 4 characters.',
+                'message' => 'Search term must be at least 2 characters.',
             ], 422);
         }
 

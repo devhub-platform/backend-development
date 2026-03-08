@@ -19,7 +19,7 @@ class PostResource extends JsonResource
             'content' => Str::limit($this->content, 200, '...'),
             'created_at' => $this->created_at->diffForHumans(),
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
-            'image_url' => $this->image_url ?? null,
+//            'image_url' => $this->image_url ?? null,
             'cover_image' => $this->cover_image?? null,
             'status' => $this->status,
             'read_time' => $this->read_time ? $this->read_time . ' min read' : null,

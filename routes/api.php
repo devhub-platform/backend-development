@@ -381,7 +381,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
 Route::fallback(function () {
     return response()->json([
-        'Hey_there!' => 'Ramadan Mubarak!!',
+        'Hey_there!' => 'Ramadan Karam!!',
         'message' => 'Resource not found, the API endpoint does not exist',
         'documentation' => 'https://0yviq6a5i5.apidog.io/',
         'version' => 'API v1',
