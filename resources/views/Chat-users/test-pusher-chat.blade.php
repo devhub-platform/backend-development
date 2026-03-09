@@ -5,13 +5,46 @@
     <title>Realtime Chat Test</title>
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        #messages { border: 1px solid #ccc; padding: 10px; height: 300px; overflow: auto; background: #f9f9f9; }
-        #messages div { padding: 8px; margin: 4px 0; background: white; border-radius: 4px; }
-        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
-        .status.success { background: #d4edda; color: #155724; }
-        .status.error { background: #f8d7da; color: #721c24; }
-        .status.info { background: #d1ecf1; color: #0c5460; }
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        #messages {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 300px;
+            overflow: auto;
+            background: #f9f9f9;
+        }
+
+        #messages div {
+            padding: 8px;
+            margin: 4px 0;
+            background: white;
+            border-radius: 4px;
+        }
+
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
     </style>
 </head>
 <body>
@@ -26,7 +59,7 @@
 <script>
     const APP_KEY = "8386ec29a087993e4c57";
     const CLUSTER = "mt1";
-    const conversationId = 2;
+    const conversationId = 5;
 
     document.getElementById('conv-id').textContent = conversationId;
 
@@ -34,10 +67,10 @@
 
     const pusher = new Pusher(APP_KEY, {
         cluster: CLUSTER,
-        authEndpoint: "https://devhub.test/api/broadcasting/auth",
+        authEndpoint: "http://devhub.eu-north-1.elasticbeanstalk.com/api/broadcasting/auth",
         auth: {
             headers: {
-                Authorization: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZGV2aHViLmV1LW5vcnRoLTEuZWxhc3RpY2JlYW5zdGFsay5jb20vYXBpL3YxL2F1dGgvZ29vZ2xlL2NhbGxiYWNrIiwiaWF0IjoxNzcyNzAyODI1LCJleHAiOjE3NzMzMDc2MjUsIm5iZiI6MTc3MjcwMjgyNSwianRpIjoiRENZQlFWUXNzcmhGc3o0TyIsInN1YiI6IjQwNiIsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.aWZULxafPyPgNvcR5E0bbOP0f3dI3hLsrrkP_cS9mkk"
+                Authorization: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZGV2aHViLmV1LW5vcnRoLTEuZWxhc3RpY2JlYW5zdGFsay5jb20vYXBpL3YxL2F1dGgvZ29vZ2xlL2NhbGxiYWNrIiwiaWF0IjoxNzcyOTAyMjI1LCJleHAiOjE3NzM1MDcwMjUsIm5iZiI6MTc3MjkwMjIyNSwianRpIjoiYXdlOEFFZU96dTE1UmZMeiIsInN1YiI6IjQwNiIsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.z4oXaEctfDfMIqhwhbYq_8so4W8WAZAAWLN2xvY_Sbs"
             }
         }
     });
@@ -132,7 +165,7 @@
     });
 
     // Global listener to catch ALL events
-    channel.bind_global(function(eventName, data) {
+    channel.bind_global(function (eventName, data) {
         console.log("Global event captured - Event:", eventName, "Data:", data);
     });
 
