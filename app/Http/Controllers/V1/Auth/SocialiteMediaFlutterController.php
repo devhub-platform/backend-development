@@ -15,7 +15,7 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class SocialiteMediaFlutterController
 {
-    public function loginGoogle(AuthenticateWithGoogleRequest $request): JsonResponse
+    public function loginGoogle(AuthenticateWithGoogleRequest $request)
     {
         try {
             $user = $request->getUserFromGoogle();
@@ -43,7 +43,7 @@ class SocialiteMediaFlutterController
         }
     }
 
-    public function loginGithub(): JsonResponse
+    public function loginGithub()
     {
         $redirectUrl = Socialite::driver('github')
             ->stateless()
@@ -56,14 +56,14 @@ class SocialiteMediaFlutterController
         ]);
     }
 
-    public function callbackGoogle(): JsonResponse
+    public function callbackGoogle()
     {
         $googleUser = Socialite::driver('google')->stateless()->user();
 
         return $this->extracted($googleUser);
     }
 
-    public function callbackGithub(): JsonResponse
+    public function callbackGithub()
     {
         $githubUser = Socialite::driver('github')->stateless()->user();
         return $this->extractedgithub($githubUser);

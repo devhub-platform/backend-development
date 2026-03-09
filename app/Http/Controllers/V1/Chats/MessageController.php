@@ -22,8 +22,9 @@ class MessageController extends Controller
     {
     }
 
-    public function sendMessage(SendMessageRequest $request, Conversation $conversation): JsonResponse
+    public function sendMessage(SendMessageRequest $request, int $conversationId): JsonResponse
     {
+        $conversation = Conversation::findOrFail($conversationId);
         $this->authorize('view', $conversation);
 
         $validated = $request->validated();
@@ -45,8 +46,9 @@ class MessageController extends Controller
         ], 201);
     }
 
-    public function sendMessageWithAttachment(SendMessageAttchmentRequest $request, Conversation $conversation): JsonResponse
+    public function sendMessageWithAttachment(SendMessageAttchmentRequest $request, int $conversationId): JsonResponse
     {
+        $conversation = Conversation::findOrFail($conversationId);
         $this->authorize('view', $conversation);
 
         $validated = $request->validated();
@@ -85,8 +87,9 @@ class MessageController extends Controller
         ], 201);
     }
 
-    public function deleteMessage(Conversation $conversation, int $messageId): JsonResponse
+    public function deleteMessage(int $messageId, int $conversationId): JsonResponse
     {
+        $conversation = Conversation::findOrFail($conversationId);
         $this->authorize('view', $conversation);
 
         $message = Chat::messages()->getById($messageId);
@@ -106,8 +109,9 @@ class MessageController extends Controller
         ], 200);
     }
 
-    public function markAsRead(Request $request, Conversation $conversation): JsonResponse
+    public function markAsRead(Request $request, int $conversationId): JsonResponse
     {
+        $conversation = Conversation::findOrFail($conversationId);
         $this->authorize('view', $conversation);
 
         Chat::conversation($conversation)
@@ -123,8 +127,9 @@ class MessageController extends Controller
         ], 200);
     }
 
-    public function updateMessage(Request $request, Conversation $conversation, int $messageId): JsonResponse
+    public function updateMessage(Request $request, int $messageId, int $conversationId): JsonResponse
     {
+        $conversation = Conversation::findOrFail($conversationId);
         $this->authorize('view', $conversation);
 
         $validated = $request->validate([
@@ -149,8 +154,9 @@ class MessageController extends Controller
         ], 200);
     }
 
-    public function toggleReaction(Request $request, Conversation $conversation, int $messageId): JsonResponse
+    public function toggleReaction(Request $request, int $messageId, int $conversationId): JsonResponse
     {
+        $conversation = Conversation::findOrFail($conversationId);
         $this->authorize('view', $conversation);
 
         $validated = $request->validate([
@@ -175,8 +181,9 @@ class MessageController extends Controller
         ], 200);
     }
 
-    public function reactToMessage(Request $request, Conversation $conversation, int $messageId): JsonResponse
+    public function reactToMessage(Request $request, int $messageId, int $conversationId): JsonResponse
     {
+        $conversation = Conversation::findOrFail($conversationId);
         $this->authorize('view', $conversation);
 
         $validated = $request->validate([
@@ -199,8 +206,15 @@ class MessageController extends Controller
         ], 201);
     }
 
-    public function unreactToMessage(Request $request, Conversation $conversation, int $messageId): JsonResponse
+    // Alias for reactToMessage (backward-compatible)
+    public function addReactionToMessage(Request $request, int $messageId, int $conversationId): JsonResponse
     {
+        return $this->reactToMessage($request, $messageId, $conversationId);
+    }
+
+    public function unreactToMessage(Request $request, int $messageId, int $conversationId): JsonResponse
+    {
+        $conversation = Conversation::findOrFail($conversationId);
         $this->authorize('view', $conversation);
 
         $validated = $request->validate([
@@ -223,8 +237,9 @@ class MessageController extends Controller
         ], 200);
     }
 
-    public function getReactionsSummary(Request $request, Conversation $conversation, int $messageId): JsonResponse
+    public function getReactionsSummary(Request $request, int $messageId, int $conversationId): JsonResponse
     {
+        $conversation = Conversation::findOrFail($conversationId);
         $this->authorize('view', $conversation);
 
         $message = Chat::messages()->getById($messageId);
@@ -240,12 +255,15 @@ class MessageController extends Controller
         ], 200);
     }
 
-    public function makeMessageAsFlagged(Request $request, Conversation $conversation, int $messageId): JsonResponse
+    public function makeMessageAsFlagged(Request $request, int $messageId, int $conversationId): JsonResponse
     {
+        $conversation = Conversation::findOrFail($conversationId);
         $this->authorize('view', $conversation);
 
-        Chat::messages()
-            ->setParticipant($request->user())->toggleFlag();
+        $message = Chat::messages()->getById($messageId);
+        Chat::message($message)
+            ->setParticipant($request->user())
+            ->toggleFlag();
 
         return response()->json([
             'message' => 'Message flagged successfully.',

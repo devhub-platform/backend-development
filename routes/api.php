@@ -41,6 +41,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
     Route::controller(SocialiteMediaFrontController::class)->group(function () {
         Route::post('front/auth/google/login', 'loginGoogle');
         Route::get('auth/google/callback', 'callbackGoogle');
+
         Route::post('front/auth/github/login', 'loginGithub');
         Route::get('auth/github/callback', 'callbackGithub');
     });
@@ -48,6 +49,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
     Route::controller(SocialiteMediaFlutterController::class)->group(function () {
         Route::post('mobile/auth/google/login', 'loginGoogle');
         Route::get('auth/google/callback', 'callbackGoogle');
+
         Route::post('mobile/auth/github/login', 'loginGithub');
         Route::get('auth/github/callback', 'callbackGithub');
     });
@@ -351,13 +353,13 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         });
 
         Route::prefix('messages')->controller(MessageController::class)->group(function () {
-            Route::post('/conversation/{conversation}/send', 'sendMessage');
-            Route::post('/conversation/{conversation}/send-attachment', 'sendMessageWithAttachment');
-            Route::delete('{messageId}/conversation/{conversation}', 'deleteMessage');
-            Route::post('/conversation/{conversation}/mark-as-read', 'markAsRead');
-            Route::put('{messageId}/conversation/{conversation}', 'updateMessage');
-            Route::post('{messageId}/conversation/{conversation}/reaction', 'addReactionToMessage');
-            Route::post('{messageId}/conversation/{conversation}/flag', 'makeMessageAsFlagged');
+            Route::post('/conversation/{conversationId}/send', 'sendMessage');
+            Route::post('/conversation/{conversationId}/send-attachment', 'sendMessageWithAttachment');
+            Route::delete('{messageId}/conversation/{conversationId}', 'deleteMessage');
+            Route::post('/conversation/{conversationId}/mark-as-read', 'markAsRead');
+            Route::put('{messageId}/conversation/{conversationId}', 'updateMessage');
+            Route::post('{messageId}/conversation/{conversationId}/reaction', 'addReactionToMessage');
+            Route::post('{messageId}/conversation/{conversationId}/flag', 'makeMessageAsFlagged');
         });
 
         // ─── AI Chat ──────────────────────────────────────────────────────────
