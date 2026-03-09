@@ -11,7 +11,7 @@ use App\Http\Controllers\V1\QuestionController;
 use App\Http\Controllers\V1\AnswerController;
 use App\Http\Controllers\V1\Auth\AuthController;
 use App\Http\Controllers\V1\Auth\ForgetPasswordController;
-use App\Http\Controllers\V1\Auth\SocialiteMediaController;
+use App\Http\Controllers\V1\Auth\SocialiteMediaFrontController;
 use App\Http\Controllers\V1\Auth\VerifyEmailController;
 use App\Http\Controllers\V1\CodeEditorController;
 use App\Http\Controllers\V1\CommentController;
@@ -33,17 +33,25 @@ use App\Http\Controllers\V1\UserStatusesController;
 use App\Http\Controllers\V1\VerifyAltEmailController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\V1\Chats\MessageController;
+use App\Http\Controllers\V1\Auth\SocialiteMediaFlutterController;
 
 Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
     // ─── Social Auth ──────────────────────────────────────────────────────────
-    Route::controller(SocialiteMediaController::class)->group(function () {
-        Route::post('auth/google/login', 'loginGoogle');
+    Route::controller(SocialiteMediaFrontController::class)->group(function () {
+        Route::post('front/auth/google/login', 'loginGoogle');
         Route::get('auth/google/callback', 'callbackGoogle');
-        Route::post('auth/google/login-mobile', 'loginGoogleForMobile');
-        Route::post('auth/github/login', 'loginGithub');
+        Route::post('front/auth/github/login', 'loginGithub');
         Route::get('auth/github/callback', 'callbackGithub');
     });
+
+    Route::controller(SocialiteMediaFlutterController::class)->group(function () {
+        Route::post('mobile/auth/google/login', 'loginGoogle');
+        Route::get('auth/google/callback', 'callbackGoogle');
+        Route::post('mobile/auth/github/login', 'loginGithub');
+        Route::get('auth/github/callback', 'callbackGithub');
+    });
+
 
     // ─── Auth ─────────────────────────────────────────────────────────────────
     Route::controller(AuthController::class)->group(function () {
@@ -100,8 +108,8 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             ->middleware('throttle:10,1')
             ->controller(PostAIController::class)
             ->group(function () {
-                Route::post('generate-image',        'generateImage');
-                Route::post('generate-content',      'generateContent');
+                Route::post('generate-image', 'generateImage');
+                Route::post('generate-content', 'generateContent');
                 Route::delete('generated-images/{id}', 'discardImage');
             });
 
@@ -115,24 +123,24 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
         // ─── Q&A - Questions ──────────────────────────────────────────────────
         Route::controller(QuestionController::class)->group(function () {
-            Route::get('questions',                  'index');
-            Route::post('questions/create',          'store');
-            Route::get('questions/hot',              'trending');
-            Route::get('questions/{question}',       'show');
-            Route::put('questions/{question}',       'update');
-            Route::delete('questions/{question}',    'destroy');
+            Route::get('questions', 'index');
+            Route::post('questions/create', 'store');
+            Route::get('questions/hot', 'trending');
+            Route::get('questions/{question}', 'show');
+            Route::put('questions/{question}', 'update');
+            Route::delete('questions/{question}', 'destroy');
             Route::post('questions/{question}/vote', 'vote');
         });
 
         // ─── Q&A - Answers ────────────────────────────────────────────────────
         Route::controller(AnswerController::class)->group(function () {
-            Route::get('questions/{question}/answers',                    'index');
-            Route::post('questions/{question}/answers/create',            'store');
-            Route::get('questions/{question}/answers/{answer}',           'show');
-            Route::put('questions/{question}/answers/{answer}',           'update');
-            Route::delete('questions/{question}/answers/{answer}',        'destroy');
-            Route::post('questions/{question}/answers/{answer}/vote',     'vote');
-            Route::post('questions/{question}/answers/{answer}/accept',   'accept');
+            Route::get('questions/{question}/answers', 'index');
+            Route::post('questions/{question}/answers/create', 'store');
+            Route::get('questions/{question}/answers/{answer}', 'show');
+            Route::put('questions/{question}/answers/{answer}', 'update');
+            Route::delete('questions/{question}/answers/{answer}', 'destroy');
+            Route::post('questions/{question}/answers/{answer}/vote', 'vote');
+            Route::post('questions/{question}/answers/{answer}/accept', 'accept');
             Route::post('questions/{question}/answers/{answer}/unaccept', 'unaccept');
         });
 
@@ -354,6 +362,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
         // ─── AI Chat ──────────────────────────────────────────────────────────
         Route::prefix('ai-chat')->group(function () {
+            // ai-chat/models is public, defined above
             Route::post('send', [AIChatController::class, 'chat']);
 
             Route::controller(AttachmentController::class)

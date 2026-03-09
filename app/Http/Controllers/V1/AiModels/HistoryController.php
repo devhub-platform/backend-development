@@ -12,10 +12,6 @@ use Illuminate\Support\Facades\Storage;
 
 class HistoryController extends Controller
 {
-    /**
-     * Return a paginated list of the authenticated user's chat sessions.
-     * Pinned sessions are always sorted to the top.
-     */
     public function sessions(Request $request): JsonResponse
     {
         $userId = $request->user()?->id;
@@ -24,37 +20,36 @@ class HistoryController extends Controller
             return response()->json(['error' => 'Authentication required'], 401);
         }
 
-        $sessions = AIChatSession::with(['messages' => fn($q) => $q->latest()->take(1)])
-            ->withCount('messages')
+        $sessions = AIChatSession::withCount('messages')
             ->where('user_id', $userId)
             ->orderBy('pinned', 'desc')
             ->orderBy('updated_at', 'desc')
             ->paginate($request->query('per_page', 20));
 
+        // Build model title lookup from config
+        $modelTitles = collect(config('ai_models.chat', []))->keyBy('id');
+
         return response()->json([
-            'sessions'   => $sessions->map(fn($s) => [
-                'id'            => $s->id,
-                'title'         => $s->title,
-                'model'         => $s->model,
+            'sessions' => $sessions->map(fn($s) => [
+                'id' => $s->id,
+                'title' => $s->title,
+                'model' => $s->model,
+                'model_title' => $modelTitles->get($s->model)['title'] ?? $s->model,
                 'message_count' => $s->messages_count,
-                'last_message'  => $s->messages->first()?->content,
-                'created_at'    => $s->created_at,
-                'updated_at'    => $s->updated_at,
-                'pinned'        => (bool) $s->pinned,
-                'active'        => (bool) $s->active,
+                'created_at' => $s->created_at,
+                'updated_at' => $s->updated_at,
+                'pinned' => (bool)$s->pinned,
+                'active' => (bool)$s->active,
             ]),
             'pagination' => [
-                'total'        => $sessions->total(),
-                'per_page'     => $sessions->perPage(),
+                'total' => $sessions->total(),
+                'per_page' => $sessions->perPage(),
                 'current_page' => $sessions->currentPage(),
-                'last_page'    => $sessions->lastPage(),
+                'last_page' => $sessions->lastPage(),
             ],
         ]);
     }
 
-    /**
-     * Return full session details and all messages in chronological order.
-     */
     public function show(Request $request, $sessionId): JsonResponse
     {
         $session = $this->findUserSession($sessionId, $request->user()?->id);
@@ -63,11 +58,11 @@ class HistoryController extends Controller
         }
 
         return response()->json([
-            'session'  => [
-                'id'         => $session->id,
-                'title'      => $session->title,
-                'model'      => $session->model,
-                'pinned'     => (bool) $session->pinned,
+            'session' => [
+                'id' => $session->id,
+                'title' => $session->title,
+                'model' => $session->model,
+                'pinned' => (bool)$session->pinned,
                 'created_at' => $session->created_at->format('Y-m-d H:i:s'),
                 'updated_at' => $session->updated_at->format('Y-m-d H:i:s'),
             ],
@@ -75,19 +70,15 @@ class HistoryController extends Controller
                 ->orderBy('created_at', 'asc')
                 ->get()
                 ->map(fn($m) => [
-                    'id'          => $m->id,
-                    'role'        => $m->role,
-                    'content'     => $m->content,
+                    'id' => $m->id,
+                    'role' => $m->role,
+                    'content' => $m->content,
                     'attachments' => $m->attachments ?? [],
-                    'created_at'  => $m->created_at->format('Y-m-d H:i:s'),
+                    'created_at' => $m->created_at->format('Y-m-d H:i:s'),
                 ]),
         ]);
     }
 
-    /**
-     * Create a new chat session.
-     * If no model is provided, the system default is used.
-     */
     public function create(Request $request): JsonResponse
     {
         $request->validate([
@@ -97,24 +88,20 @@ class HistoryController extends Controller
 
         $session = AIChatSession::create([
             'user_id' => $request->user()?->id,
-            'title'   => $request->title ?? 'New Chat',
-            'model'   => $request->model ?? config('ai_models.default'),
-            'active'  => true,
-            'pinned'  => false,
+            'title' => $request->title ?? 'New Chat',
+            'model' => $request->model ?? config('ai_models.default'),
+            'active' => true,
+            'pinned' => false,
         ]);
 
         return response()->json([
-            'id'         => $session->id,
-            'title'      => $session->title,
-            'model'      => $session->model,
+            'id' => $session->id,
+            'title' => $session->title,
+            'model' => $session->model,
             'created_at' => $session->created_at->format('Y-m-d H:i:s'),
         ], 201);
     }
 
-    /**
-     * Permanently delete a session along with its messages and attachments.
-     * S3 objects are removed before the DB records are deleted.
-     */
     public function delete(Request $request, $sessionId): JsonResponse
     {
         $session = $this->findUserSession($sessionId, $request->user()?->id);
@@ -122,7 +109,7 @@ class HistoryController extends Controller
             return $this->notFound();
         }
 
-        $messages      = AIChatMessage::where('ai_chat_session_id', $sessionId)->get();
+        $messages = AIChatMessage::where('ai_chat_session_id', $sessionId)->get();
         $attachmentIds = $messages
             ->flatMap(fn($m) => $m->attachments ?? [])
             ->filter()
@@ -156,7 +143,6 @@ class HistoryController extends Controller
         return response()->json(['message' => 'Session deleted successfully']);
     }
 
-    /** Pin a session so it appears at the top of the session list. */
     public function pin(Request $request, $sessionId): JsonResponse
     {
         $session = $this->findUserSession($sessionId, $request->user()?->id);
@@ -169,7 +155,6 @@ class HistoryController extends Controller
         return response()->json(['message' => 'Session pinned', 'pinned' => true]);
     }
 
-    /** Remove the pin from a session. */
     public function unpin(Request $request, $sessionId): JsonResponse
     {
         $session = $this->findUserSession($sessionId, $request->user()?->id);
@@ -182,7 +167,6 @@ class HistoryController extends Controller
         return response()->json(['message' => 'Session unpinned', 'pinned' => false]);
     }
 
-    /** Update the display title of a session. */
     public function updateTitle(Request $request, $sessionId): JsonResponse
     {
         $request->validate(['title' => 'required|string|max:255']);
@@ -199,7 +183,6 @@ class HistoryController extends Controller
 
     // -------------------------------------------------------------------------
 
-    /** Find a session that belongs to the given user, or return null. */
     private function findUserSession($sessionId, ?int $userId): ?AIChatSession
     {
         if (!$userId) {
