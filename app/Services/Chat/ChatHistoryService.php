@@ -2,17 +2,17 @@
 
 namespace App\Services\Chat;
 
-use App\Models\AIChatMessage;
 use App\Models\AIChatSession;
+use App\Models\AIChatMessage;
 use Illuminate\Support\Str;
 
 class ChatHistoryService
 {
     /**
-     * Resolve an existing session or create a new one.
-     *
-     * If a valid session ID is provided and belongs to the user, the session
-     * is reactivated and returned. Otherwise a fresh session is created.
+     * Resolve existing session or create new one.
+     * - If session_id provided and belongs to user → reuse it
+     * - If model differs from session model → caller handles the mismatch
+     * - If no session_id → create new with given model (or default)
      */
     public function resolveSession(?int $sessionId, ?string $model, ?int $userId): AIChatSession
     {
@@ -29,7 +29,6 @@ class ChatHistoryService
                     'closed_at'  => null,
                     'updated_at' => now(),
                 ]);
-
                 return $session;
             }
         }
@@ -44,8 +43,8 @@ class ChatHistoryService
     }
 
     /**
-     * Create a brand-new session, ignoring any existing session context.
-     * Used when the user explicitly starts a new chat.
+     * Create a fresh session with given model (or default).
+     * Used when user explicitly starts a new chat.
      */
     public function createSession(?string $model, int $userId): AIChatSession
     {
@@ -60,9 +59,14 @@ class ChatHistoryService
         ]);
     }
 
-    /** Persist a user message and touch the session's updated_at timestamp. */
+    /**
+     * Persist a user message.
+     * If this is the first message in the session, use it as the session title.
+     */
     public function storeUserMessage(int $sessionId, string $content, array $attachments = []): void
     {
+        $isFirst = !AIChatMessage::where('ai_chat_session_id', $sessionId)->exists();
+
         AIChatMessage::create([
             'ai_chat_session_id' => $sessionId,
             'role'               => 'user',
@@ -70,10 +74,17 @@ class ChatHistoryService
             'attachments'        => $attachments,
         ]);
 
-        AIChatSession::where('id', $sessionId)->update(['updated_at' => now()]);
+        $updates = ['updated_at' => now()];
+
+        // Use first message as session title (max 60 chars)
+        if ($isFirst) {
+            $trimmed         = trim($content);
+            $updates['title'] = mb_substr($trimmed, 0, 60) . (mb_strlen($trimmed) > 60 ? '...' : '');
+        }
+
+        AIChatSession::where('id', $sessionId)->update($updates);
     }
 
-    /** Persist an assistant message with no attachments. */
     public function storeAIMessage(int $sessionId, string $content): void
     {
         AIChatMessage::create([
@@ -84,48 +95,33 @@ class ChatHistoryService
         ]);
     }
 
-    /**
-     * Return the most recent $limit messages in chronological order.
-     *
-     * Fetches descending (newest first) then reverses, ensuring the AI always
-     * receives recent context rather than the oldest messages in the session.
-     */
     public function getLastMessages(int $sessionId, int $limit = 12): array
     {
         return AIChatMessage::where('ai_chat_session_id', $sessionId)
-            ->orderBy('created_at', 'desc')
+            ->orderBy('created_at', 'asc')
             ->take($limit)
             ->get(['role', 'content', 'attachments', 'created_at'])
-            ->reverse()
-            ->values()
             ->toArray();
     }
 
-    /** Update the display title of a session. */
     public function updateSessionTitle(int $sessionId, string $title): bool
     {
         return (bool) AIChatSession::where('id', $sessionId)->update(['title' => $title]);
     }
 
-    /** Return the total number of messages in a session. */
     public function getSessionMessagesCount(int $sessionId): int
     {
         return AIChatMessage::where('ai_chat_session_id', $sessionId)->count();
     }
 
-    /**
-     * Delete unpinned sessions that have not been updated within the given number of days.
-     * Returns the count of deleted sessions.
-     */
     public function cleanupOldSessions(int $days = 30): int
     {
-        $cutoff   = now()->subDays($days);
-        $sessions = AIChatSession::where('updated_at', '<', $cutoff)
+        $date     = now()->subDays($days);
+        $sessions = AIChatSession::where('updated_at', '<', $date)
             ->where('pinned', false)
             ->get();
 
         $deleted = 0;
-
         foreach ($sessions as $session) {
             AIChatMessage::where('ai_chat_session_id', $session->id)->delete();
             $session->delete();
@@ -135,8 +131,6 @@ class ChatHistoryService
         return $deleted;
     }
 
-    // -------------------------------------------------------------------------
-
     private function generateTitle(string $model): string
     {
         foreach (config('ai_models.chat', []) as $aiModel) {
@@ -144,7 +138,6 @@ class ChatHistoryService
                 return $aiModel['title'] . ' - ' . date('M d, H:i');
             }
         }
-
         return $this->formatModelName($model) . ' - ' . date('M d, H:i');
     }
 
@@ -167,9 +160,6 @@ class ChatHistoryService
         ];
 
         $lowerModel = strtolower(trim($model));
-
-        return $knownModels[$lowerModel]
-            ?? ucwords(preg_replace('/\s+/', ' ', trim($model)))
-            ?: 'AI Chat';
+        return $knownModels[$lowerModel] ?? ucwords(preg_replace('/\s+/', ' ', trim($model))) ?: 'AI Chat';
     }
 }

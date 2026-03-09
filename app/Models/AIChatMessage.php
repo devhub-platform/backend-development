@@ -16,25 +16,19 @@ class AIChatMessage extends Model
     ];
 
     protected $casts = [
-        'attachments' => 'array',
+        'attachments' => 'array', // handles encoding on write + decoding on read
     ];
 
     /**
-     * Always return an array for attachments, even if the DB column is null.
-     * Prevents crashes in the chat layer when iterating over older messages.
+     * Extra safety: always return an array even if DB value is null or malformed.
+     * The cast handles normal cases; this accessor covers edge cases.
      */
     public function getAttachmentsAttribute($value): array
     {
-        if (is_null($value)) {
-            return [];
-        }
-
-        if (is_array($value)) {
-            return $value;
-        }
+        if (is_null($value)) return [];
+        if (is_array($value)) return $value;
 
         $decoded = json_decode($value, true);
-
         return is_array($decoded) ? $decoded : [];
     }
 

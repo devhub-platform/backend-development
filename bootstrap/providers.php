@@ -5,5 +5,5 @@ return [
     App\Providers\TelescopeServiceProvider::class,
     App\Providers\AuthServiceProvider::class,
     App\Providers\BroadcastServiceProvider::class,
-//    Berkayk\OneSignal\OneSignalServiceProvider::class,
+    Berkayk\OneSignal\OneSignalServiceProvider::class,
 ];

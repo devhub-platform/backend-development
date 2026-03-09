@@ -41,11 +41,6 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URL'),
     ],
 
-    'google_mobile' => [
-        'client_id' => env('GOOGLE_MOBILE_CLIENT_ID'),
-        'client_secret' => env('GOOGLE_MOBLE_CLIENT_SECRET'),
-    ],
-
     'github' => [
         'client_id' => env('GITHUB_CLIENT_ID'),
         'client_secret' => env('GITHUB_CLIENT_SECRET'),
@@ -57,10 +52,6 @@ return [
         'token'    => env('HACKAI_API_KEY'),
     ],
 
-
-    'hackClub' => [
-        'api_key' => env('HACKCLUB_API_KEY'),
-    ],
 
     'llama' => [
         'api_key' => env('LLAMA_KEY'),
