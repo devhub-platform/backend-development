@@ -103,6 +103,7 @@ class CodeEditorService
                 'language' => $result['language'] ?? $validated['language'],
                 'version' => $result['version'] ?? $validated['version'],
                 'run' => [
+                    'stderr' => $run['signal'] ?? '',
                     'stdout' => $run['stdout'] ?? '',
                     'stderr' => $run['stderr'] ?? '',
                     'code' => $run['code'] ?? 0,
