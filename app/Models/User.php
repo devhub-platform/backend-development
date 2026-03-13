@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[ObservedBy([UserObserver::class])]
 class User extends Authenticatable implements JWTSubject, MustVerifyEmail
 {
-    use HasFactory, Notifiable, softDeletes, Reactor, Searchable , Messageable;
+    use HasFactory, Notifiable, softDeletes, Reactor, Searchable, Messageable;
 
     public function getJWTIdentifier()
     {

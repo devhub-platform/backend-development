@@ -43,6 +43,12 @@ class ProfileController
             $user = Auth::user();
             $image = $request->file('avatar_url');
 
+            if (!$image) {
+                return response()->json([
+                    'message' => 'No image file provided. Please upload a valid image.',
+                ], 422);
+            }
+
             $uploadedFileUrl = $cloudinaryService->uploadAvatar($user, $image);
 
             $user->update(['avatar_url' => $uploadedFileUrl]);
@@ -69,6 +75,12 @@ class ProfileController
             $user = auth()->user();
             $image = $request->file('cover_image');
 
+            if (!$image) {
+                return response()->json([
+                    'message' => 'No image file provided. Please upload a valid image.',
+                ], 422);
+            }
+
             $uploadedFileUrl = $cloudinaryService->uploadCoverImage($user, $image);
 
             $user->update(['cover_image' => $uploadedFileUrl]);
@@ -89,31 +101,30 @@ class ProfileController
 
     public function update(ProfileRequest $request)
     {
+        $user = auth()->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
         try {
             $validated = $request->validated();
-            $user = auth()->user();
 
-            if (!$user) {
-                return response()->json([
-                    'message' => 'User not found',
-                ], 404);
-            }
+            unset($validated['avatar_url'], $validated['cover_image']);
 
-            $originalData = $user->only(array_keys($validated));
             $user->update($validated);
-
 
             Log::info("Profile updated for user: {$user->email}");
 
             return response()->json([
                 'message' => 'Profile updated successfully',
-                'data' => new UserResource($user->fresh()),
+                'data'    => new UserResource($user->fresh()),
             ], 200);
         } catch (\Exception $e) {
-            Log::error("Profile update failed for user: " . auth()->user()->email . " - " . $e->getMessage());
+            Log::error("Profile update failed for user: {$user->email} - " . $e->getMessage());
             return response()->json([
                 'message' => 'Failed to update profile. Please try again.',
-                'error' => $e->getMessage()
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }

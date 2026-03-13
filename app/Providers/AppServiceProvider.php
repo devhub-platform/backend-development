@@ -41,8 +41,8 @@ class AppServiceProvider extends ServiceProvider
             $event->extendSocialite('microsoft', MicrosoftProvider::class);
         });
 
-        if (config('app.env') === 'production') {
-            URL::forceScheme('https');
-        }
+//        if (config('app.env') === 'production') {
+//            URL::forceScheme('https');
+//        }
     }
 }
