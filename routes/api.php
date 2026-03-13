@@ -355,6 +355,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::prefix('messages')->controller(MessageController::class)->group(function () {
             Route::post('/conversation/{conversationId}/send', 'sendMessage');
             Route::post('/conversation/{conversationId}/send-attachment', 'sendMessageWithAttachment');
+            Route::post('/conversation/{conversationId}/send-voice', 'sendVoiceMessage');
             Route::delete('{messageId}/conversation/{conversationId}', 'deleteMessage');
             Route::post('/conversation/{conversationId}/mark-as-read', 'markAsRead');
             Route::put('{messageId}/conversation/{conversationId}', 'updateMessage');
@@ -394,7 +395,7 @@ Route::fallback(function () {
     return response()->json([
         'Hey_there!' => 'Ramadan Karam!!',
         'message' => 'Resource not found, the API endpoint does not exist',
-        'documentation' => 'https://0yviq6a5i5.apidog.io/',
+        'documentation' => 'https://devhub.apidog.io/',
         'version' => 'API v1',
     ], 404);
 });
