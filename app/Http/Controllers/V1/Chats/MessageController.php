@@ -8,6 +8,7 @@ use App\Http\Controllers\V1\Controller;
 use App\Http\Resources\MessageResource;
 use App\Http\Requests\MessagesRequests\SendMessageAttchmentRequest;
 use App\Http\Requests\MessagesRequests\SendMessageRequest;
+use App\Http\Requests\MessagesRequests\SendVoiceMessageRequest;
 use App\Services\AWSS3Service;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -84,6 +85,37 @@ class MessageController extends Controller
         return response()->json([
             'message' => 'Attachment sent successfully.' . (!empty($validated['message']) ? ' Text message also sent.' : ''),
             'data' => $messages,
+        ], 201);
+    }
+
+    public function sendVoiceMessage(SendVoiceMessageRequest $request, int $conversationId): JsonResponse
+    {
+        $conversation = Conversation::findOrFail($conversationId);
+        $this->authorize('view', $conversation);
+
+        $validated = $request->validated();
+        $file = $request->file('file');
+        $fileName = $validated['file_name'] ?? $file->getClientOriginalName();
+        $durationMs = $validated['duration_ms'] ?? null;
+
+        $fileUrl = $this->awsS3Service->uploadFile($file, 'chat_voice_messages');
+
+        $voiceMessage = Chat::message($validated['message'] ?? 'Voice message')
+            ->type('voice')
+            ->data([
+                'file_name' => $fileName,
+                'file_url' => $fileUrl,
+                'mime_type' => $file->getMimeType(),
+                'size_bytes' => $file->getSize(),
+                'duration_ms' => $durationMs,
+            ])
+            ->from(auth()->user())
+            ->to($conversation)
+            ->send();
+
+        return response()->json([
+            'message' => 'Voice message sent successfully.',
+            'data' => new MessageResource($voiceMessage),
         ], 201);
     }
 
