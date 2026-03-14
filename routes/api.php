@@ -399,3 +399,6 @@ Route::fallback(function () {
         'version' => 'API v1',
     ], 404);
 });
+
+
+Route::post('/test/send-message', [MessageController::class, 'broadcastTest']);
