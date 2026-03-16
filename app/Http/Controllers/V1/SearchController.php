@@ -29,7 +29,7 @@ class SearchController
 
         return response()->json([
             'message' => 'Posts found successfully',
-            'count' => $data['count'],
+            'results_found' => $data['count'],
             'data' => SearchPostResource::collection($data['results']),
         ]);
     }
@@ -40,7 +40,7 @@ class SearchController
 
         return response()->json([
             'message' => 'Users found successfully',
-            'count' => $data['count'],
+            'results_found' => $data['count'],
             'data' => SearchUsersResource::collection($data['results']),
         ]);
     }
@@ -51,7 +51,7 @@ class SearchController
 
         return response()->json([
             'message' => 'Tags found successfully',
-            'count' => $data['count'],
+            'results_found' => $data['count'],
             'data' => SearchTagsResource::collection($data['results']),
         ]);
     }

@@ -299,7 +299,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('code/languages', 'languages');
         });
 
-        // ─── Reports & Blocking ───────────────────────────────────────────────
         Route::controller(ReportController::class)->group(function () {
             Route::post('reports/block/{target}', 'block');
             Route::post('reports/report/{target}', 'report');
@@ -373,17 +372,19 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             });
         });
 
-    });
-});
+     });
+ });
 
-Route::fallback(function () {
-    return response()->json([
-        'Hey_there!' => 'Ramadan Karam!!',
-        'message' => 'Resource not found, the API endpoint does not exist',
-        'documentation' => 'https://devhub.apidog.io/',
-        'version' => 'API v1',
-    ], 404);
-});
+ Route::post('/test/send-message', [MessageController::class, 'broadcastTest']);
+ Route::post('/test/send-message_notification', \App\Http\Controllers\TestNotificationController::class);
+ Route::post('/send-message_notification', \App\Http\Controllers\TestNotificationController::class);
 
+ Route::fallback(function () {
+     return response()->json([
+         'Hey_there!' => 'Ramadan Karam!!',
+         'message' => 'Resource not found, the API endpoint does not exist',
+         'documentation' => 'https://devhub.apidog.io/',
+         'version' => 'API v1',
+     ], 404);
+ });
 
-Route::post('/test/send-message', [MessageController::class, 'broadcastTest']);
