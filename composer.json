@@ -14,6 +14,7 @@
         "algolia/algoliasearch-client-php": "^4.35",
         "api-platform/laravel": "^4.2",
         "awssat/laravel-visits": "^6.2",
+        "berkayk/onesignal-laravel": "^2.4",
         "binafy/laravel-reactions": "^1.0",
         "cloudinary-labs/cloudinary-laravel": "^3.0",
         "dusterio/laravel-aws-worker": "^1.0",
