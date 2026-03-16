@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1\Chats;
 
 use App\Events\MessageDeleted;
+use App\Events\MessageReactionUpdated;
 use App\Events\MessageUpdated;
 use App\Http\Controllers\V1\Controller;
 use App\Http\Resources\MessageResource;
@@ -12,6 +13,7 @@ use App\Http\Requests\MessagesRequests\SendVoiceMessageRequest;
 use App\Services\AWSS3Service;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Musonza\Chat\Facades\ChatFacade as Chat;
 use Musonza\Chat\Models\Conversation;
 
@@ -200,6 +202,17 @@ class MessageController extends Controller
             ->setParticipant($request->user())
             ->toggleReaction($validated['reaction']);
 
+        $reactions = $this->normalizeReactionsSummary(Chat::message($message)->reactionsSummary());
+
+        broadcast(new MessageReactionUpdated(
+            messageId: $messageId,
+            conversationId: $conversation->id,
+            userId: (int)$request->user()->id,
+            reaction: $validated['reaction'],
+            action: $result['added'] ? 'added' : 'removed',
+            reactions: $reactions,
+        ))->toOthers();
+
         return response()->json([
             'message' => $result['added'] ? 'Reaction added.' : 'Reaction removed.',
             'data' => [
@@ -208,7 +221,8 @@ class MessageController extends Controller
                 'reaction' => $validated['reaction'],
                 'added' => $result['added'],
                 'toggled_at' => now()->toIso8601String(),
-                'details' => $result
+                'details' => $result,
+                'reactions' => $reactions,
             ]
         ], 200);
     }
@@ -227,6 +241,17 @@ class MessageController extends Controller
             ->setParticipant($request->user())
             ->react($validated['reaction']);
 
+        $reactions = $this->normalizeReactionsSummary(Chat::message($message)->reactionsSummary());
+
+        broadcast(new MessageReactionUpdated(
+            messageId: $messageId,
+            conversationId: $conversation->id,
+            userId: (int)$request->user()->id,
+            reaction: $validated['reaction'],
+            action: 'added',
+            reactions: $reactions,
+        ))->toOthers();
+
         return response()->json([
             'message' => 'Reaction added to message.',
             'data' => [
@@ -234,11 +259,10 @@ class MessageController extends Controller
                 'conversation_id' => $conversation->id,
                 'reaction' => $validated['reaction'],
                 'reacted_at' => now()->format('Y-m-d H:i:s'),
+                'reactions' => $reactions,
             ]
         ], 201);
     }
-
-    // Alias for reactToMessage (backward-compatible)
     public function addReactionToMessage(Request $request, int $messageId, int $conversationId): JsonResponse
     {
         return $this->reactToMessage($request, $messageId, $conversationId);
@@ -258,6 +282,17 @@ class MessageController extends Controller
             ->setParticipant($request->user())
             ->unreact($validated['reaction']);
 
+        $reactions = $this->normalizeReactionsSummary(Chat::message($message)->reactionsSummary());
+
+        broadcast(new MessageReactionUpdated(
+            messageId: $messageId,
+            conversationId: $conversation->id,
+            userId: (int)$request->user()->id,
+            reaction: $validated['reaction'],
+            action: 'removed',
+            reactions: $reactions,
+        ))->toOthers();
+
         return response()->json([
             'message' => 'Reaction removed from message.',
             'data' => [
@@ -265,6 +300,7 @@ class MessageController extends Controller
                 'conversation_id' => $conversation->id,
                 'reaction' => $validated['reaction'],
                 'unreacted_at' => now()->format('Y-m-d H:i:s'),
+                'reactions' => $reactions,
             ]
         ], 200);
     }
@@ -275,7 +311,7 @@ class MessageController extends Controller
         $this->authorize('view', $conversation);
 
         $message = Chat::messages()->getById($messageId);
-        $summary = Chat::message($message)->reactionsSummary();
+        $summary = $this->normalizeReactionsSummary(Chat::message($message)->reactionsSummary());
 
         return response()->json([
             'message' => 'Reactions summary retrieved successfully.',
@@ -311,5 +347,18 @@ class MessageController extends Controller
     {
         event(new \App\Events\MyEvent('Menna sent a message'));
         return response()->json(['message' => 'Broadcast event sent.']);
+    }
+
+    private function normalizeReactionsSummary(mixed $summary): array
+    {
+        if (is_array($summary)) {
+            return $summary;
+        }
+
+        if ($summary instanceof Collection) {
+            return $summary->toArray();
+        }
+
+        return (array)$summary;
     }
 }

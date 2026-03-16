@@ -17,6 +17,7 @@
         "binafy/laravel-reactions": "^1.0",
         "cloudinary-labs/cloudinary-laravel": "^3.0",
         "dusterio/laravel-aws-worker": "^1.0",
+        "filament/filament": "5.0",
         "guzzlehttp/guzzle": "^7.10",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.0",

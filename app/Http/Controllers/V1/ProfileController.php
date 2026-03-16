@@ -5,6 +5,7 @@ namespace App\Http\Controllers\V1;
 use App\Http\Requests\ImageUploadRequest;
 use App\Http\Requests\ProfileRequests\ProfileRequest;
 use App\Http\Requests\ProfileRequests\UpdatePasswordRequest;
+use App\Http\Requests\ProfileRequests\UpdateProfileRequest;
 use App\Http\Resources\CommentResource;
 use App\Http\Resources\PostResource;
 use App\Http\Resources\UserResource;
@@ -99,7 +100,7 @@ class ProfileController
         }
     }
 
-    public function update(ProfileRequest $request)
+    public function update(UpdateProfileRequest $request)
     {
         $user = auth()->user();
 
