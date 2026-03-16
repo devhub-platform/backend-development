@@ -37,7 +37,6 @@ use App\Http\Controllers\V1\Auth\SocialiteMediaFlutterController;
 
 Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
-    // ─── Social Auth ──────────────────────────────────────────────────────────
     Route::controller(SocialiteMediaFrontController::class)->group(function () {
         Route::post('front/auth/google/login', 'loginGoogle');
         Route::get('auth/google/callback', 'callbackGoogle');
@@ -55,7 +54,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
     });
 
 
-    // ─── Auth ─────────────────────────────────────────────────────────────────
     Route::controller(AuthController::class)->group(function () {
         Route::post('login', 'login');
         Route::post('register', 'register');
@@ -68,20 +66,15 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         Route::get('email/is-verified', 'isVerified');
     });
 
-    // ─── Forgot Password ──────────────────────────────────────────────────────
     Route::controller(ForgetPasswordController::class)->group(function () {
         Route::post('password/forgot', 'forgetPassword');
         Route::post('password/verify-otp', 'verifyOtp');
         Route::post('password/reset', 'resetPassword');
     });
 
-    // ─── Public AI ────────────────────────────────────────────────────────────
     Route::get('ai-chat/models', [AIChatController::class, 'models']);
 
-    // ─── Protected Routes ─────────────────────────────────────────────────────
     Route::middleware(['auth:api', 'throttle:25,1'])->group(function () {
-
-        // ─── Auth Actions ─────────────────────────────────────────────────────
         Route::controller(AuthController::class)->group(function () {
             Route::post('logout', 'logout');
             Route::post('refresh', 'refreshToken');
@@ -105,10 +98,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
         });
         Route::apiResource('posts', PostController::class);
 
-        // ─── Post AI Generation ───────────────────────────────────────────────
-        Route::prefix('posts/ai')
-            ->middleware('throttle:10,1')
-            ->controller(PostAIController::class)
+        Route::prefix('posts/ai')->middleware('throttle:10,1')->controller(PostAIController::class)
             ->group(function () {
                 Route::post('generate-image', 'generateImage');
                 Route::post('generate-content', 'generateContent');
@@ -117,13 +107,11 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
         Route::post('posts/{post}/ai-chat', [PostChatController::class, 'chat']);
 
-        // ─── Post Views ───────────────────────────────────────────────────────
         Route::controller(PostViewController::class)->group(function () {
             Route::get('posts/viewed/recent', 'getRecentViewedPosts');
             Route::delete('posts/viewed/clear', 'clearViewedPosts');
         });
 
-        // ─── Q&A - Questions ──────────────────────────────────────────────────
         Route::controller(QuestionController::class)->group(function () {
             Route::get('questions', 'index');
             Route::post('questions/create', 'store');
@@ -134,7 +122,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('questions/{question}/vote', 'vote');
         });
 
-        // ─── Q&A - Answers ────────────────────────────────────────────────────
         Route::controller(AnswerController::class)->group(function () {
             Route::get('questions/{question}/answers', 'index');
             Route::post('questions/{question}/answers/create', 'store');
@@ -148,7 +135,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
         Route::post('questions/{question}/ai-chat', [QuestionChatController::class, 'chat']);
 
-        // ─── Users ────────────────────────────────────────────────────────────
         Route::controller(UserController::class)->group(function () {
             Route::get('users', 'index');
             Route::get('users/recommended', 'getRecommendedUsers');
@@ -164,7 +150,6 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('users/{user}/mutual-following', 'checkMutualFollowing');
         });
 
-        // ─── Search ───────────────────────────────────────────────────────────
         Route::controller(SearchController::class)->group(function () {
             Route::get('search/posts', 'searchPosts');
             Route::get('search/users', 'searchUsersByUsername');
