@@ -10,7 +10,7 @@ class PostObserver
 {
     public function creating(Post $post): void
     {
-        $post->title = Str::title($post->title);
+//        $post->title = Str::title($post->title);
         $post->status = $post->status ?? 'draft';
     }
 
