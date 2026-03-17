@@ -34,6 +34,7 @@ use App\Http\Controllers\V1\VerifyAltEmailController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\V1\Chats\MessageController;
 use App\Http\Controllers\V1\Auth\SocialiteMediaFlutterController;
+use App\Http\Controllers\V1\TestNotificationController;
 
 Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
@@ -376,8 +377,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
  });
 
  Route::post('/test/send-message', [MessageController::class, 'broadcastTest']);
- Route::post('/test/send-message_notification', \App\Http\Controllers\TestNotificationController::class);
- Route::post('/send-message_notification', \App\Http\Controllers\TestNotificationController::class);
+ Route::post('/send-message_notification', TestNotificationController::class);
 
  Route::fallback(function () {
      return response()->json([
@@ -387,4 +387,3 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
          'version' => 'API v1',
      ], 404);
  });
-
