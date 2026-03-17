@@ -1,7 +1,6 @@
 <?php
 
 return [
-
     /*
     |--------------------------------------------------------------------------
     | Third Party Services
@@ -72,5 +71,11 @@ return [
     'piston' => [
         'api_key' => env('PISTON_API_KEY'),
         'base_url' => env('PISTON_API_URL', 'https://emkc.org/api/v2/piston'),
+    ],
+
+    'profile_share' => [
+        'web_base_url' => env('PROFILE_SHARE_WEB_BASE_URL', env('APP_URL')),
+        'deep_link_scheme' => env('PROFILE_SHARE_DEEP_LINK_SCHEME', 'devhub'),
+        'deep_link_profile_path' => env('PROFILE_SHARE_DEEP_LINK_PROFILE_PATH', 'profile'),
     ],
 ];

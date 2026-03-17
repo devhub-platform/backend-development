@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\V1;
 
 use Illuminate\Http\Request;
 use OneSignal;
@@ -18,7 +18,7 @@ class TestNotificationController extends Controller
         ]);
 
         try {
-            OneSignal::sendNotificationToAll(
+            OneSignal::sendNotificationToUser(
                 $validated['message'],
                 $validated['url'] ?? null,
                 null,

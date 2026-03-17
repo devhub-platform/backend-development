@@ -34,6 +34,7 @@ use App\Http\Controllers\V1\VerifyAltEmailController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\V1\Chats\MessageController;
 use App\Http\Controllers\V1\Auth\SocialiteMediaFlutterController;
+use App\Http\Controllers\V1\TestNotificationController;
 
 Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
 
@@ -148,6 +149,7 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('users/{user}/following', 'usersFollowing');
             Route::get('users/{user}/mutual-followers', 'getMutualFollowers');
             Route::get('users/{user}/mutual-following', 'checkMutualFollowing');
+
         });
 
         Route::controller(SearchController::class)->group(function () {
@@ -201,6 +203,8 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::post('profile/upload/cover-image', 'uploadCoverImage');
             Route::get('profile/activity', 'activity');
             Route::get('profile/details', 'details');
+
+            Route::get('profile/share-link', 'shareLink');
         });
 
         // ─── Followers ────────────────────────────────────────────────────────
@@ -251,6 +255,12 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
             Route::get('notifications/preferences', 'getNotificationPreferences');
             Route::put('notifications/preferences', 'updateNotificationPreferences');
             Route::patch('notifications/preferences/{type}/toggle', 'toggleNotificationPreference');
+
+            Route::patch('notifications/add-player-id', 'storePlayerId');
+            Route::delete('notifications/remove-player-id', 'removePlayerId');
+
+            Route::get('notifications/questions', 'getQuestionsNotifications');
+            Route::get('notifications/answers', 'getAnswersNotifications');
         });
 
         // ─── Tags Follow ──────────────────────────────────────────────────────
@@ -376,15 +386,12 @@ Route::prefix('v1')->middleware('throttle:15,1')->group(function () {
  });
 
  Route::post('/test/send-message', [MessageController::class, 'broadcastTest']);
- Route::post('/test/send-message_notification', \App\Http\Controllers\TestNotificationController::class);
- Route::post('/send-message_notification', \App\Http\Controllers\TestNotificationController::class);
+ Route::post('/send-message_notification', TestNotificationController::class);
 
  Route::fallback(function () {
      return response()->json([
-         'Hey_there!' => 'Ramadan Karam!!',
          'message' => 'Resource not found, the API endpoint does not exist',
          'documentation' => 'https://devhub.apidog.io/',
          'version' => 'API v1',
      ], 404);
  });
-

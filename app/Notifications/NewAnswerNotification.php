@@ -7,11 +7,13 @@ use Illuminate\Notifications\Notification;
 
 class NewAnswerNotification extends Notification
 {
-    protected $answer;
+    protected Answer $answer;
+    protected array $databasePayload;
 
     public function __construct(Answer $answer)
     {
         $this->answer = $answer;
+        $this->databasePayload = $this->buildDatabasePayload();
     }
 
     public function via($notifiable): array
@@ -21,20 +23,42 @@ class NewAnswerNotification extends Notification
 
     public function toDatabase($notifiable): array
     {
-        return [
-            'message' => 'New answer to your question: ' . $this->answer->question->title,
-            'answerer_name' => $this->answer->user->name,
-            'question_title' => $this->answer->question->title,
-            'question_id' => $this->answer->question_id,
-            'answer_id' => $this->answer->id,
-        ];
+        return $this->databasePayload;
     }
 
     public function toArray($notifiable): array
     {
         return [
-            'question_id' => $this->answer->question_id,
-            'answer_id' => $this->answer->id,
+            'question_id' => $this->databasePayload['question_id'],
+            'answer_id' => $this->databasePayload['answer_id'],
+        ];
+    }
+
+    private function buildDatabasePayload(): array
+    {
+        $answer = $this->answer->loadMissing(['question', 'user']);
+        $question = $answer->question;
+
+        return [
+            'message' => 'New answer to your question: ' . ($question->title ?? ''),
+            'answerer_from_user' => $this->answererPayload($answer->user),
+            'question_title' => $question->title ?? null,
+            'question_id' => $answer->question_id,
+            'answer_id' => $answer->id,
+        ];
+    }
+
+    private function answererPayload($user): ?array
+    {
+        if (!$user) {
+            return null;
+        }
+
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'username' => $user->username,
+            'avatar_url' => $user->avatar_url,
         ];
     }
 }
