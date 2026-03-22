@@ -69,7 +69,7 @@ class PostController
             ->with(['user', 'tags'])
             ->where('status', '!=', 'draft')
             ->when(auth()->check(), fn($query) => $query->whereNotIn('user_id', $this->blockedUserIds()))
-            ->prioritizeFollowedTags($user)
+//            ->scopePrioritizeFollowedTags($user)
             ->latest()
             ->paginate(10);
 

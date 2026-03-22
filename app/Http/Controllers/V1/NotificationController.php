@@ -174,7 +174,7 @@ class NotificationController
         $currentPreferences = $user->getNotificationPreferences();
 
         foreach ($validated['preferences'] as $type => $enabled) {
-            $currentPreferences[$type] = (bool) $enabled;
+            $currentPreferences[$type] = (bool)$enabled;
         }
 
         $user->update(['notification_preferences' => $currentPreferences]);
