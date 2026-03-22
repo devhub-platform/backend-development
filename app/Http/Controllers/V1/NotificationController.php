@@ -34,6 +34,11 @@ class NotificationController
         return $this->unreadByTypes($user, [$type]);
     }
 
+    private function validPreferenceTypes(): array
+    {
+        return array_keys(User::getDefaultNotificationPreferences());
+    }
+
     public function showNewCommentNotify(): JsonResponse
     {
         $notifications = $this->unreadByType($this->user(), self::TYPE_NEW_COMMENT);
@@ -148,20 +153,28 @@ class NotificationController
     public function updateNotificationPreferences(Request $request): JsonResponse
     {
         $user = $this->user();
-
-        $validTypes = array_keys(User::getDefaultNotificationPreferences());
+        $validTypes = $this->validPreferenceTypes();
 
         $validated = $request->validate([
             'preferences' => 'required|array',
             'preferences.*' => 'boolean',
         ]);
 
+        $incomingTypes = array_keys($validated['preferences']);
+        $invalidTypes = array_values(array_diff($incomingTypes, $validTypes));
+
+        if ($invalidTypes !== []) {
+            return response()->json([
+                'message' => 'Invalid notification type',
+                'invalid_types' => $invalidTypes,
+                'valid_types' => $validTypes,
+            ], 422);
+        }
+
         $currentPreferences = $user->getNotificationPreferences();
 
         foreach ($validated['preferences'] as $type => $enabled) {
-            if (in_array($type, $validTypes, true)) {
-                $currentPreferences[$type] = (bool)$enabled;
-            }
+            $currentPreferences[$type] = (bool) $enabled;
         }
 
         $user->update(['notification_preferences' => $currentPreferences]);
@@ -172,11 +185,10 @@ class NotificationController
         ]);
     }
 
-    public function toggleNotificationPreference(Request $request, string $type): JsonResponse
+    public function toggleNotificationPreference(string $type): JsonResponse
     {
         $user = $this->user();
-
-        $validTypes = array_keys(User::getDefaultNotificationPreferences());
+        $validTypes = $this->validPreferenceTypes();
 
         if (!in_array($type, $validTypes, true)) {
             return response()->json([

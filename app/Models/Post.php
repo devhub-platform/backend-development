@@ -6,6 +6,7 @@ use App\Observers\PostObserver;
 use Binafy\LaravelReaction\Contracts\HasReaction;
 use Binafy\LaravelReaction\Traits\Reactable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -43,6 +44,28 @@ class Post extends Model implements HasReaction
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function scopePrioritizeFollowedTags(Builder $query, ?User $user): Builder
+    {
+        if (!$user) {
+            return $query;
+        }
+
+        if (!$user->followedTags()->exists()) {
+            return $query;
+        }
+
+        return $query->orderByRaw(
+            'EXISTS (
+                SELECT 1
+                FROM post_tags pt
+                INNER JOIN tag_user tu ON tu.tag_id = pt.tag_id
+                WHERE pt.post_id = posts.id
+                  AND tu.user_id = ?
+            ) DESC',
+            [$user->id]
+        );
     }
 
     public function comments(): HasMany
