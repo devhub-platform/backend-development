@@ -51,6 +51,15 @@ return [
         'token'    => env('HACKAI_API_KEY'),
     ],
 
+    'hackclub_cdn' => [
+        'base_url' => env('HACKCLUB_CDN_BASE_URL', 'https://cdn.hackclub.com/api/v4'),
+        'token' => env('HACKCLUB_API_CDN'),
+        'timeout' => (int) env('HACKCLUB_CDN_TIMEOUT', 30),
+        'retry_times' => (int) env('HACKCLUB_CDN_RETRY_TIMES', 2),
+        'retry_sleep_ms' => (int) env('HACKCLUB_CDN_RETRY_SLEEP_MS', 200),
+        'chat_fallback_to_s3' => (bool) env('HACKCLUB_CHAT_FALLBACK_TO_S3', true),
+    ],
+
 
     'llama' => [
         'api_key' => env('LLAMA_KEY'),

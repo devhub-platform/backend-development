@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use App\Services\AWSS3Service;
+use App\Services\HackClubCdnService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Mockery;
@@ -27,14 +27,14 @@ class ChatVoiceMessageTest extends TestCase
     }
 
     /** @test */
-    public function it_can_send_a_voice_message_to_s3(): void
+    public function it_can_send_a_voice_message_to_hackclub_cdn(): void
     {
-        $mockS3 = Mockery::mock(AWSS3Service::class);
-        $mockS3->shouldReceive('uploadFile')
+        $mockCdn = Mockery::mock(HackClubCdnService::class);
+        $mockCdn->shouldReceive('uploadFileUrl')
             ->once()
-            ->andReturn('https://bucket.s3.region.amazonaws.com/chat_voice_messages/voice.webm');
+            ->andReturn('https://cdn.hackclub.com/voice.webm');
 
-        $this->app->instance(AWSS3Service::class, $mockS3);
+        $this->app->instance(HackClubCdnService::class, $mockCdn);
 
         $file = UploadedFile::fake()->create('voice.webm', 400, 'audio/webm');
 
@@ -50,7 +50,7 @@ class ChatVoiceMessageTest extends TestCase
             ->assertJsonPath('message', 'Voice message sent successfully.')
             ->assertJsonPath('data.type', 'voice')
             ->assertJsonPath('data.data.file_name', 'intro-voice.webm')
-            ->assertJsonPath('data.data.file_url', 'https://bucket.s3.region.amazonaws.com/chat_voice_messages/voice.webm')
+            ->assertJsonPath('data.data.file_url', 'https://cdn.hackclub.com/voice.webm')
             ->assertJsonPath('data.data.duration_ms', 2200);
     }
 
