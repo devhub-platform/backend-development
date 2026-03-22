@@ -63,10 +63,13 @@ class PostController
     {
         $this->authorize('viewAny', Post::class);
 
+        $user = auth()->user();
+
         $posts = Post::query()
             ->with(['user', 'tags'])
             ->where('status', '!=', 'draft')
             ->when(auth()->check(), fn($query) => $query->whereNotIn('user_id', $this->blockedUserIds()))
+            ->prioritizeFollowedTags($user)
             ->latest()
             ->paginate(10);
 
@@ -108,6 +111,9 @@ class PostController
         $this->authorize('create', Post::class);
 
         $validated = $request->validated();
+        $requestedTags = $validated['tags'] ?? [];
+        unset($validated['tags']);
+
         $validated['user_id'] = auth()->id();
         $validated['slug'] = Str::slug($validated['title']);
 
@@ -146,6 +152,19 @@ class PostController
 
         $post = Post::create($validated);
 
+        if (!empty($requestedTags)) {
+            $tagIds = collect($requestedTags)
+                ->map(fn($tagName) => trim((string) $tagName))
+                ->filter()
+                ->unique()
+                ->map(fn($tagName) => Tag::firstOrCreate(['name' => $tagName])->id)
+                ->values();
+
+            if ($tagIds->isNotEmpty()) {
+                $post->tags()->syncWithoutDetaching($tagIds);
+            }
+        }
+
         // If user passed a generated_image_id, confirm it and attach to the post
         if ($generatedImageId) {
             try {
@@ -175,7 +194,7 @@ class PostController
 
         return response()->json([
             'message' => "Post '{$post->title}' created successfully",
-            'data' => new PostResource($post)
+            'data' => new PostResource($post->loadMissing(['user', 'tags']))
         ], 201);
     }
 
