@@ -47,8 +47,11 @@ return [
     ],
 
     'hackai' => [
-        'base_url' => env('HACKAI_BASE_URL'),
-        'token'    => env('HACKAI_API_KEY'),
+        'base_url' => env('HACKAI_BASE_URL', 'https://ai.hackclub.com/proxy/v1'),
+        'token' => env('HACKAI_API_KEY'),
+        'embeddings_model' => env('HACKAI_EMBEDDINGS_MODEL', 'openai/text-embedding-3-large'),
+        'embeddings_timeout' => (int) env('HACKAI_EMBEDDINGS_TIMEOUT', 20),
+        'embeddings_enabled' => env('HACKAI_EMBEDDINGS_ENABLED', true),
     ],
 
     'hackclub_cdn' => [
