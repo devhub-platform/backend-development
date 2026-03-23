@@ -5,6 +5,7 @@ namespace App\Http\Controllers\V1;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Notifications\FollowNotification;
+use App\Services\Followers\PeopleSuggestionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -68,6 +69,7 @@ class FollowersController
             'followers_count' => $count_followers,
         ]);
     }
+
     public function myFollowers()
     {
         $user = auth()->user();
@@ -106,69 +108,8 @@ class FollowersController
     public function suggestions(Request $request)
     {
         $user = auth()->user();
-        $limit = (int) $request->query('limit', 5);
-        $limit = max(1, min($limit, 20));
-
-        $followingIds = $user->following()->pluck('users.id')->all();
-        $excludeIds = array_merge($followingIds, [$user->id]);
-        $topicIds = $user->topics()->pluck('topics.id');
-
-        $suggestedUsers = collect();
-
-        if ($topicIds->isNotEmpty()) {
-            $suggestedUsers = User::query()
-                ->whereNotIn('id', $excludeIds)
-                ->whereHas('topics', function ($query) use ($topicIds) {
-                    $query->whereIn('topics.id', $topicIds);
-                })
-                ->whereHas('posts', function ($query) {
-                    $query->where('status', '!=', 'draft');
-                })
-                ->withCount([
-                    'topics as shared_topics_count' => function ($query) use ($topicIds) {
-                        $query->whereIn('topics.id', $topicIds);
-                    },
-                    'posts as published_posts_count' => function ($query) {
-                        $query->where('status', '!=', 'draft');
-                    },
-                ])
-                ->orderByDesc('shared_topics_count')
-                ->orderByDesc('published_posts_count')
-                ->limit($limit)
-                ->get(['id', 'name', 'username', 'avatar_url', 'bio']);
-        }
-
-        if ($suggestedUsers->count() < $limit) {
-            $remaining = $limit - $suggestedUsers->count();
-
-            $publishedCandidates = User::query()
-                ->whereNotIn('id', array_merge($excludeIds, $suggestedUsers->pluck('id')->all()))
-                ->whereHas('posts', function ($query) {
-                    $query->where('status', '!=', 'draft');
-                })
-                ->withCount([
-                    'posts as published_posts_count' => function ($query) {
-                        $query->where('status', '!=', 'draft');
-                    },
-                ])
-                ->orderByDesc('published_posts_count')
-                ->limit($remaining)
-                ->get(['id', 'name', 'username', 'avatar_url', 'bio']);
-
-            $suggestedUsers = $suggestedUsers->concat($publishedCandidates);
-        }
-
-        if ($suggestedUsers->count() < $limit) {
-            $remaining = $limit - $suggestedUsers->count();
-
-            $randomCandidates = User::query()
-                ->whereNotIn('id', array_merge($excludeIds, $suggestedUsers->pluck('id')->all()))
-                ->inRandomOrder()
-                ->limit($remaining)
-                ->get(['id', 'name', 'username', 'avatar_url', 'bio']);
-
-            $suggestedUsers = $suggestedUsers->concat($randomCandidates);
-        }
+        $limit = (int)$request->query('limit', 5);
+        $suggestedUsers = app(PeopleSuggestionService::class)->suggestForUser($user, $limit);
 
         if ($suggestedUsers->isEmpty()) {
             return response()->json([

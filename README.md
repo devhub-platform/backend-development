@@ -169,6 +169,25 @@ Explore the complete API documentation in the `postman/` directory:
 - **Testing** - PHPUnit tests with feature and unit test coverage
 ```
 
+## AI People Suggestions
+
+`GET /api/v1/followers/suggestions` now supports AI re-ranking using HackAI embeddings.
+
+Required environment variables:
+
+- `HACKAI_BASE_URL` (default: `https://ai.hackclub.com/proxy/v1`)
+- `HACKAI_API_KEY`
+- `HACKAI_EMBEDDINGS_MODEL` (default: `openai/text-embedding-3-large`)
+- `HACKAI_EMBEDDINGS_TIMEOUT` (seconds)
+- `HACKAI_EMBEDDINGS_ENABLED` (`true`/`false`)
+
+Behavior:
+
+- Builds a candidate pool from users with published posts.
+- Prioritizes shared topics.
+- Re-ranks candidates by embedding similarity to the current user's profile.
+- Falls back to non-AI ranking/random fill if the AI request fails.
+
 ---
 
 ## 🐳 Docker Support
