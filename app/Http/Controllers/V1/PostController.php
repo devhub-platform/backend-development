@@ -14,6 +14,7 @@ use App\Models\Tag;
 use App\Notifications\PostReportedNotification;
 use App\Notifications\NewPostNotification;
 use App\Services\AI\PostAIImageService;
+use App\Services\HackClubCdnService;
 use App\Services\ImageUploadCloudinaryService;
 use App\Services\ModerationService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -29,8 +30,11 @@ class PostController
 
     public function __construct(
         private ImageUploadCloudinaryService $cloudinaryService,
+        private HackClubCdnService           $hackClubCdnService,
         private PostAIImageService           $aiImageService,
-    ) {}
+    )
+    {
+    }
 
     public function topPostsViews(): JsonResponse
     {
@@ -125,11 +129,7 @@ class PostController
         }
 
         if ($request->hasFile('image_url')) {
-            $validated['image_url'] = $this->cloudinaryService->uploadImage(
-                $request->file('image_url'),
-                'posts-images',
-                $validated['slug']
-            );
+            $validated['image_url'] = $this->hackClubCdnService->uploadFileUrl($request->file('image_url'));
         }
         // If image_url is a plain URL string (e.g. from AI generation), keep it as-is
 
@@ -154,7 +154,7 @@ class PostController
 
         if (!empty($requestedTags)) {
             $tagIds = collect($requestedTags)
-                ->map(fn($tagName) => trim((string) $tagName))
+                ->map(fn($tagName) => trim((string)$tagName))
                 ->filter()
                 ->unique()
                 ->map(fn($tagName) => Tag::firstOrCreate(['name' => $tagName])->id)
@@ -170,15 +170,15 @@ class PostController
             try {
                 $secureUrl = $this->aiImageService->confirm(
                     generatedImageId: $generatedImageId,
-                    postId:           $post->id,
-                    userId:           auth()->id(),
+                    postId: $post->id,
+                    userId: auth()->id(),
                 );
                 $post->update(['cover_image' => $secureUrl]);
             } catch (\Exception $e) {
                 Log::warning('Could not attach generated image to post', [
-                    'post_id'            => $post->id,
+                    'post_id' => $post->id,
                     'generated_image_id' => $generatedImageId,
-                    'error'              => $e->getMessage(),
+                    'error' => $e->getMessage(),
                 ]);
             }
         }
@@ -416,13 +416,13 @@ class PostController
         $validated = $request->validated();
 
         $report = Report::create([
-            'reporter_id'      => $user->id,
+            'reporter_id' => $user->id,
             'reported_user_id' => $post->user_id,
             'reported_post_id' => $post->id,
-            'type'             => 'post',
-            'reason'           => $validated['reason'],
-            'message'          => $validated['message'] ?? null,
-            'report'           => true,
+            'type' => 'post',
+            'reason' => $validated['reason'],
+            'message' => $validated['message'] ?? null,
+            'report' => true,
         ]);
 
         $adminEmail = config('services.mail.admin_email_2', 'youssef.ahmed.fci@gmail.com');
@@ -435,8 +435,8 @@ class PostController
             'message' => 'Post reported successfully. Our team will review it shortly.',
             'data' => [
                 'report_id' => $report->id,
-                'post_id'   => $post->id,
-                'reason'    => Report::REASONS[$validated['reason']] ?? $validated['reason'],
+                'post_id' => $post->id,
+                'reason' => Report::REASONS[$validated['reason']] ?? $validated['reason'],
             ],
         ], 201);
     }
@@ -455,7 +455,7 @@ class PostController
             return [];
         }
 
-        $blocked  = $user->blockedUsers()->pluck('users.id');
+        $blocked = $user->blockedUsers()->pluck('users.id');
         $blockers = $user->blockers()->pluck('users.id');
 
         return $blocked->merge($blockers)->unique()->values()->all();

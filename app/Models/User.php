@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Observers\UserObserver;
+use App\Services\HackClubCdnService;
 use Binafy\LaravelReaction\Traits\Reactor;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -98,6 +99,11 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         ];
     }
 
+//    public function getAvatarUrlAttribute($value): ?string
+//    {
+//        return app(HackClubCdnService::class)->resolvePublicUrl($value);
+//    }
+
     public function posts(): HasMany
     {
         return $this->hasMany(Post::class);
@@ -167,6 +173,12 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     public function readingLists()
     {
         return $this->hasMany(ReadingList::class);
+    }
+
+    public function topics(): BelongsToMany
+    {
+        return $this->belongsToMany(Topic::class, 'topic_user', 'user_id', 'topic_id')
+            ->withTimestamps();
     }
 
     public function questions(): HasMany
