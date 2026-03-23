@@ -399,7 +399,6 @@ Route::prefix('v1')->group(function () {
                     Route::put('{sessionId}/title', 'updateTitle');
                 });
             });
-
         });
     });
 });
@@ -409,8 +408,9 @@ Route::post('/send-message_notification', TestNotificationController::class);
 
 Route::fallback(function () {
     return response()->json([
-        'message' => 'Resource not found, the API endpoint does not exist',
+        'Hi_there' => 'أدعوا لأمي بالرحمه️ غفر الله لأمي ولكل المسلمين والمسلمات الأحياء منهم والأموات',
+        'message' => 'Resource not found, the API endpoint does not exist , can visit the documentation for more details',
         'documentation' => 'https://devhub.apidog.io/',
-        'version' => 'API v1',
+        'version' => 'API v2',
     ], 404);
 });

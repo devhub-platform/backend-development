@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\V1;
 
+use App\Http\Resources\TopicResource;
 use App\Models\Topic;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -20,7 +21,7 @@ class TopicController
         return response()->json([
             'message' => 'Topics retrieved successfully',
             'count' => $topics->count(),
-            'data' => $topics,
+            'data' => TopicResource::collection($topics),
         ], 200);
     }
 
@@ -37,7 +38,7 @@ class TopicController
 
         return response()->json([
             'message' => 'Topic retrieved successfully',
-            'data' => $topic,
+            'data' => new TopicResource($topic),
         ], 200);
     }
 
