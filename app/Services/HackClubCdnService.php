@@ -12,6 +12,30 @@ use Throwable;
 class HackClubCdnService
 {
     /**
+     * Resolve a stored path/URL into a public CDN URL.
+     */
+    public function resolvePublicUrl(?string $pathOrUrl): ?string
+    {
+        if (!is_string($pathOrUrl)) {
+            return null;
+        }
+
+        $value = trim($pathOrUrl);
+
+        if ($value === '') {
+            return null;
+        }
+
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            return $value;
+        }
+
+        $publicBaseUrl = rtrim((string) config('services.hackclub_cdn.public_base_url', 'https://cdn.hackclub.com/api/v4'), '/');
+
+        return $publicBaseUrl . '/' . ltrim($value, '/');
+    }
+
+    /**
      * Upload a local uploaded file to Hack Club CDN.
      */
     public function uploadFile(UploadedFile $file): array
