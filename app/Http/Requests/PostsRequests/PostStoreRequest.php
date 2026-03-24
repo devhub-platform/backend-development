@@ -3,6 +3,8 @@
 namespace App\Http\Requests\PostsRequests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Auth;
 
 class PostStoreRequest extends FormRequest
 {
@@ -11,6 +13,7 @@ class PostStoreRequest extends FormRequest
         return [
             'title' => 'required|string|max:255',
             'content' => 'required|string|max:5000',
+
             'image_url' => [
                 'nullable',
                 function ($attribute, $value, $fail) {
@@ -20,7 +23,6 @@ class PostStoreRequest extends FormRequest
                         }
 
                         $fail('The ' . $attribute . ' field must be a valid URL or an image file.');
-
                         return;
                     }
 
@@ -30,20 +32,32 @@ class PostStoreRequest extends FormRequest
                         }
 
                         $fail('The ' . $attribute . ' file must be an image.');
-
                         return;
                     }
 
                     $fail('The ' . $attribute . ' field must be a valid URL or an image file.');
                 },
             ],
+
             'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+
             'tags' => 'nullable|array|max:10',
             'tags.*' => 'string|max:50',
+
             'slug' => 'sometimes|string|unique:posts,slug',
             'status' => 'nullable|in:draft,published',
             'read_time' => 'nullable|integer|min:1|max:59',
-            'generated_image_id' => 'nullable|integer|exists:generated_post_images,id',
+
+            // Optional generated image ID for AI-generated cover images
+            'generated_image_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('generated_post_images', 'id')
+                    ->where(function ($query) {
+                        $query->where('user_id', Auth::id())
+                            ->where('status', 'pending');
+                    }),
+            ],
         ];
     }
 

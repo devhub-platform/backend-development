@@ -78,6 +78,7 @@ class PostAIImageService
         $image = GeneratedPostImage::where('id', $generatedImageId)
             ->where('user_id', $userId)
             ->where('status', 'pending')
+            ->where('created_at', '>=', now()->subMinutes(10))
             ->firstOrFail();
 
         $image->update([
@@ -103,7 +104,7 @@ class PostAIImageService
         }
 
         if ($image->public_id) {
-            $this->cloudinary->deleteImage($image->secure_url);
+            $this->cloudinary->deleteImage($image->public_id);
         }
 
         $image->delete();
