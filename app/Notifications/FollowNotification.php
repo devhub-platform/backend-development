@@ -28,7 +28,6 @@ class FollowNotification extends Notification
             'follower_avatar' => $this->follower->avatar_url,
             'message' => "{$this->follower->name} started following you",
             'total_followers' => $notifiable->followers()->count(),
-            'action_url' => "/users/{$this->follower->username}",
         ];
     }
 

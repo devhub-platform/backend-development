@@ -57,18 +57,18 @@ class AuthenticateWithGoogleRequest extends FormRequest
                 $username = $this->generateUniqueUsername(Str::before($googleUser['email'], '@'));
 
                 $user = User::create([
-                    'name'              => $name,
-                    'username'          => $username,
-                    'email'             => $googleUser['email'],
-                    'provider_id'       => $googleUser['sub'],
-                    'avatar_url'        => $avatar,
+                    'name' => $name,
+                    'username' => $username,
+                    'email' => $googleUser['email'],
+                    'provider_id' => $googleUser['sub'],
+                    'avatar_url' => $avatar,
                     'email_verified_at' => now(),
-                    'password'          => bcrypt(Str::random(16)),
+                    'password' => bcrypt(Str::random(16)),
                 ]);
 
                 Log::info('New user created via Google', [
                     'user_id' => $user->id,
-                    'email'   => $user->email,
+                    'email' => $user->email,
                 ]);
             } else {
                 $updateData = [];
@@ -88,7 +88,7 @@ class AuthenticateWithGoogleRequest extends FormRequest
 
                 Log::info('Existing user logged in via Google', [
                     'user_id' => $user->id,
-                    'email'   => $user->email,
+                    'email' => $user->email,
                 ]);
             }
 

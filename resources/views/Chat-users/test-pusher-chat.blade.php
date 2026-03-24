@@ -5,13 +5,46 @@
     <title>Realtime Chat Test</title>
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        #messages { border: 1px solid #ccc; padding: 10px; height: 300px; overflow: auto; background: #f9f9f9; }
-        #messages div { padding: 8px; margin: 4px 0; background: white; border-radius: 4px; }
-        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
-        .status.success { background: #d4edda; color: #155724; }
-        .status.error { background: #f8d7da; color: #721c24; }
-        .status.info { background: #d1ecf1; color: #0c5460; }
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        #messages {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 300px;
+            overflow: auto;
+            background: #f9f9f9;
+        }
+
+        #messages div {
+            padding: 8px;
+            margin: 4px 0;
+            background: white;
+            border-radius: 4px;
+        }
+
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
     </style>
 </head>
 <body>
@@ -26,7 +59,7 @@
 <script>
     const APP_KEY = "8386ec29a087993e4c57";
     const CLUSTER = "mt1";
-    const conversationId = 2;
+    const conversationId = 19;
 
     document.getElementById('conv-id').textContent = conversationId;
 
@@ -34,10 +67,10 @@
 
     const pusher = new Pusher(APP_KEY, {
         cluster: CLUSTER,
-        authEndpoint: "https://devhub.test/api/broadcasting/auth",
+        authEndpoint: "https://api.dev-hubs.tech/api/broadcasting/auth",
         auth: {
             headers: {
-                Authorization: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZGV2aHViLmV1LW5vcnRoLTEuZWxhc3RpY2JlYW5zdGFsay5jb20vYXBpL3YxL2F1dGgvZ29vZ2xlL2NhbGxiYWNrIiwiaWF0IjoxNzcyNzAyODI1LCJleHAiOjE3NzMzMDc2MjUsIm5iZiI6MTc3MjcwMjgyNSwianRpIjoiRENZQlFWUXNzcmhGc3o0TyIsInN1YiI6IjQwNiIsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.aWZULxafPyPgNvcR5E0bbOP0f3dI3hLsrrkP_cS9mkk"
+                Authorization: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vYXBpLmRldi1odWJzLnRlY2gvYXBpL3YxL3JlZ2lzdGVyIiwiaWF0IjoxNzczNTg0MzE3LCJleHAiOjE3ODEzNjAzMTcsIm5iZiI6MTc3MzU4NDMxNywianRpIjoiVEVDckRYTFBJeTNOMXdNTyIsInN1YiI6IjQ2NyIsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.uEI0fZe-5cFYx1C5YNuV9eih6BtjsZwkZsJfARYteKo"
             }
         }
     });
@@ -46,6 +79,69 @@
         const statusDiv = document.getElementById('status');
         statusDiv.textContent = message;
         statusDiv.className = 'status ' + type;
+    }
+
+    function formatReactions(reactions) {
+        if (!reactions) {
+            return '';
+        }
+
+        const tokens = [];
+
+        if (Array.isArray(reactions)) {
+            reactions.forEach((item) => {
+                if (typeof item === 'string') {
+                    tokens.push(item);
+                    return;
+                }
+
+                if (item && typeof item === 'object') {
+                    const name = item.reaction || item.type || item.name;
+                    const count = typeof item.count === 'number'
+                        ? item.count
+                        : (Array.isArray(item.users) ? item.users.length : null);
+
+                    if (name) {
+                        tokens.push(count ? `${name} (${count})` : `${name}`);
+                    }
+                }
+            });
+        } else if (typeof reactions === 'object') {
+            Object.entries(reactions).forEach(([name, value]) => {
+                if (typeof value === 'number') {
+                    tokens.push(`${name} (${value})`);
+                } else if (Array.isArray(value)) {
+                    tokens.push(`${name} (${value.length})`);
+                } else if (value && typeof value === 'object' && typeof value.count === 'number') {
+                    tokens.push(`${name} (${value.count})`);
+                } else {
+                    tokens.push(`${name}`);
+                }
+            });
+        }
+
+        return tokens.join(' | ');
+    }
+
+    function upsertReactionLine(messageId, reactions) {
+        const existing = document.getElementById("msg-" + messageId);
+
+        if (!existing) {
+            return;
+        }
+
+        let reactionLine = document.getElementById("msg-reactions-" + messageId);
+        if (!reactionLine) {
+            reactionLine = document.createElement('div');
+            reactionLine.id = "msg-reactions-" + messageId;
+            reactionLine.style.marginTop = '6px';
+            reactionLine.style.fontSize = '13px';
+            reactionLine.style.color = '#555';
+            existing.appendChild(reactionLine);
+        }
+
+        const formatted = formatReactions(reactions);
+        reactionLine.textContent = formatted ? `Reactions: ${formatted}` : 'No reactions';
     }
 
 
@@ -81,6 +177,7 @@
         msg.innerHTML = `
             <strong>${data.message.sender.name ?? "User"}:</strong>
             ${data.message.body}
+            <div id="msg-reactions-${data.message.id}" style="margin-top:6px;font-size:13px;color:#555;">No reactions</div>
         `;
 
         messageBox.appendChild(msg);
@@ -100,14 +197,31 @@
             existing.innerHTML = `
                 <strong>(edited):</strong>
                 ${parsedData.body}
+                <div id="msg-reactions-${parsedData.id}" style="margin-top:6px;font-size:13px;color:#555;">No reactions</div>
             `;
         } else {
             const msg = document.createElement("div");
             msg.id = "msg-" + parsedData.id;
-            msg.innerHTML = `<strong>(edited):</strong> ${parsedData.body}`;
+            msg.innerHTML = `
+                <strong>(edited):</strong> ${parsedData.body}
+                <div id="msg-reactions-${parsedData.id}" style="margin-top:6px;font-size:13px;color:#555;">No reactions</div>
+            `;
             messageBox.appendChild(msg);
             messageBox.scrollTop = messageBox.scrollHeight;
         }
+    });
+
+    channel.bind("message.reaction.updated", function (data) {
+        console.log("message.reaction.updated event received:", data);
+
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+        console.log("Parsed reaction data:", parsedData);
+
+        upsertReactionLine(parsedData.message_id, parsedData.reactions);
+        updateStatus(
+            `Reaction ${parsedData.action} on message #${parsedData.message_id}`,
+            'success'
+        );
     });
 
     channel.bind("message.deleted", function (data) {
@@ -132,12 +246,12 @@
     });
 
     // Global listener to catch ALL events
-    channel.bind_global(function(eventName, data) {
+    channel.bind_global(function (eventName, data) {
         console.log("Global event captured - Event:", eventName, "Data:", data);
     });
 
     console.log("Event bindings registered for:",
-        "MessageWasSent, message.updated, message.deleted");
+        "MessageWasSent, message.updated, message.deleted, message.reaction.updated");
     console.log("Channel:", "private-mc-chat-conversation." + conversationId);
 </script>
 

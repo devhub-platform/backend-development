@@ -50,14 +50,14 @@ return [
 
     'image' => [
         [
-            'id'       => 'google/gemini-2.5-flash-image',
+            'id'       => 'google/gemini-2.5-flash-image-preview',
             'title'    => 'Nano Banana',
             'best_for' => 'Fast image generation',
             'cost'     => 0.04,
             'default'  => true,
         ],
         [
-            'id'       => 'google/gemini-3.1-flash-image-preview',
+            'id'       => 'google/gemini-2.5-pro-image-preview',
             'title'    => 'Nano Banana 2',
             'best_for' => 'High quality image generation',
             'cost'     => 0.07,

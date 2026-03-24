@@ -15,7 +15,7 @@ class SearchPostResource extends JsonResource
         return [
             'title' => $this->title,
             'content' => Str::limit($this->content, 100),
-            'post by' => new SearchUsersResource($this->whenLoaded('user')),
+            'posted_by' => new SearchUsersResource($this->whenLoaded('user')),
         ];
     }
 }

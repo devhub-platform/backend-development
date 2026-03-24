@@ -29,7 +29,7 @@ class ReadingListResource extends JsonResource
                     'content' => Str::take($post->content, 100),
                     'created_at' => $post->created_at->diffForHumans(),
                     'read_time' => $post->read_time . ' min',
-                    'image_url' => $post->image_url,
+                    'cover_image' => $post->cover_image ?? null,
                     'id' => $post->id,
                     'note' => $post->pivot->note,
 

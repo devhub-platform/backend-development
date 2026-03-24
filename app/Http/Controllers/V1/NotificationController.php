@@ -3,151 +3,178 @@
 namespace App\Http\Controllers\V1;
 
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class NotificationController
 {
-    public function showNewCommentNotify()
+    private const NOTIFICATION_COLUMNS = ['type', 'data', 'created_at'];
+    private const TYPE_NEW_COMMENT = 'App\\Notifications\\NewCommentNotification';
+    private const TYPE_REACT = 'App\\Notifications\\ReactNotification';
+    private const TYPE_FOLLOW = 'App\\Notifications\\FollowNotification';
+    private const TYPE_NEW_POST = 'App\\Notifications\\NewPostNotification';
+    private const TYPE_MENTION = 'App\\Notifications\\MentionInCommentNotification';
+    private const TYPE_QUESTION_CREATED = 'App\\Notifications\\QuestionCreatedNotification';
+    private const TYPE_NEW_ANSWER = 'App\\Notifications\\NewAnswerNotification';
+
+    private function user(): User
     {
-        $user = auth()->user();
-        $notifications = $user->unreadNotifications()
-            ->where('type', 'App\Notifications\NewCommentNotification')->get([
-                'type', 'data', 'created_at'
-            ]);
+        return auth()->user();
+    }
+
+    private function unreadByTypes(User $user, array $types)
+    {
+        return $user->unreadNotifications()
+            ->whereIn('type', $types)
+            ->get(self::NOTIFICATION_COLUMNS);
+    }
+
+    private function unreadByType(User $user, string $type)
+    {
+        return $this->unreadByTypes($user, [$type]);
+    }
+
+    private function validPreferenceTypes(): array
+    {
+        return array_keys(User::getDefaultNotificationPreferences());
+    }
+
+    public function showNewCommentNotify(): JsonResponse
+    {
+        $notifications = $this->unreadByType($this->user(), self::TYPE_NEW_COMMENT);
+
         return response()->json([
             'new_comment_notifications' => $notifications,
         ]);
     }
 
-    public function showNewReactNotify()
+    public function showNewReactNotify(): JsonResponse
     {
-        $user = auth()->user();
-        $notifications = $user->unreadNotifications()
-            ->where('type', 'App\Notifications\ReactNotification')->get([
-                'type', 'data', 'created_at'
-            ]);
+        $notifications = $this->unreadByType($this->user(), self::TYPE_REACT);
+
         return response()->json([
             'new_react_notifications' => $notifications,
         ]);
     }
 
-    public function makeAllRead()
+    public function makeAllRead(): JsonResponse
     {
-        $user = auth()->user();
-        $user->unreadNotifications->markAsRead();
+        $this->user()->unreadNotifications()->update(['read_at' => now()]);
+
         return response()->json([
             'message' => 'All notifications marked as read',
         ]);
     }
 
-    public function makeAsRead(string $slug)
+    public function makeAsRead(string $slug): JsonResponse
     {
-        $user = auth()->user();
-        $notification = $user->unreadNotifications->find($slug);
+        $notification = $this->user()
+            ->unreadNotifications()
+            ->whereKey($slug)
+            ->first();
+
         if ($notification) {
             $notification->markAsRead();
+
             return response()->json([
                 'message' => 'Notification marked as read',
             ]);
-        } else {
-            return response()->json([
-                'message' => 'Notification not found',
-            ], 404);
         }
+
+        return response()->json([
+            'message' => 'Notification not found',
+        ], 404);
     }
 
-    public function showAllNotifications()
+    public function showAllNotifications(): JsonResponse
     {
-        $user = auth()->user();
-        $notifications = $user->notifications;
+        $notifications = $this->user()->notifications;
+
         return response()->json([
             'all_notifications' => $notifications,
         ]);
     }
 
-    public function clearAllNotifications()
+    public function clearAllNotifications(): JsonResponse
     {
-        $user = auth()->user();
-        $user->notifications()->delete();
+        $this->user()->notifications()->delete();
+
         return response()->json([
             'message' => 'All notifications deleted',
         ]);
     }
 
-    public function showNewFollowersNotifications()
+    public function showNewFollowersNotifications(): JsonResponse
     {
-        $user = auth()->user(); // youssef
-        $notifications = $user->unreadNotifications()
-            ->where('type', 'App\Notifications\FollowNotification')->get([
-                'type', 'data', 'created_at'
-            ]);
+        $notifications = $this->unreadByType($this->user(), self::TYPE_FOLLOW);
+
         return response()->json([
             'new_follower_notifications' => $notifications,
         ]);
     }
 
-    public function clearAllNotificationFromFollowers()
+    public function clearAllNotificationFromFollowers(): JsonResponse
     {
-        $user = auth()->user();
-        $user->unreadNotifications()
-            ->where('type', 'App\Notifications\FollowNotification')
+        $this->user()
+            ->unreadNotifications()
+            ->where('type', self::TYPE_FOLLOW)
             ->delete();
+
         return response()->json([
             'message' => 'All follower notifications deleted',
         ]);
     }
 
-    public function newPostCreateFromFollower()
+    public function newPostCreateFromFollower(): JsonResponse
     {
-        $user = auth()->user();
-        $notifications = $user->unreadNotifications()
-            ->where('type', 'App\Notifications\NewPostNotification')->get([
-                'type', 'data', 'created_at'
-            ]);
+        $notifications = $this->unreadByType($this->user(), self::TYPE_NEW_POST);
+
         return response()->json([
             'new_post_from_follower_notifications' => $notifications,
         ]);
     }
 
-    # notification for mention in comment
-
-    public function showNewMentionNotifications()
+    public function showNewMentionNotifications(): JsonResponse
     {
-        $user = auth()->user();
-        $notifications = $user->unreadNotifications()
-            ->where('type', 'App\Notifications\MentionInCommentNotification')->get([
-                'type', 'data', 'created_at'
-            ]);
+        $notifications = $this->unreadByType($this->user(), self::TYPE_MENTION);
+
         return response()->json([
             'new_mention_notifications' => $notifications,
         ]);
     }
 
-    public function getNotificationPreferences()
+    public function getNotificationPreferences(): JsonResponse
     {
-        $user = auth()->user();
         return response()->json([
-            'notification_preferences' => $user->getNotificationPreferences(),
+            'notification_preferences' => $this->user()->getNotificationPreferences(),
         ]);
     }
 
-    public function updateNotificationPreferences(Request $request)
+    public function updateNotificationPreferences(Request $request): JsonResponse
     {
-        $user = auth()->user();
-
-        $validTypes = array_keys(User::getDefaultNotificationPreferences());
+        $user = $this->user();
+        $validTypes = $this->validPreferenceTypes();
 
         $validated = $request->validate([
             'preferences' => 'required|array',
             'preferences.*' => 'boolean',
         ]);
 
+        $incomingTypes = array_keys($validated['preferences']);
+        $invalidTypes = array_values(array_diff($incomingTypes, $validTypes));
+
+        if ($invalidTypes !== []) {
+            return response()->json([
+                'message' => 'Invalid notification type',
+                'invalid_types' => $invalidTypes,
+                'valid_types' => $validTypes,
+            ], 422);
+        }
+
         $currentPreferences = $user->getNotificationPreferences();
 
         foreach ($validated['preferences'] as $type => $enabled) {
-            if (in_array($type, $validTypes)) {
-                $currentPreferences[$type] = (bool)$enabled;
-            }
+            $currentPreferences[$type] = (bool)$enabled;
         }
 
         $user->update(['notification_preferences' => $currentPreferences]);
@@ -158,13 +185,12 @@ class NotificationController
         ]);
     }
 
-    public function toggleNotificationPreference(Request $request, string $type)
+    public function toggleNotificationPreference(string $type): JsonResponse
     {
-        $user = auth()->user();
+        $user = $this->user();
+        $validTypes = $this->validPreferenceTypes();
 
-        $validTypes = array_keys(User::getDefaultNotificationPreferences());
-
-        if (!in_array($type, $validTypes)) {
+        if (!in_array($type, $validTypes, true)) {
             return response()->json([
                 'message' => 'Invalid notification type',
                 'valid_types' => $validTypes,
@@ -183,43 +209,31 @@ class NotificationController
         ]);
     }
 
-    public function getQuestionsNotifications()
+    public function getQuestionsNotifications(): JsonResponse
     {
-        $user = auth()->user();
-        $notifications = $user->unreadNotifications()
-            ->whereIn('type', [
-                'App\Notifications\QuestionCreatedNotification',
-            ])->get([
-                'type', 'data', 'created_at'
-            ]);
+        $notifications = $this->unreadByType($this->user(), self::TYPE_QUESTION_CREATED);
+
         return response()->json([
             'questions_notifications' => $notifications,
         ]);
     }
 
-    public function getAnswersNotifications()
+    public function getAnswersNotifications(): JsonResponse
     {
-        $user = auth()->user();
-        $notifications = $user->unreadNotifications()
-            ->whereIn('type', [
-                'App\Notifications\NewAnswerNotification',
-            ])->get([
-                'type', 'data', 'created_at'
-            ]);
+        $notifications = $this->unreadByType($this->user(), self::TYPE_NEW_ANSWER);
+
         return response()->json([
             'answers_notifications' => $notifications,
         ]);
     }
 
-    public function storePlayerId(Request $request)
+    public function storePlayerId(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'player_id' => 'required|string|uuid',
         ]);
 
-        $user = auth()->user();
-
-        $user->update([
+        $this->user()->update([
             'onesignal_player_id' => $validated['player_id'],
         ]);
 
@@ -229,11 +243,9 @@ class NotificationController
         ]);
     }
 
-    public function removePlayerId()
+    public function removePlayerId(): JsonResponse
     {
-        $user = auth()->user();
-
-        $user->update([
+        $this->user()->update([
             'onesignal_player_id' => null,
         ]);
 

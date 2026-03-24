@@ -5,6 +5,7 @@ namespace App\Http\Controllers\V1;
 use App\Http\Requests\ImageUploadRequest;
 use App\Http\Requests\ProfileRequests\ProfileRequest;
 use App\Http\Requests\ProfileRequests\UpdatePasswordRequest;
+use App\Http\Requests\ProfileRequests\UpdateProfileRequest;
 use App\Http\Resources\CommentResource;
 use App\Http\Resources\PostResource;
 use App\Http\Resources\UserResource;
@@ -20,7 +21,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Facades\JWTAuth;
-
+use Illuminate\Support\Str;
 
 class ProfileController
 {
@@ -42,6 +43,12 @@ class ProfileController
         try {
             $user = Auth::user();
             $image = $request->file('avatar_url');
+
+            if (!$image) {
+                return response()->json([
+                    'message' => 'No image file provided. Please upload a valid image.',
+                ], 422);
+            }
 
             $uploadedFileUrl = $cloudinaryService->uploadAvatar($user, $image);
 
@@ -69,6 +76,12 @@ class ProfileController
             $user = auth()->user();
             $image = $request->file('cover_image');
 
+            if (!$image) {
+                return response()->json([
+                    'message' => 'No image file provided. Please upload a valid image.',
+                ], 422);
+            }
+
             $uploadedFileUrl = $cloudinaryService->uploadCoverImage($user, $image);
 
             $user->update(['cover_image' => $uploadedFileUrl]);
@@ -87,21 +100,20 @@ class ProfileController
         }
     }
 
-    public function update(ProfileRequest $request)
+    public function update(UpdateProfileRequest $request)
     {
+        $user = auth()->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
         try {
             $validated = $request->validated();
-            $user = auth()->user();
 
-            if (!$user) {
-                return response()->json([
-                    'message' => 'User not found',
-                ], 404);
-            }
+            unset($validated['avatar_url'], $validated['cover_image']);
 
-            $originalData = $user->only(array_keys($validated));
             $user->update($validated);
-
 
             Log::info("Profile updated for user: {$user->email}");
 
@@ -110,10 +122,10 @@ class ProfileController
                 'data' => new UserResource($user->fresh()),
             ], 200);
         } catch (\Exception $e) {
-            Log::error("Profile update failed for user: " . auth()->user()->email . " - " . $e->getMessage());
+            Log::error("Profile update failed for user: {$user->email} - " . $e->getMessage());
             return response()->json([
                 'message' => 'Failed to update profile. Please try again.',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -248,5 +260,32 @@ class ProfileController
         }
     }
 
+    public function shareLink()
+    {
+        $user = Auth::user();
+
+        $identifier = $user->username ?: (string)$user->id;
+
+        $webBaseUrl = Str::rtrim((string)config('services.profile_share.web_base_url', config('app.url')), '/');
+        $deepLinkScheme = Str::trim((string)config('services.profile_share.deep_link_scheme', 'devhub'));
+        $deepLinkProfilePath = Str::trim((string)config('services.profile_share.deep_link_profile_path', 'profile'), '/');
+
+        $webUrl = $webBaseUrl . '/u/' . rawurlencode($identifier);
+        $deepLink = $deepLinkScheme . '://' . $deepLinkProfilePath . '/' . rawurlencode($identifier);
+
+        return response()->json([
+            'data' => [
+                'user' => [
+                    'avatar_url' => $user->avatar_url,
+                    'username' => $user->username,
+                    'name' => $user->name,
+                ],
+                'links' => [
+                    'deep_link' => $deepLink,
+                    'fallback' => $webUrl,
+                ],
+            ],
+        ]);
+    }
 
 }

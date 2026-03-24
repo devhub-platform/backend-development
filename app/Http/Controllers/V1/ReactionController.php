@@ -36,7 +36,7 @@ class ReactionController
 
             $user->updateReaction($validated['type'], $post);
             if ($post->user->isNotificationEnabled('new_reaction')) {
-                Notification::send($post->user, new ReactNotification($post, $validated['type']));
+                Notification::send($post->user, new ReactNotification($post, $validated['type'], $user));
             }
 
             return response()->json([
@@ -47,7 +47,7 @@ class ReactionController
 
         $user->reaction($validated['type'], $post);
         if ($post->user->isNotificationEnabled('new_reaction')) {
-            Notification::send($post->user, new ReactNotification($post, $validated['type']));
+            Notification::send($post->user, new ReactNotification($post, $validated['type'], $user));
         }
 
         return response()->json([

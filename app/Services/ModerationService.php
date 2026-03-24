@@ -19,7 +19,7 @@ class ModerationService
 
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
-                'Authorization' => 'Bearer ' . config('services.hackClub.api_key'),
+                'Authorization' => 'Bearer ' . config('services.hackai.token'),
             ])->post('https://ai.hackclub.com/proxy/v1/moderations', [
                 'input' => $text,
             ]);
