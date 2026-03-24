@@ -14,8 +14,7 @@ class TagResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'created_at' => $this->created_at->format('Y-m-d H:i:s'),
-            'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
+            'created_at' => $this->created_at->diffForHumans(),
             'posts_count' => $this->posts_count,
 
             'posts' => PostCollection::collection($this->whenLoaded('posts')),

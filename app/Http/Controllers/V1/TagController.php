@@ -6,6 +6,8 @@ use App\Http\Resources\PostResource;
 use App\Http\Resources\TagResource;
 use App\Models\Post;
 use App\Models\Tag;
+use App\Observers\TagObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
