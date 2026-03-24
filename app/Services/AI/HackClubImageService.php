@@ -11,46 +11,33 @@ class HackClubImageService
 {
     private Client $client;
 
-    private const ENDPOINT = 'images/generations';
-
     public function __construct(
         private ModelResolver $resolver,
     ) {
-        if (function_exists('set_time_limit')) {
-            set_time_limit(500);
-        }
-
         $this->client = new Client([
             'base_uri'        => rtrim(config('services.hackai.base_url', 'https://ai.hackclub.com/proxy/v1'), '/') . '/',
             'headers'         => [
                 'Authorization' => 'Bearer ' . config('services.hackai.token'),
                 'Content-Type'  => 'application/json',
             ],
-            'timeout'         => 300,
             'connect_timeout' => 15,
-            'read_timeout'    => 180,
+            'timeout'         => 120,
         ]);
     }
 
-    /**
-     * Generate an image from a text prompt.
-     * Model is resolved automatically based on prompt complexity unless explicitly passed.
-     * Returns the raw base64 string (without the data URI prefix).
-     *
-     * @throws \Exception on API failure or unexpected response format.
-     */
     public function generateBase64(string $prompt, ?string $model = null): string
     {
+        set_time_limit(0);
+
         $model = $this->resolver->resolveImageModel($prompt, $model);
 
         Log::info('HackClub image generation request', [
             'model'  => $model,
             'prompt' => $prompt,
-            'cost'   => $this->resolver->imageModelCost($model),
         ]);
 
         try {
-            $response = $this->client->post(self::ENDPOINT, [
+            $response = $this->client->post('images/generations', [
                 'json' => [
                     'model'  => $model,
                     'prompt' => $prompt,
@@ -58,53 +45,34 @@ class HackClubImageService
                 ],
             ]);
 
-            $data = json_decode($response->getBody()->getContents(), true);
+            $raw  = $response->getBody()->getContents();
+            $data = json_decode($raw, true);
 
-            Log::info('HackClub RAW image response', [
-                'model'    => $model,
-                'response' => $data,
+            Log::info('HackClub image generation raw response', [
+                'model' => $model,
+                'data'  => $data,
             ]);
 
-            $base64 = null;
+            $item = $data['data'][0] ?? null;
 
-            // FORMAT 1: OpenAI style — data[0].b64_json
-            if (isset($data['data'][0]['b64_json'])) {
-                $base64 = $data['data'][0]['b64_json'];
+            if (!$item) {
+                throw new \Exception('Image response missing data field. Raw: ' . $raw);
             }
 
-            // FORMAT 2: data[0].image_base64
-            if (!$base64 && isset($data['data'][0]['image_base64'])) {
-                $base64 = $data['data'][0]['image_base64'];
+            // b64_json — most models
+            if (!empty($item['b64_json'])) {
+                return $item['b64_json'];
             }
 
-            // FORMAT 3: data[0].b64
-            if (!$base64 && isset($data['data'][0]['b64'])) {
-                $base64 = $data['data'][0]['b64'];
+            // url — some models return a link or data URI
+            if (!empty($item['url'])) {
+                return $this->resolveUrl($item['url']);
             }
 
-            // FORMAT 4: data[0].url
-            if (!$base64 && isset($data['data'][0]['url'])) {
-                $base64 = $this->urlToBase64($data['data'][0]['url']);
-            }
-
-            // FORMAT 5: Gemini / Chat style
-            if (!$base64 && isset($data['choices'][0]['message']['images'][0]['image_url']['url'])) {
-                $base64 = $this->urlToBase64($data['choices'][0]['message']['images'][0]['image_url']['url']);
-            }
-
-            if (!$base64) {
-                Log::error('HackClub image generation: unsupported response format', [
-                    'response' => $data,
-                ]);
-                throw new \Exception('Image response format not supported');
-            }
-
-            return $base64;
+            throw new \Exception('Image response missing both b64_json and url. Raw: ' . $raw);
 
         } catch (ConnectException $e) {
-            Log::error('HackClub image generation: connection failed', [
-                'message' => $e->getMessage(),
-            ]);
+            Log::error('HackClub image: connection failed', ['message' => $e->getMessage()]);
             throw new \Exception('Could not connect to image generation service.');
 
         } catch (GuzzleException $e) {
@@ -113,7 +81,7 @@ class HackClubImageService
                 $body = $e->getResponse()->getBody()->getContents();
             }
 
-            Log::error('HackClub image generation: API error', [
+            Log::error('HackClub image: API error', [
                 'model'   => $model,
                 'code'    => $e->getCode(),
                 'message' => $e->getMessage(),
@@ -125,20 +93,24 @@ class HackClubImageService
     }
 
     /**
-     * Convert URL or data URI to base64.
+     * Resolve a URL or data URI to a raw base64 string.
      */
-    private function urlToBase64(string $url): string
+    private function resolveUrl(string $url): string
     {
-        if (str_starts_with($url, 'data:image')) {
-            return explode(',', $url)[1];
+        // data:image/png;base64,<data>
+        if (str_starts_with($url, 'data:')) {
+            $comma = strpos($url, ',');
+            if ($comma !== false) {
+                return substr($url, $comma + 1);
+            }
         }
 
-        $image = @file_get_contents($url);
-
-        if (!$image) {
-            throw new \Exception('Failed to download generated image');
+        // Remote URL — download and encode
+        $content = @file_get_contents($url);
+        if ($content === false) {
+            throw new \Exception('Failed to download image from URL: ' . $url);
         }
 
-        return base64_encode($image);
+        return base64_encode($content);
     }
 }

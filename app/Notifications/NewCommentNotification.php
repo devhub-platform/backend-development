@@ -22,7 +22,7 @@ class NewCommentNotification extends Notification
     {
         return [
             'message' => 'New comment on your post: ' . $this->comment->post->title,
-            'commenter_name' => $this->comment->user->name,
+            'commenter_user' => $this->comment->user,
             'comment_body' => $this->comment->content,
         ];
     }

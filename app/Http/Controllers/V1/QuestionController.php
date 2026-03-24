@@ -7,11 +7,13 @@ use App\Http\Requests\QuestionsRequests\UpdateQuestionRequest;
 use App\Http\Requests\QuestionsRequests\VoteQuestionRequest;
 use App\Http\Resources\QuestionResource;
 use App\Models\Question;
+use App\Notifications\QuestionCreatedNotification;
 use App\Services\QuestionService;
 use App\Services\VoteService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 
 class QuestionController extends \Illuminate\Routing\Controller
 {
@@ -43,10 +45,19 @@ class QuestionController extends \Illuminate\Routing\Controller
     {
         $this->authorize('create', Question::class);
 
+        $user = $request->user();
         $question = $this->questionService->createQuestion(
-            $request->user(),
+            $user,
             $request->validated()
         );
+
+        $followers = $user->followers
+            ->where('id', '!=', $user->id)
+            ->filter(fn($follower) => $follower->isNotificationEnabled('new_post_from_following'));
+
+        if ($followers->isNotEmpty()) {
+            Notification::send($followers, new QuestionCreatedNotification($question->loadMissing('user')));
+        }
 
         return response()->json([
             'success' => true,

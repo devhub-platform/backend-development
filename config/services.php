@@ -1,7 +1,6 @@
 <?php
 
 return [
-
     /*
     |--------------------------------------------------------------------------
     | Third Party Services
@@ -48,8 +47,20 @@ return [
     ],
 
     'hackai' => [
-        'base_url' => env('HACKAI_BASE_URL'),
-        'token'    => env('HACKAI_API_KEY'),
+        'base_url' => env('HACKAI_BASE_URL', 'https://ai.hackclub.com/proxy/v1'),
+        'token' => env('HACKAI_API_KEY'),
+        'embeddings_model' => env('HACKAI_EMBEDDINGS_MODEL', 'openai/text-embedding-3-large'),
+        'embeddings_timeout' => (int) env('HACKAI_EMBEDDINGS_TIMEOUT', 20),
+        'embeddings_enabled' => env('HACKAI_EMBEDDINGS_ENABLED', true),
+    ],
+
+    'hackclub_cdn' => [
+        'base_url' => env('HACKCLUB_CDN_BASE_URL', 'https://cdn.hackclub.com/api/v4'),
+        'token' => env('HACKCLUB_API_CDN'),
+        'timeout' => (int) env('HACKCLUB_CDN_TIMEOUT', 30),
+        'retry_times' => (int) env('HACKCLUB_CDN_RETRY_TIMES', 2),
+        'retry_sleep_ms' => (int) env('HACKCLUB_CDN_RETRY_SLEEP_MS', 200),
+        'chat_fallback_to_s3' => (bool) env('HACKCLUB_CHAT_FALLBACK_TO_S3', true),
     ],
 
 
@@ -72,5 +83,11 @@ return [
     'piston' => [
         'api_key' => env('PISTON_API_KEY'),
         'base_url' => env('PISTON_API_URL', 'https://emkc.org/api/v2/piston'),
+    ],
+
+    'profile_share' => [
+        'web_base_url' => env('PROFILE_SHARE_WEB_BASE_URL', env('APP_URL')),
+        'deep_link_scheme' => env('PROFILE_SHARE_DEEP_LINK_SCHEME', 'devhub'),
+        'deep_link_profile_path' => env('PROFILE_SHARE_DEEP_LINK_PROFILE_PATH', 'profile'),
     ],
 ];

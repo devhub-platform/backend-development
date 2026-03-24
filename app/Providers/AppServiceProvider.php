@@ -3,8 +3,10 @@
 namespace App\Providers;
 
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Musonza\Chat\Models\Conversation;
 use SocialiteProviders\Manager\SocialiteWasCalled;
 use SocialiteProviders\Microsoft\Provider as MicrosoftProvider;
 use Illuminate\Support\Facades\URL;
@@ -24,6 +26,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Route::model('conversation', Conversation::class);
+
         Password::defaults(function () {
             return Password::min(8)
                 ->letters()
@@ -37,8 +41,8 @@ class AppServiceProvider extends ServiceProvider
             $event->extendSocialite('microsoft', MicrosoftProvider::class);
         });
 
-        if (config('app.env') === 'production') {
-            URL::forceScheme('https');
-        }
+//        if (config('app.env') === 'production') {
+//            URL::forceScheme('https');
+//        }
     }
 }

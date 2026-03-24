@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers\V1;
 
+use App\Http\Resources\SuggestedUsersResource;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Notifications\FollowNotification;
+use App\Services\Followers\PeopleSuggestionService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Auth;
@@ -67,6 +70,7 @@ class FollowersController
             'followers_count' => $count_followers,
         ]);
     }
+
     public function myFollowers()
     {
         $user = auth()->user();
@@ -102,14 +106,11 @@ class FollowersController
         ]);
     }
 
-    public function suggestions()
+    public function suggestions(Request $request)
     {
         $user = auth()->user();
-        $followingIds = $user->following()->pluck('users.id')->toArray();
-        $suggestedUsers = User::whereNotIn('id', array_merge($followingIds, [$user->id]))
-            ->inRandomOrder()
-            ->take(5)
-            ->get(['id', 'name', 'username', 'bio']);
+        $limit = (int)$request->query('limit', 5);
+        $suggestedUsers = app(PeopleSuggestionService::class)->suggestForUser($user, $limit);
 
         if ($suggestedUsers->isEmpty()) {
             return response()->json([
@@ -118,7 +119,7 @@ class FollowersController
         }
 
         return response()->json([
-            'Suggested Users' => $suggestedUsers,
+            'Suggested Users' => SuggestedUsersResource::collection($suggestedUsers),
         ]);
     }
 }

@@ -2,31 +2,20 @@
 
 namespace App\Http\Controllers\V1\Auth;
 
+use App\Http\Requests\V1\AuthenticateWithGithubRequest;
 use App\Http\Requests\V1\AuthenticateWithGoogleRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\ValidationException;
 use Laravel\Socialite\Facades\Socialite;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
-class SocialiteMediaController
+class SocialiteMediaFlutterController
 {
-    public function loginGoogle(): JsonResponse
-    {
-        $redirectUrl = Socialite::driver('google')
-            ->stateless()
-            ->redirect()
-            ->getTargetUrl();
-
-        Log::info('Generated Google OAuth redirect URL: ' . $redirectUrl);
-        return response()->json([
-            'url' => $redirectUrl
-        ]);
-    }
-
-    public function loginGoogleForMobile(AuthenticateWithGoogleRequest $request): JsonResponse
+    public function loginGoogle(AuthenticateWithGoogleRequest $request)
     {
         try {
             $user = $request->getUserFromGoogle();
@@ -54,8 +43,7 @@ class SocialiteMediaController
         }
     }
 
-
-    public function loginGithub(): JsonResponse
+    public function loginGithub()
     {
         $redirectUrl = Socialite::driver('github')
             ->stateless()
@@ -68,20 +56,20 @@ class SocialiteMediaController
         ]);
     }
 
-    public function callbackGoogle(): JsonResponse
+    public function callbackGoogle()
     {
         $googleUser = Socialite::driver('google')->stateless()->user();
 
         return $this->extracted($googleUser);
     }
 
-    public function callbackGithub(): JsonResponse
+    public function callbackGithub()
     {
         $githubUser = Socialite::driver('github')->stateless()->user();
-        return $this->extracted($githubUser);
+        return $this->extractedgithub($githubUser);
     }
 
-    public function extracted($mediaUser): JsonResponse
+    public function extracted($mediaUser)
     {
         $username = str()->before($mediaUser->getEmail(), '@')
             . '_' . strval(rand(9999, 99999));
@@ -104,7 +92,7 @@ class SocialiteMediaController
             ]
         );
 
-        JWTAuth::factory()->setTTL(60 * 24 * 7); // Set token to expire in 1 week (7 days)
+        JWTAuth::factory()->setTTL(60 * 24 * 30 * 12); // 1 year
         $token = JWTAuth::fromUser($user);
 
         return response()->json([
@@ -112,6 +100,35 @@ class SocialiteMediaController
             'user' => new UserResource($user),
             'token' => $token
         ]);
+    }
+
+    public function extractedgithub($mediaUser)
+    {
+        $username = str()->before($mediaUser->getEmail(), '@')
+            . '_' . strval(rand(9999, 99999));
+
+        $user = User::UpdateOrCreate(
+            [
+                'email' => $mediaUser->getEmail(),
+            ],
+            [
+                'name' => $mediaUser->getName(),
+                'username' => $username,
+                'website_url' => null,
+                'role' => 'user',
+                'bio' => $mediaUser->getNickname(),
+                'github_username' => $mediaUser->getNickname(),
+                'provider_id' => $mediaUser->getId(),
+                'password' => bcrypt(str()->random(16)),
+                'avatar_url' => $mediaUser->getAvatar(),
+                'email_verified_at' => now(),
+            ]
+        );
+
+        JWTAuth::factory()->setTTL(60 * 24 * 30 * 12); // 1 year
+        $token = JWTAuth::fromUser($user);
+
+        return redirect('myapp://auth?token=' . $token);
     }
 
 }

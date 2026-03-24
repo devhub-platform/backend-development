@@ -47,16 +47,33 @@ class UserResource extends JsonResource
     private function getSocialLinks(): array
     {
         return array_filter([
-            'linkedin' => $this->linkedin_username
-                ? ['username' => $this->linkedin_username, 'url' => "https://www.linkedin.com/in/{$this->linkedin_username}"]
-                : null,
-            'github' => $this->github_username
-                ? ['username' => $this->github_username, 'url' => "https://github.com/{$this->github_username}"]
-                : null,
-            'orcid' => $this->orcid_username
-                ? ['username' => $this->orcid_username, 'url' => "https://orcid.org/{$this->orcid_username}"]
-                : null,
+            'linkedin' => $this->buildSocialLink($this->linkedin_username, 'https://www.linkedin.com/in'),
+            'github' => $this->buildSocialLink($this->github_username, 'https://github.com'),
+            'orcid' => $this->buildSocialLink($this->orcid_username, 'https://orcid.org'),
         ]);
+    }
+
+    private function buildSocialLink(?string $value, string $baseUrl): ?array
+    {
+        if (!$value) {
+            return null;
+        }
+
+        // Backward-compatible: old records may store usernames, new records store full URLs.
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            $path = trim((string) parse_url($value, PHP_URL_PATH), '/');
+            $username = $path ? basename($path) : null;
+
+            return [
+                'username' => $username,
+                'url' => $value,
+            ];
+        }
+
+        return [
+            'username' => $value,
+            'url' => rtrim($baseUrl, '/') . '/' . ltrim($value, '/'),
+        ];
     }
 
     private function isOwner(Request $request): bool
