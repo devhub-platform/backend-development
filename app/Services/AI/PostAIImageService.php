@@ -78,6 +78,7 @@ class PostAIImageService
         $image = GeneratedPostImage::where('id', $generatedImageId)
             ->where('user_id', $userId)
             ->where('status', 'pending')
+            ->where('created_at', '>=', now()->subMinutes(10))
             ->firstOrFail();
 
         $image->update([
@@ -94,16 +95,19 @@ class PostAIImageService
      */
     public function discard(int $generatedImageId, int $userId): void
     {
-        $image = GeneratedPostImage::where('id', $generatedImageId)
-            ->where('user_id', $userId)
-            ->first();
+        $image = GeneratedPostImage::where('id', $generatedImageId)->first();
 
         if (!$image) {
-            return;
+            throw new \Exception('Image not found.');
+        }
+
+        if ($image->user_id !== $userId) {
+
+            throw new \Exception('You do not have permission to delete this image.', 403);
         }
 
         if ($image->public_id) {
-            $this->cloudinary->deleteImage($image->secure_url);
+            $this->cloudinary->deleteImage($image->public_id);
         }
 
         $image->delete();
