@@ -55,12 +55,19 @@ class PostAIController extends Controller
      */
     public function discardImage(Request $request, int $generatedImageId): JsonResponse
     {
-        $this->imageService->discard($generatedImageId, $request->user()->id);
+        try {
+            $this->imageService->discard($generatedImageId, $request->user()->id);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Generated image discarded successfully.',
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Generated image discarded successfully.',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], $e->getCode() === 403 ? 403 : 500);
+        }
     }
 
     /**
