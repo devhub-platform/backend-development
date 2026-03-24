@@ -9,25 +9,26 @@ class AddSocialAccountsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'linkedin_username' => [
+            'linkedin_url' => [
                 'sometimes',
                 'nullable',
-                'string',
+                'url',
                 'max:255',
-                'min:3',
+                'regex:/^https?:\/\/(www\.)?linkedin\.com\/.+/i',
             ],
-            'github_username' => [
+            'github_url' => [
                 'sometimes',
                 'nullable',
-                'string',
-                'max:39',
-                'min:1',
-            ],
-            'orcid_username' => [
-                'sometimes',
-                'nullable',
-                'string',
+                'url',
                 'max:255',
+                'regex:/^https?:\/\/(www\.)?github\.com\/.+/i',
+            ],
+            'orcid_url' => [
+                'sometimes',
+                'nullable',
+                'url',
+                'max:255',
+                'regex:/^https?:\/\/(www\.)?orcid\.org\/.+/i',
             ],
         ];
     }
@@ -35,13 +36,17 @@ class AddSocialAccountsRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'linkedin_username.min' => 'LinkedIn username must be at least 3 characters',
-            'linkedin_username.max' => 'LinkedIn username cannot exceed 255 characters',
+            'linkedin_url.url' => 'LinkedIn link must be a valid URL',
+            'linkedin_url.max' => 'LinkedIn link cannot exceed 255 characters',
+            'linkedin_url.regex' => 'LinkedIn link must be a linkedin.com URL',
 
-            'github_username.max' => 'GitHub username cannot exceed 39 characters',
-            'github_username.min' => 'GitHub username must be at least 1 character',
+            'github_url.url' => 'GitHub link must be a valid URL',
+            'github_url.max' => 'GitHub link cannot exceed 255 characters',
+            'github_url.regex' => 'GitHub link must be a github.com URL',
 
-            'orcid_username.max' => 'ORCID username cannot exceed 255 characters',
+            'orcid_url.url' => 'ORCID link must be a valid URL',
+            'orcid_url.max' => 'ORCID link cannot exceed 255 characters',
+            'orcid_url.regex' => 'ORCID link must be an orcid.org URL',
         ];
     }
 
@@ -49,9 +54,9 @@ class AddSocialAccountsRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'linkedin_username' => 'LinkedIn username',
-            'github_username' => 'GitHub username',
-            'orcid_username' => 'ORCID identifier',
+            'linkedin_url' => 'LinkedIn URL',
+            'github_url' => 'GitHub URL',
+            'orcid_url' => 'ORCID URL',
         ];
     }
 

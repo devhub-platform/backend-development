@@ -75,7 +75,21 @@ class SettingController
             return response()->json(['message' => 'User not found'], 404);
         }
 
-        $data = $request->only(['linkedin_username', 'github_username', 'orcid_username']);
+        $validated = $request->validated();
+        $data = [];
+
+        if (array_key_exists('linkedin_url', $validated)) {
+            $data['linkedin_username'] = $validated['linkedin_url'];
+        }
+
+        if (array_key_exists('github_url', $validated)) {
+            $data['github_username'] = $validated['github_url'];
+        }
+
+        if (array_key_exists('orcid_url', $validated)) {
+            $data['orcid_username'] = $validated['orcid_url'];
+        }
+
         $result = $this->settingService->updateSocialAccounts($user, $data);
 
         if (!$result['success']) {

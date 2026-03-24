@@ -18,7 +18,7 @@ class AddAltEmailRequest extends FormRequest
         return [
             'alt_email' => [
                 'required',
-                'email',
+                'email:rfc,dns',
                 'max:255',
                 Rule::unique('users', 'alt_email')->ignore($this->user()->id),
                 Rule::unique('users', 'email'),
