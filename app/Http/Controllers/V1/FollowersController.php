@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\V1;
 
+use App\Http\Resources\SuggestedUsersResource;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Notifications\FollowNotification;
@@ -118,7 +119,7 @@ class FollowersController
         }
 
         return response()->json([
-            'Suggested Users' => $suggestedUsers,
+            'Suggested Users' => SuggestedUsersResource::collection($suggestedUsers),
         ]);
     }
 }

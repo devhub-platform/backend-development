@@ -165,7 +165,6 @@ class PostController
             }
         }
 
-        // If user passed a generated_image_id, confirm it and attach to the post
         if ($generatedImageId) {
             try {
                 $secureUrl = $this->aiImageService->confirm(
