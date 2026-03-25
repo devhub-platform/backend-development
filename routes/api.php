@@ -39,11 +39,6 @@ use App\Http\Controllers\V1\TestNotificationController;
 
 Route::prefix('v1')->group(function () {
 
-    Route::controller(TopicController::class)->group(function () {
-        Route::get('topics', 'index');
-        Route::get('topics/{topicId}', 'show');
-    });
-
     Route::middleware('throttle:15,1')->group(function () {
 
         Route::controller(SocialiteMediaFrontController::class)->group(function () {
@@ -93,6 +88,7 @@ Route::prefix('v1')->group(function () {
             // ─── Topics (User Selection) ───────────────────────────────────────────
             Route::controller(TopicController::class)->prefix('topics')->group(function () {
                 Route::get('my-topics', 'getUserTopics');
+                Route::get('topics', 'index');
                 Route::post('select', 'selectTopics');
                 Route::post('add', 'addTopics');
                 Route::post('remove', 'removeTopics');
