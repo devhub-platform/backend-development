@@ -119,7 +119,7 @@ class FollowersController
         }
 
         return response()->json([
-            'Suggested Users' => SuggestedUsersResource::collection($suggestedUsers),
+            'Suggested_users' => $suggestedUsers,
         ]);
     }
 }
