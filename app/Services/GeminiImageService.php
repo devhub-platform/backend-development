@@ -18,7 +18,7 @@ class GeminiImageService
     /**
      * Generate an image using Gemini API.
      */
-    public function generateImage(string $prompt, string $filename = null): string
+    public function generateImage(string $prompt, ?string $filename = null): string
     {
         $response = Http::withHeaders([
             "x-goog-api-key" => $this->apiKey,

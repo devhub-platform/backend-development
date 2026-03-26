@@ -140,7 +140,7 @@ class UserStatus extends Model
     /**
      * Mark status as busy
      */
-    public function markBusy(string $text = null, \DateTime $clearAfter = null): self
+    public function markBusy(?string $text = null, ?\DateTime $clearAfter = null): self
     {
         $this->is_busy = true;
         $this->status_text = $text ?? $this->status_text ?? 'Busy';
