@@ -27,6 +27,8 @@ class QuestionResource extends JsonResource
             'title'            => $this->title,
             'content'          => $this->content,
             'slug'             => $this->slug,
+            'tags'             => $this->tags,
+            'images'           => $this->images,
             'is_resolved'      => $this->is_resolved,
             'views'            => $this->views,
             'answers_count'    => $this->answers_count,
