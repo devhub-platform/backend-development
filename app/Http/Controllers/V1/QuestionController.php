@@ -46,17 +46,31 @@ class QuestionController extends \Illuminate\Routing\Controller
         $this->authorize('create', Question::class);
 
         $user = $request->user();
+
+        // Create question (service already loads tags + images)
         $question = $this->questionService->createQuestion(
             $user,
             $request->validated()
         );
 
+        /**
+         * Reload full relations safely before any usage
+         * This guarantees Resource always gets complete data
+         */
+        $question->load(['user', 'tags', 'images']);
+
+        // Notifications (safe user-only load)
         $followers = $user->followers
             ->where('id', '!=', $user->id)
-            ->filter(fn($follower) => $follower->isNotificationEnabled('new_post_from_following'));
+            ->filter(fn($follower) =>
+            $follower->isNotificationEnabled('new_post_from_following')
+            );
 
         if ($followers->isNotEmpty()) {
-            Notification::send($followers, new QuestionCreatedNotification($question->loadMissing('user')));
+            Notification::send(
+                $followers,
+                new QuestionCreatedNotification($question->load('user'))
+            );
         }
 
         return response()->json([
