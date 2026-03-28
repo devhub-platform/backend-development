@@ -97,6 +97,61 @@ class TopicSeeder extends Seeder
                 'display_order' => 12,
                 'is_active' => true,
             ],
+            [
+                'name' => 'Open Source & Community',
+                'description' => 'Open source projects, community building, and collaborative development',
+                'icon' => '🌍',
+                'display_order' => 13,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'DevOps & Infrastructure',
+                'description' => 'CI/CD, containerization, orchestration, and infrastructure management',
+                'icon' => '⚙️',
+                'display_order' => 14,
+                'is_active' => true,
+            ],
+             [
+                'name' => 'Security & Privacy',
+                'description' => 'Cybersecurity, data privacy, secure coding practices, and threat mitigation',
+                'icon' => '🔒',
+                'display_order' => 15,
+                'is_active' => true,
+            ],[
+                'name' => 'Game Development',
+                'description' => 'Game design, development, engines, and interactive media',
+                'icon' => '🎮',
+                'display_order' => 16,
+                'is_active' => true,
+            ],
+             [
+                'name' => 'Blockchain & Crypto',
+                'description' => 'Cryptocurrency, blockchain technology, smart contracts, and decentralized applications',
+                'icon' => '⛓️',
+                'display_order' => 17,
+                'is_active' => true,
+            ],
+             [
+                'name' => 'AR/VR & Metaverse',
+                'description' => 'Augmented reality, virtual reality, metaverse development, and immersive technologies',
+                'icon' => '🕶️',
+                'display_order' => 18,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Hardware & Embedded',
+                'description' => 'Embedded systems, microcontrollers, hardware programming, and IoT devices',
+                'icon' => '🔧',
+                'display_order' => 19,
+                'is_active' => true,
+            ],
+             [
+                'name' => 'Software Architecture',
+                'description' => 'Design patterns, system architecture, scalability, and software engineering principles',
+                'icon' => '🏗️',
+                'display_order' => 20,
+                'is_active' => true,
+            ]
         ];
 
         foreach ($topics as $topic) {
