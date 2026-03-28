@@ -5,19 +5,66 @@ namespace App\Services;
 use App\Models\Answer;
 use App\Models\Question;
 use App\Models\QuestionView;
+use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class QuestionService
 {
+    public function __construct(
+        private HackClubCdnService $cdn,
+    ) {}
+
     public function createQuestion(User $user, array $data): Question
     {
         $data['user_id'] = $user->id;
         $data['slug']    = Str::slug($data['title']) . '-' . uniqid();
 
-        return Question::create($data);
+        $tags   = $data['tags']   ?? [];
+        $images = $data['images'] ?? [];
+
+        // Remove non-fillable fields before create
+        unset($data['tags'], $data['images']);
+
+        $question = Question::create($data);
+
+        // ─── Attach Tags ──────────────────────────────────────────────────────
+        if (!empty($tags)) {
+            $tagIds = collect($tags)->map(function ($name) {
+                return Tag::firstOrCreate(
+                    ['name' => strtolower(trim($name))],
+                    ['slug' => Str::slug($name)]
+                )->id;
+            });
+
+            $question->tags()->sync($tagIds);
+        }
+
+        // ─── Upload Images ────────────────────────────────────────────────────
+        if (!empty($images)) {
+            foreach ($images as $image) {
+                try {
+                    $url    = $this->cdn->uploadFileUrl($image);
+                    $fileId = $this->extractFileId($url);
+
+                    $question->images()->create([
+                        'url'     => $url,
+                        'file_id' => $fileId,
+                    ]);
+                } catch (\Exception $e) {
+                    Log::warning('Question image upload failed', [
+                        'question_id' => $question->id,
+                        'error'       => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
+
+        $question->load(['user', 'tags', 'images']);
+        return $question->fresh();
     }
 
     public function updateQuestion(Question $question, array $data): Question
@@ -35,13 +82,13 @@ class QuestionService
     }
 
     public function getQuestions(
-        int     $perPage    = 15,
+        int     $perPage    = 14,
         string  $sortBy     = 'recent',
         ?bool   $isResolved = null,
         ?int    $postId     = null,
         ?string $tag        = null
     ): LengthAwarePaginator {
-        $query = Question::query()->with(['user', 'post', 'votes', 'answers']);
+        $query = Question::query()->with(['user', 'post', 'votes', 'answers', 'tags', 'images']);
 
         if ($isResolved !== null) {
             $query->where('is_resolved', $isResolved);
@@ -74,6 +121,8 @@ class QuestionService
             'user',
             'post',
             'votes',
+            'tags',
+            'images',
             'answers' => fn($q) => $q
                 ->orderByRaw('is_accepted DESC')
                 ->orderByRaw('helpful_count DESC')
@@ -107,39 +156,39 @@ class QuestionService
         return $question->fresh();
     }
 
-    public function searchQuestions(string $query, int $perPage = 15): LengthAwarePaginator
+    public function searchQuestions(string $query, int $perPage = 14): LengthAwarePaginator
     {
         return Question::where(function ($q) use ($query) {
             $q->whereRaw("MATCH(title, content) AGAINST(? IN BOOLEAN MODE)", [$query])
                 ->orWhere('title', 'like', "%{$query}%")
                 ->orWhere('content', 'like', "%{$query}%");
         })
-            ->with(['user', 'post', 'votes', 'answers'])
+            ->with(['user', 'post', 'votes', 'answers', 'tags', 'images'])
             ->recent()
             ->paginate($perPage);
     }
 
-    public function getUserQuestions(User $user, int $perPage = 15): LengthAwarePaginator
+    public function getUserQuestions(User $user, int $perPage = 14): LengthAwarePaginator
     {
         return $user->questions()
-            ->with(['user', 'post', 'votes', 'answers'])
+            ->with(['user', 'post', 'votes', 'answers', 'tags', 'images'])
             ->recent()
             ->paginate($perPage);
     }
 
-    public function getUserAnsweredQuestions(User $user, int $perPage = 15): LengthAwarePaginator
+    public function getUserAnsweredQuestions(User $user, int $perPage = 14): LengthAwarePaginator
     {
         return Question::whereIn('id', function ($query) use ($user) {
             $query->select('question_id')->from('answers')->where('user_id', $user->id);
         })
-            ->with(['user', 'post', 'votes', 'answers'])
+            ->with(['user', 'post', 'votes', 'answers', 'tags', 'images'])
             ->recent()
             ->paginate($perPage);
     }
 
-    public function getTrendingQuestions(int $limit = 5): \Illuminate\Database\Eloquent\Collection
+    public function getTrendingQuestions(int $limit = 4): \Illuminate\Database\Eloquent\Collection
     {
-        return Question::with(['user', 'votes', 'answers'])
+        return Question::with(['user', 'votes', 'answers', 'tags', 'images'])
             ->hot()
             ->limit($limit)
             ->get();
@@ -165,5 +214,11 @@ class QuestionService
         if ($created) {
             $question->increment('views');
         }
+    }
+
+    private function extractFileId(string $url): ?string
+    {
+        $parts = explode('/', $url);
+        return end($parts) ?: null;
     }
 }
