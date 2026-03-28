@@ -212,11 +212,11 @@ Route::prefix('v1')->group(function () {
                 Route::get('profile/user/posts', 'userPosts');
                 Route::get('profile/user/comments', 'userComments');
                 Route::get('profile/user/tags', 'userTags');
+                Route::get('profile/user/questions', [QuestionController::class, 'userQuestions']);
                 Route::post('profile/upload/avatar', 'uploadAvatarImage');
                 Route::post('profile/upload/cover-image', 'uploadCoverImage');
                 Route::get('profile/activity', 'activity');
                 Route::get('profile/details', 'details');
-
                 Route::get('profile/share-link', 'shareLink');
             });
 
