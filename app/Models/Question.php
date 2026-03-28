@@ -73,6 +73,16 @@ class Question extends Model
             ->orderByPivot('viewed_at', 'desc');
     }
 
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class, 'question_tag');
+    }
+
+    public function images(): HasMany
+    {
+        return $this->hasMany(QuestionImage::class);
+    }
+
     // ─── Scopes ───────────────────────────────────────────────────────────────
 
     public function scopeResolved($query)

@@ -22,22 +22,24 @@ class QuestionController extends \Illuminate\Routing\Controller
     public function __construct(
         private QuestionService $questionService,
         private VoteService     $voteService
-    ) {}
+    )
+    {
+    }
 
     public function index(Request $request): JsonResponse
     {
         $questions = $this->questionService->getQuestions(
-            perPage:    $request->integer('per_page', 15),
-            sortBy:     $request->query('sort_by', 'recent'),
+            perPage: $request->integer('per_page', 15),
+            sortBy: $request->query('sort_by', 'recent'),
             isResolved: $request->has('is_resolved') ? $request->boolean('is_resolved') : null,
-            postId:     $request->integer('post_id') ?: null,
-            tag:        $request->query('tag'),
+            postId: $request->integer('post_id') ?: null,
+            tag: $request->query('tag'),
         );
 
         return response()->json([
             'success' => true,
-            'data'    => QuestionResource::collection($questions),
-            'meta'    => $this->paginationMeta($questions),
+            'data' => QuestionResource::collection($questions),
+            'meta' => $this->paginationMeta($questions),
         ]);
     }
 
@@ -46,23 +48,36 @@ class QuestionController extends \Illuminate\Routing\Controller
         $this->authorize('create', Question::class);
 
         $user = $request->user();
+
+        // Create question (service already loads tags + images)
         $question = $this->questionService->createQuestion(
             $user,
             $request->validated()
         );
 
+        /**
+         * Reload full relations safely before any usage
+         * This guarantees Resource always gets complete data
+         */
+        $question->load(['user', 'tags', 'images']);
+
+        // Notifications (safe user-only load)
         $followers = $user->followers
             ->where('id', '!=', $user->id)
-            ->filter(fn($follower) => $follower->isNotificationEnabled('new_post_from_following'));
+            ->filter(fn($follower) => $follower->isNotificationEnabled('new_post_from_following')
+            );
 
         if ($followers->isNotEmpty()) {
-            Notification::send($followers, new QuestionCreatedNotification($question->loadMissing('user')));
+            Notification::send(
+                $followers,
+                new QuestionCreatedNotification($question->load('user'))
+            );
         }
 
         return response()->json([
             'success' => true,
             'message' => 'Question created successfully',
-            'data'    => new QuestionResource($question),
+            'data' => new QuestionResource($question),
         ], 201);
     }
 
@@ -74,7 +89,7 @@ class QuestionController extends \Illuminate\Routing\Controller
 
         return response()->json([
             'success' => true,
-            'data'    => new QuestionResource($question),
+            'data' => new QuestionResource($question),
         ]);
     }
 
@@ -87,7 +102,7 @@ class QuestionController extends \Illuminate\Routing\Controller
         return response()->json([
             'success' => true,
             'message' => 'Question updated successfully',
-            'data'    => new QuestionResource($question),
+            'data' => new QuestionResource($question),
         ]);
     }
 
@@ -115,15 +130,15 @@ class QuestionController extends \Illuminate\Routing\Controller
 
         // Reload votes from DB after voting - single query
         $question->load('votes');
-        $upvotes   = $question->votes->where('vote_type', 'upvote')->count();
+        $upvotes = $question->votes->where('vote_type', 'upvote')->count();
         $downvotes = $question->votes->where('vote_type', 'downvote')->count();
 
         return response()->json([
-            'success'           => true,
-            'message'           => $vote ? 'Vote recorded' : 'Vote removed',
-            'data'              => [
-                'question_id'       => $question->id,
-                'vote_score'        => $upvotes - $downvotes,
+            'success' => true,
+            'message' => $vote ? 'Vote recorded' : 'Vote removed',
+            'data' => [
+                'question_id' => $question->id,
+                'vote_score' => $upvotes - $downvotes,
                 'current_user_vote' => $vote?->vote_type,
             ],
         ]);
@@ -138,8 +153,8 @@ class QuestionController extends \Illuminate\Routing\Controller
 
         return response()->json([
             'success' => true,
-            'data'    => QuestionResource::collection($questions),
-            'meta'    => $this->paginationMeta($questions),
+            'data' => QuestionResource::collection($questions),
+            'meta' => $this->paginationMeta($questions),
         ]);
     }
 
@@ -161,8 +176,8 @@ class QuestionController extends \Illuminate\Routing\Controller
 
         return response()->json([
             'success' => true,
-            'data'    => QuestionResource::collection($questions),
-            'meta'    => $this->paginationMeta($questions),
+            'data' => QuestionResource::collection($questions),
+            'meta' => $this->paginationMeta($questions),
         ]);
     }
 
@@ -172,17 +187,17 @@ class QuestionController extends \Illuminate\Routing\Controller
 
         return response()->json([
             'success' => true,
-            'data'    => QuestionResource::collection($questions),
+            'data' => QuestionResource::collection($questions),
         ]);
     }
 
     private function paginationMeta($paginator): array
     {
         return [
-            'total'        => $paginator->total(),
-            'per_page'     => $paginator->perPage(),
+            'total' => $paginator->total(),
+            'per_page' => $paginator->perPage(),
             'current_page' => $paginator->currentPage(),
-            'last_page'    => $paginator->lastPage(),
+            'last_page' => $paginator->lastPage(),
         ];
     }
 }
