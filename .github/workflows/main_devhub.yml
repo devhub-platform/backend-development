@@ -31,14 +31,22 @@ jobs:
 
       - name: Run composer install if composer.json exists
         if: steps.check_files.outputs.files_exists == 'true'
-        run: composer validate --no-check-publish && composer install --prefer-dist --no-progress
+        env:
+          # CI-only defaults so package discovery does not require real Pusher secrets.
+          BROADCAST_CONNECTION: log
+          BROADCAST_DRIVER: log
+          PUSHER_APP_ID: ci
+          PUSHER_APP_KEY: ci
+          PUSHER_APP_SECRET: ci
+          PUSHER_APP_CLUSTER: mt1
+        run: composer validate --no-check-publish && composer install --no-interaction --prefer-dist --no-progress --optimize-autoloader
 
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: php-app
-          path: .
+          path: release.zip
 
   deploy:
     runs-on: ubuntu-latest
@@ -52,7 +60,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: php-app
-      
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -67,4 +75,3 @@ jobs:
           app-name: 'devhub'
           slot-name: 'Production'
           package: .
-          

@@ -38,6 +38,14 @@ jobs:
           composer config http-basic.repo.nova.laravel.com "${{ secrets.NOVA_USER }}" "${{ secrets.NOVA_KEY }}"
 
       - name: Install dependencies
+        env:
+          # CI-only defaults so package discovery does not require real Pusher secrets.
+          BROADCAST_CONNECTION: log
+          BROADCAST_DRIVER: log
+          PUSHER_APP_ID: ci
+          PUSHER_APP_KEY: ci
+          PUSHER_APP_SECRET: ci
+          PUSHER_APP_CLUSTER: mt1
         run: |
           php --version
           composer --version
