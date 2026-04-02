@@ -39,6 +39,13 @@ use App\Http\Controllers\V1\TestNotificationController;
 
 Route::prefix('v1')->group(function () {
 
+    Route::get('/', function () {
+        return response()->json([
+            'message' => 'DevHub API v1',
+            'status' => 'ok',
+        ]);
+    });
+
     Route::middleware('throttle:15,1')->group(function () {
 
         Route::controller(SocialiteMediaFrontController::class)->group(function () {
