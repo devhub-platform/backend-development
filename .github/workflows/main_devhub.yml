@@ -41,12 +41,16 @@ jobs:
           PUSHER_APP_CLUSTER: mt1
         run: composer validate --no-check-publish && composer install --no-interaction --prefer-dist --no-progress --optimize-autoloader
 
+      - name: Create deploy package
+        run: zip -r release.zip . -x ".git/*" "node_modules/*" "tests/*" "storage/logs/*" ".github/*"
+
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: php-app
           path: release.zip
+          if-no-files-found: error
 
   deploy:
     runs-on: ubuntu-latest
@@ -60,6 +64,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: php-app
+          path: .
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -74,4 +79,4 @@ jobs:
         with:
           app-name: 'devhub'
           slot-name: 'Production'
-          package: .
+          package: release.zip
