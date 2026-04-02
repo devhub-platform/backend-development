@@ -1,38 +1,81 @@
-name: DevHub CI/CD Pipeline
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy Laravel app to Azure Web App - devhub
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
-  laravel-tests:
-
+  build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read #This is required for actions/checkout
 
     steps:
-      - uses: shivammathur/setup-php@15c43e89cdef867065b0213be354c2841860869e
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
 
-      - uses: actions/checkout@v4
+      - name: Check if composer.json exists
+        id: check_files
+        uses: andstor/file-existence-action@v1
         with:
-          clean: false
+          files: 'composer.json'
 
-      - name: Copy .env
-        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+      - name: Install dependencies
+        if: steps.check_files.outputs.files_exists == 'true'
+        run:
+          php --version
+          composer config "http-basic.repo.nova.laravel.com" "${{ secrets.NOVA_USER }}" "${{ secrets.NOVA_KEY }}"
 
-      - name: Install Dependencies
-        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+      - name: Run composer install if composer.json exists
+        if: steps.check_files.outputs.files_exists == 'true'
+        run: composer validate --no-check-publish && composer install --prefer-dist --no-progress
 
-      - name: Generate key
-        run: php artisan key:generate
+      - name: Zip the application files
+        run: zip -r release.zip .
 
-      - name: Directory Permissions
-        run: chmod -R 777 storage bootstrap/cache
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: php-app
+          path: .
 
-      - name: Execute tests (Unit and Feature tests)
-        env:
-          DB_CONNECTION: sqlite
-        run: php artisan test || true
+      - name: Unzip the artifact to verify
+        run: unzip release.zip
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: php-app
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.__clientidsecretname__ }}
+          tenant-id: ${{ secrets.__tenantidsecretname__ }}
+          subscription-id: ${{ secrets.__subscriptionidsecretname__ }}
+
+      - name: 'Deploy to Azure Web App'
+        uses: azure/webapps-deploy@v3
+        id: deploy-to-webapp
+        with:
+          app-name: 'devhub'
+          slot-name: 'Production'
+          publish-profile: ${{ secrets.publishprofilesecretname }}
+          package: .
