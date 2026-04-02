@@ -42,7 +42,7 @@ jobs:
         run: composer validate --no-check-publish && composer install --no-interaction --prefer-dist --no-progress --optimize-autoloader
 
       - name: Create deploy package
-        run: zip -r release.zip . -x ".git/*" "node_modules/*" "tests/*" "storage/logs/*" ".github/*"
+        run: zip -r release.zip . \ -x ".git/*" "node_modules/*" "vendor/*" "tests/*" ".github/*"
 
 
       - name: Upload artifact for deployment job
