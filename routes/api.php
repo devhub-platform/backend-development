@@ -41,8 +41,10 @@ Route::prefix('v1')->group(function () {
 
     Route::get('/', function () {
         return response()->json([
-            'message' => 'DevHub API v1',
-            'status' => 'ok',
+            'message' => 'Devhub API v2',
+            'status' => 'OK - Server is running',
+            'base_url' => 'https://devhub.azurewebsites.net/api/v1',
+            'api_documentation' => 'https://devhub.apidog.io/'
         ]);
     });
 
