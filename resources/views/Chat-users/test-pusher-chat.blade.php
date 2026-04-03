@@ -67,10 +67,10 @@
 
     const pusher = new Pusher(APP_KEY, {
         cluster: CLUSTER,
-        authEndpoint: "https://api.dev-hubs.tech/api/broadcasting/auth",
+        authEndpoint: "https://devhub.azurewebsites.net/api/broadcasting/auth",
         auth: {
             headers: {
-                Authorization: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vYXBpLmRldi1odWJzLnRlY2gvYXBpL3YxL3JlZ2lzdGVyIiwiaWF0IjoxNzczNTg0MzE3LCJleHAiOjE3ODEzNjAzMTcsIm5iZiI6MTc3MzU4NDMxNywianRpIjoiVEVDckRYTFBJeTNOMXdNTyIsInN1YiI6IjQ2NyIsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.uEI0fZe-5cFYx1C5YNuV9eih6BtjsZwkZsJfARYteKo"
+                Authorization: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZGV2aHViLmF6dXJld2Vic2l0ZXMubmV0L2FwaS92MS9yZWdpc3RlciIsImlhdCI6MTc3NTE5MDU1NCwiZXhwIjoxNzgyOTY2NTU0LCJuYmYiOjE3NzUxOTA1NTQsImp0aSI6InhSRDJCMElzY3ZRRmpyUWQiLCJzdWIiOiI0ODAiLCJwcnYiOiIyM2JkNWM4OTQ5ZjYwMGFkYjM5ZTcwMWM0MDA4NzJkYjdhNTk3NmY3In0.eJmkTtHocpnS-kiE9HUVAK8WowxbbP-fOyXanEQY-Ok"
             }
         }
     });
