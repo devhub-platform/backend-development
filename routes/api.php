@@ -38,7 +38,6 @@ use App\Http\Controllers\V1\Auth\SocialiteMediaFlutterController;
 use App\Http\Controllers\V1\TestNotificationController;
 
 Route::prefix('v1')->group(function () {
-
     Route::get('/', function () {
         return response()->json([
             'message' => 'Devhub API v2',
