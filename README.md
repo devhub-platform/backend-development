@@ -27,12 +27,6 @@ php artisan migrate
 php artisan serve
 ```
 
-## Useful Commands
-
-```bash
-php artisan test
-npm run build
-```
 
 ## Health Check
 
