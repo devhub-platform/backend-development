@@ -157,10 +157,6 @@ class PeopleSuggestionService
         ])));
     }
 
-    /**
-     * @param array<int, float|int> $left
-     * @param array<int, float|int> $right
-     */
     private function cosineSimilarity(array $left, array $right): float
     {
         if (count($left) === 0 || count($left) !== count($right)) {
@@ -187,4 +183,3 @@ class PeopleSuggestionService
         return $dotProduct / (sqrt($leftNorm) * sqrt($rightNorm));
     }
 }
-

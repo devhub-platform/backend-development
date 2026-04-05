@@ -27,7 +27,6 @@ php artisan migrate
 php artisan serve
 ```
 
-
 ## Health Check
 
 - API status endpoint: `GET /api/v1/`
