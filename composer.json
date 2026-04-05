@@ -32,6 +32,7 @@
         "opcodesio/log-viewer": "^3.21",
         "phpoffice/phpword": "^1.4",
         "pusher/pusher-php-server": "*",
+        "sendgrid/sendgrid": "^8.1",
         "smalot/pdfparser": "^2.12",
         "socialiteproviders/medium": "^4.1",
         "socialiteproviders/microsoft": "^4.7",
