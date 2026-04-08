@@ -7,9 +7,6 @@ use Illuminate\Database\Seeder;
 
 class TopicSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $topics = [
@@ -111,27 +108,27 @@ class TopicSeeder extends Seeder
                 'display_order' => 14,
                 'is_active' => true,
             ],
-             [
+            [
                 'name' => 'Security & Privacy',
                 'description' => 'Cybersecurity, data privacy, secure coding practices, and threat mitigation',
                 'icon' => '🔒',
                 'display_order' => 15,
                 'is_active' => true,
-            ],[
+            ], [
                 'name' => 'Game Development',
                 'description' => 'Game design, development, engines, and interactive media',
                 'icon' => '🎮',
                 'display_order' => 16,
                 'is_active' => true,
             ],
-             [
+            [
                 'name' => 'Blockchain & Crypto',
                 'description' => 'Cryptocurrency, blockchain technology, smart contracts, and decentralized applications',
                 'icon' => '⛓️',
                 'display_order' => 17,
                 'is_active' => true,
             ],
-             [
+            [
                 'name' => 'AR/VR & Metaverse',
                 'description' => 'Augmented reality, virtual reality, metaverse development, and immersive technologies',
                 'icon' => '🕶️',
@@ -145,11 +142,88 @@ class TopicSeeder extends Seeder
                 'display_order' => 19,
                 'is_active' => true,
             ],
-             [
+            [
                 'name' => 'Software Architecture',
                 'description' => 'Design patterns, system architecture, scalability, and software engineering principles',
                 'icon' => '🏗️',
                 'display_order' => 20,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Programming Languages',
+                'description' => 'General programming concepts, language comparisons, and coding best practices',
+                'icon' => '💻',
+                'display_order' => 21,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'APIs & Integrations',
+                'description' => 'API design, RESTful services, GraphQL, and third-party integrations',
+                'icon' => '🔌',
+                'display_order' => 22,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Performance & Optimization',
+                'description' => 'Code optimization, performance tuning, and efficient algorithms',
+                'icon' => '⚡',
+                'display_order' => 23,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Cloud Services & Platforms',
+                'description' => 'AWS, Azure, Google Cloud, and cloud service management',
+                'icon' => '☁️',
+                'display_order' => 24,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Software Development Tools',
+                'description' => 'IDEs, code editors, debugging tools, and developer productivity software',
+                'icon' => '',
+                'display_order' => 25,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Software Development Methodologies',
+                'description' => 'Agile, Scrum, Kanban, DevOps, and software development processes',
+                'icon' => '',
+                'display_order' => 26,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Emerging Technologies',
+                'description' => 'Cutting-edge technologies, trends, and innovations in the tech industry',
+                'icon' => '',
+                'display_order' => 27,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'General Programming',
+                'description' => 'General programming concepts, language comparisons, and coding best practices',
+                'icon' => '💻',
+                'display_order' => 28,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Career Development',
+                'description' => 'Career advice, interviews, professional development, and job market trends',
+                'icon' => '💼',
+                'display_order' => 29,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Open Source & Community',
+                'description' => 'Open source projects, community building, and collaborative development',
+                'icon' => '🌍',
+                'display_order' => 30,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Software Testing & QA',
+                'description' => 'Unit testing, integration testing, automation, and quality assurance',
+                'icon' => '✅',
+                'display_order' => 31,
                 'is_active' => true,
             ]
         ];

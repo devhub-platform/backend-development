@@ -1,3 +1,0 @@
-### GET to retrieve emails from the testmail.app API
-GET https://api.testmail.app/api/json?apikey=383a008d-4fc8-4c15-a7f9-f23d981089de&namespace=s5sys&pretty=true
-Accept: application/json
