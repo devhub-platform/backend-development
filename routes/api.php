@@ -41,9 +41,10 @@ Route::prefix('v1')->group(function () {
     Route::get('/', function () {
         return response()->json([
             'message' => 'Devhub API v2',
-            'status' => 'OK - Server is running',
-            'base_url' => 'https://devhub.azurewebsites.net/api/v1',
-            'api_documentation' => 'https://devhub.apidog.io/'
+            'status' => 'OK - Server on azure-cloud is running',
+            'base_url' => 'https://dev-hubs.tech/api/v1',
+            'api_docs' => 'https://devhub.apidog.io/',
+            'created_by' => 'DevHub Team'
         ]);
     });
 
@@ -412,9 +413,6 @@ Route::post('/send-message_notification', TestNotificationController::class);
 
 Route::fallback(function () {
     return response()->json([
-        'Hi_there' => 'أدعوا لأمي بالرحمه️ غفر الله لأمي ولكل المسلمين والمسلمات الأحياء منهم والأموات',
         'message' => 'Resource not found, the API endpoint does not exist , can visit the documentation for more details',
-        'documentation' => 'https://devhub.apidog.io/',
-        'version' => 'API v2',
     ], 404);
 });
