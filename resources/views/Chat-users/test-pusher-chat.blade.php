@@ -59,7 +59,7 @@
 <script>
     const APP_KEY = "8386ec29a087993e4c57";
     const CLUSTER = "mt1";
-    const conversationId = 21;
+    const conversationId = 7;
 
     document.getElementById('conv-id').textContent = conversationId;
 
@@ -67,10 +67,10 @@
 
     const pusher = new Pusher(APP_KEY, {
         cluster: CLUSTER,
-        authEndpoint: "https://devhub.azurewebsites.net/api/broadcasting/auth",
+        authEndpoint: "https://dev-hubs.tech/api/broadcasting/auth",
         auth: {
             headers: {
-                Authorization: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZGV2aHViLmF6dXJld2Vic2l0ZXMubmV0L2FwaS92MS9yZWdpc3RlciIsImlhdCI6MTc3NTE5MDU1NCwiZXhwIjoxNzgyOTY2NTU0LCJuYmYiOjE3NzUxOTA1NTQsImp0aSI6InhSRDJCMElzY3ZRRmpyUWQiLCJzdWIiOiI0ODAiLCJwcnYiOiIyM2JkNWM4OTQ5ZjYwMGFkYjM5ZTcwMWM0MDA4NzJkYjdhNTk3NmY3In0.eJmkTtHocpnS-kiE9HUVAK8WowxbbP-fOyXanEQY-Ok"
+                Authorization: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2Rldmh1Yi50ZXN0L2FwaS92MS9yZWdpc3RlciIsImlhdCI6MTc3NTYxNjU0NSwiZXhwIjoxNzgzMzkyNTQ1LCJuYmYiOjE3NzU2MTY1NDUsImp0aSI6IjBHWlg3TXpneDFtS0FxNEsiLCJzdWIiOiIyIiwicHJ2IjoiMjNiZDVjODk0OWY2MDBhZGIzOWU3MDFjNDAwODcyZGI3YTU5NzZmNyJ9.COp_UdkwVHqs-rAW_KscCZr00vfQZJOHm1sNejwZfyM"
             }
         }
     });
