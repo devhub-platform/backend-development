@@ -2,17 +2,23 @@
 
 namespace App\Http\Controllers\V1;
 
+use App\Http\Requests\TopicRequest;
 use App\Http\Resources\TopicResource;
 use App\Models\Topic;
 use App\Models\User;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class TopicController
 {
+    use AuthorizesRequests;
+
     public function index(): JsonResponse
     {
+        $this->authorize('viewAny', Topic::class);
+
         $topics = Topic::where('is_active', true)
             ->orderBy('display_order', 'asc')
             ->orderBy('name', 'asc')
@@ -22,6 +28,52 @@ class TopicController
             'message' => 'Topics retrieved successfully',
             'count' => $topics->count(),
             'data' => TopicResource::collection($topics),
+        ], 200);
+    }
+
+    public function store(TopicRequest $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        $validated = $request->validated();
+        $this->authorize('create', Topic::class);
+
+        $topic = Topic::create(array_merge([
+            'display_order' => 0,
+            'is_active' => true,
+        ], $validated));
+
+        return response()->json([
+            'message' => 'Topic created successfully',
+            'data' => new TopicResource($topic),
+        ], 201);
+    }
+
+    public function update(TopicRequest $request, Topic $topic): JsonResponse
+    {
+        $user = Auth::user();
+
+        $validated = $request->validated();
+        $this->authorize('update', $topic);
+
+        $topic->update($validated);
+
+        return response()->json([
+            'message' => 'Topic updated successfully',
+            'data' => new TopicResource($topic),
+        ], 200);
+    }
+
+    public function destroy(Topic $topic): JsonResponse
+    {
+        $user = Auth::user();
+
+        $this->authorize('delete', $topic);
+
+        $topic->delete();
+
+        return response()->json([
+            'message' => 'Topic deleted successfully',
         ], 200);
     }
 
@@ -64,45 +116,6 @@ class TopicController
             'message' => 'User topics retrieved successfully',
             'count' => $topics->count(),
             'data' => $topics,
-        ], 200);
-    }
-
-    /**
-     * Select/Add topics for the authenticated user
-     */
-    public function selectTopics(Request $request): JsonResponse
-    {
-        $user = Auth::user();
-
-        if (!$user) {
-            return response()->json([
-                'message' => 'Unauthorized',
-            ], 401);
-        }
-
-        $validated = $request->validate([
-            'topic_ids' => 'required|array|min:1',
-            'topic_ids.*' => 'integer|exists:topics,id',
-        ]);
-
-        // Verify all topics exist and are active
-        $topics = Topic::where('is_active', true)
-            ->whereIn('id', $validated['topic_ids'])
-            ->pluck('id')
-            ->toArray();
-
-        if (count($topics) !== count($validated['topic_ids'])) {
-            return response()->json([
-                'message' => 'One or more selected topics are invalid or inactive',
-            ], 422);
-        }
-
-        // Sync topics (replace existing selection)
-        $user->topics()->sync($topics);
-
-        return response()->json([
-            'message' => 'Topics selected successfully',
-            'data' => $user->topics()->get(),
         ], 200);
     }
 

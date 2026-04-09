@@ -98,7 +98,11 @@ Route::prefix('v1')->group(function () {
             Route::controller(TopicController::class)->prefix('topics')->group(function () {
                 Route::get('my-topics', 'getUserTopics');
                 Route::get('/', 'index');
-                Route::post('select', 'selectTopics');
+
+                Route::post('/', 'store'); // Admin only
+                Route::delete('{topic}', 'destroy'); // Admin only
+                Route::delete('{topic}', 'update'); // Admin only
+
                 Route::post('add', 'addTopics');
                 Route::post('remove', 'removeTopics');
                 Route::post('clear', 'clearTopics');
@@ -382,13 +386,9 @@ Route::prefix('v1')->group(function () {
 
             // ─── AI Chat ──────────────────────────────────────────────────────────
             Route::prefix('ai-chat')->group(function () {
-                // ai-chat/models is public, defined above
                 Route::post('send', [AIChatController::class, 'chat']);
 
-                Route::controller(AttachmentController::class)
-                    ->prefix('attachments')
-                    ->middleware('throttle:10,1')
-                    ->group(function () {
+                Route::controller(AttachmentController::class)->prefix('attachments')->middleware('throttle:10,1')->group(function () {
                         Route::post('upload', 'upload');
                         Route::delete('{attachmentId}', 'destroy');
                         Route::get('{attachmentId}/status', 'status');
