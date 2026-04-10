@@ -4,62 +4,44 @@
     <meta charset="UTF-8">
     <title>Realtime Chat Test</title>
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-        }
-
-        #messages {
-            border: 1px solid #ccc;
-            padding: 10px;
-            height: 300px;
-            overflow: auto;
-            background: #f9f9f9;
-        }
-
-        #messages div {
-            padding: 8px;
-            margin: 4px 0;
-            background: white;
-            border-radius: 4px;
-        }
-
-        .status {
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 4px;
-        }
-
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .status.info {
-            background: #d1ecf1;
-            color: #0c5460;
-        }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-slate-100 min-h-screen py-8 px-4 text-slate-900">
 
-<h2>Realtime Chat Test - Conversation #<span id="conv-id"></span></h2>
-<div id="status" class="status info">Connecting to Pusher...</div>
+<main class="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <h2 class="text-xl font-semibold">Realtime Chat Test - Conversation #<span id="conv-id"></span></h2>
+    <div id="status" class="mt-3 rounded-lg border px-3 py-2 text-sm font-medium bg-sky-50 text-sky-700 border-sky-200">Connecting to Pusher...</div>
 
+    <h3 class="mt-4 text-sm font-semibold uppercase tracking-wide text-slate-500">Messages</h3>
+    <div id="messages" class="mt-2 h-80 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3 flex flex-col gap-2"></div>
 
-<h3>Messages:</h3>
-<div id="messages"></div>
+    <div class="mt-3 space-y-2">
+        <div class="flex items-center gap-2">
+            <label for="attachment-input" class="cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Attach file</label>
+            <input id="attachment-input" type="file" class="hidden">
+            <span id="attachment-name" class="text-xs text-slate-500">No file selected</span>
+            <button id="clear-attachment" type="button" class="hidden rounded-md px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50">Clear</button>
+        </div>
+        <div class="flex items-end gap-2">
+            <textarea id="message-input" class="min-h-12 max-h-32 flex-1 resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-0 focus:border-blue-500 focus:ring-2 focus:ring-blue-200" placeholder="Type your message... (Enter to send, Shift+Enter for new line)"></textarea>
+            <button id="send-button" type="button" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">Send</button>
+        </div>
+    </div>
+</main>
 
 <script>
     const APP_KEY = "8386ec29a087993e4c57";
     const CLUSTER = "mt1";
-    const conversationId = 7;
+    const conversationId = Number(new URLSearchParams(window.location.search).get('conversation_id') || 8);
+    const currentUserId = Number(new URLSearchParams(window.location.search).get('viewer_id') || '{{ auth()->id() ?? 0 }}');
+    const AUTH_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2Rldmh1Yi50ZXN0L2FwaS92MS9yZWdpc3RlciIsImlhdCI6MTc3NTYxNjU0NSwiZXhwIjoxNzgzMzkyNTQ1LCJuYmYiOjE3NzU2MTY1NDUsImp0aSI6IjBHWlg3TXpneDFtS0FxNEsiLCJzdWIiOiIyIiwicHJ2IjoiMjNiZDVjODk0OWY2MDBhZGIzOWU3MDFjNDAwODcyZGI3YTU5NzZmNyJ9.COp_UdkwVHqs-rAW_KscCZr00vfQZJOHm1sNejwZfyM";
+    const API_BASE_URL = "https://dev-hubs.tech/api/v1";
+    const STATUS_BASE_CLASS = 'mt-3 rounded-lg border px-3 py-2 text-sm font-medium';
+    const STATUS_VARIANTS = {
+        info: 'bg-sky-50 text-sky-700 border-sky-200',
+        success: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        error: 'bg-rose-50 text-rose-700 border-rose-200'
+    };
 
     document.getElementById('conv-id').textContent = conversationId;
 
@@ -70,15 +52,96 @@
         authEndpoint: "https://dev-hubs.tech/api/broadcasting/auth",
         auth: {
             headers: {
-                Authorization: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2Rldmh1Yi50ZXN0L2FwaS92MS9yZWdpc3RlciIsImlhdCI6MTc3NTYxNjU0NSwiZXhwIjoxNzgzMzkyNTQ1LCJuYmYiOjE3NzU2MTY1NDUsImp0aSI6IjBHWlg3TXpneDFtS0FxNEsiLCJzdWIiOiIyIiwicHJ2IjoiMjNiZDVjODk0OWY2MDBhZGIzOWU3MDFjNDAwODcyZGI3YTU5NzZmNyJ9.COp_UdkwVHqs-rAW_KscCZr00vfQZJOHm1sNejwZfyM"
+                Authorization: "Bearer " + AUTH_TOKEN
             }
         }
     });
 
+    function getMessageRowClasses(isSent) {
+        const base = 'max-w-[75%] rounded-xl px-3 py-2 shadow-sm border';
+        return isSent
+            ? `${base} ml-auto bg-blue-100 border-blue-200`
+            : `${base} mr-auto bg-white border-slate-200`;
+    }
+
+    function getReactionClasses() {
+        return 'mt-1 text-xs text-slate-500';
+    }
+
     function updateStatus(message, type = 'info') {
         const statusDiv = document.getElementById('status');
         statusDiv.textContent = message;
-        statusDiv.className = 'status ' + type;
+        statusDiv.className = STATUS_BASE_CLASS + ' ' + (STATUS_VARIANTS[type] || STATUS_VARIANTS.info);
+    }
+
+    function escapeHtml(text) {
+        if (text === null || text === undefined) {
+            return '';
+        }
+
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function resolveSenderId(message) {
+        return Number(
+            message.sender_id
+            || message.user_id
+            || (message.sender && message.sender.id)
+            || 0
+        );
+    }
+
+    function resolveSenderName(message, fallback = 'User') {
+        return message.sender_name
+            || message.sender?.name
+            || message.user?.name
+            || fallback;
+    }
+
+    function renderMessage(message, options = {}) {
+        const { isEdited = false } = options;
+        const messageBox = document.getElementById("messages");
+        const messageId = message.id;
+
+        if (!messageId) {
+            return;
+        }
+
+        let row = document.getElementById("msg-" + messageId);
+        const senderId = resolveSenderId(message);
+        const senderName = resolveSenderName(message, row?.dataset.senderName || 'User');
+        const isSent = currentUserId !== 0 && senderId === currentUserId;
+
+        const previousReactionText = document.getElementById("msg-reactions-" + messageId)?.textContent || 'No reactions';
+
+        if (!row) {
+            row = document.createElement("div");
+            row.id = "msg-" + messageId;
+            messageBox.appendChild(row);
+        }
+
+        const messageType = message.type || 'text';
+        const attachmentName = message.data?.file_name || message.data?.filename || 'Attachment';
+        const attachmentUrl = message.data?.file_url || message.data?.url || '';
+        const bodyHtml = messageType === 'attachment'
+            ? `<a href="${escapeHtml(attachmentUrl)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-sm font-medium text-blue-700 underline">📎 ${escapeHtml(attachmentName)}</a>`
+            : `<div class="text-sm text-slate-800 whitespace-pre-wrap break-words">${escapeHtml(message.body || '')}</div>`;
+
+        row.dataset.senderId = String(senderId);
+        row.dataset.senderName = senderName;
+        row.className = getMessageRowClasses(isSent);
+        row.innerHTML = `
+            <div class="mb-1 text-xs text-slate-500"><strong>${escapeHtml(senderName)}</strong>${isEdited ? ' (edited)' : ''}</div>
+            ${bodyHtml}
+            <div id="msg-reactions-${messageId}" class="${getReactionClasses()}">${escapeHtml(previousReactionText)}</div>
+        `;
+
+        messageBox.scrollTop = messageBox.scrollHeight;
     }
 
     function formatReactions(reactions) {
@@ -134,9 +197,7 @@
         if (!reactionLine) {
             reactionLine = document.createElement('div');
             reactionLine.id = "msg-reactions-" + messageId;
-            reactionLine.style.marginTop = '6px';
-            reactionLine.style.fontSize = '13px';
-            reactionLine.style.color = '#555';
+            reactionLine.className = getReactionClasses();
             existing.appendChild(reactionLine);
         }
 
@@ -144,115 +205,177 @@
         reactionLine.textContent = formatted ? `Reactions: ${formatted}` : 'No reactions';
     }
 
+    async function sendMessage() {
+        const input = document.getElementById('message-input');
+        const button = document.getElementById('send-button');
+        const fileInput = document.getElementById('attachment-input');
+        const text = input.value.trim();
+        const file = fileInput.files[0] || null;
+
+        if (!text && !file) {
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = 'Sending...';
+        updateStatus('Sending message...', 'info');
+
+        try {
+            let response;
+            if (file) {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('file_name', file.name);
+                if (text) {
+                    formData.append('message', text);
+                }
+
+                response = await fetch(`${API_BASE_URL}/messages/conversation/${conversationId}/send-attachment`, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${AUTH_TOKEN}`
+                    },
+                    body: formData
+                });
+            } else {
+                response = await fetch(`${API_BASE_URL}/chat/conversations/${conversationId}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${AUTH_TOKEN}`
+                    },
+                    body: JSON.stringify({
+                        message: text,
+                        type: 'text'
+                    })
+                });
+            }
+
+            const payload = await response.json();
+
+            if (!response.ok) {
+                updateStatus('Send failed: ' + (payload?.message || payload?.error || 'Unknown error'), 'error');
+                return;
+            }
+
+            if (payload?.data?.id) {
+                renderMessage(payload.data);
+            }
+            if (payload?.data?.attachment?.id) {
+                renderMessage(payload.data.attachment);
+            }
+            if (payload?.data?.text?.id) {
+                renderMessage(payload.data.text);
+            }
+
+            input.value = '';
+            clearAttachment();
+            updateStatus('Message sent successfully.', 'success');
+        } catch (error) {
+            console.error('sendMessage error:', error);
+            updateStatus('Send failed: ' + (error.message || 'Unknown error'), 'error');
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Send';
+            input.focus();
+        }
+    }
+
+    function clearAttachment() {
+        const fileInput = document.getElementById('attachment-input');
+        const attachmentName = document.getElementById('attachment-name');
+        const clearButton = document.getElementById('clear-attachment');
+
+        fileInput.value = '';
+        attachmentName.textContent = 'No file selected';
+        clearButton.classList.add('hidden');
+    }
+
+    function updateAttachmentPreview() {
+        const fileInput = document.getElementById('attachment-input');
+        const attachmentName = document.getElementById('attachment-name');
+        const clearButton = document.getElementById('clear-attachment');
+        const file = fileInput.files[0];
+
+        if (!file) {
+            clearAttachment();
+            return;
+        }
+
+        attachmentName.textContent = `${file.name} (${Math.ceil(file.size / 1024)} KB)`;
+        clearButton.classList.remove('hidden');
+    }
 
     function handleMessageDelete(parsedData) {
-        console.log("Handling message deletion:", parsedData);
-
         const existing = document.getElementById("msg-" + parsedData.id);
-        console.log("Found element:", existing);
 
         if (existing) {
             existing.style.transition = "opacity 0.3s";
             existing.style.opacity = "0";
             setTimeout(() => {
                 existing.remove();
-                console.log("Element removed:", parsedData.id);
                 updateStatus('Message #' + parsedData.id + ' deleted successfully', 'success');
             }, 300);
         } else {
-            console.log("Element not found for message ID:", parsedData.id);
             updateStatus('Message #' + parsedData.id + ' not found in DOM. Add it first!', 'error');
         }
     }
 
-    const channel = pusher.subscribe(
-        "private-mc-chat-conversation." + conversationId
-    );
+    const channel = pusher.subscribe("private-mc-chat-conversation." + conversationId);
 
-    channel.bind("Musonza\\Chat\\Eventing\\MessageWasSent", function (data) {
-        const messageBox = document.getElementById("messages");
-
-        const msg = document.createElement("div");
-        msg.id = "msg-" + data.message.id;
-        msg.innerHTML = `
-            <strong>${data.message.sender.name ?? "User"}:</strong>
-            ${data.message.body}
-            <div id="msg-reactions-${data.message.id}" style="margin-top:6px;font-size:13px;color:#555;">No reactions</div>
-        `;
-
-        messageBox.appendChild(msg);
-        messageBox.scrollTop = messageBox.scrollHeight;
-    });
-
-    channel.bind("message.updated", function (data) {
-        console.log("message.updated event received:", data);
-
-        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
-        console.log("Parsed data:", parsedData);
-
-        const messageBox = document.getElementById("messages");
-        const existing = document.getElementById("msg-" + parsedData.id);
-
-        if (existing) {
-            existing.innerHTML = `
-                <strong>(edited):</strong>
-                ${parsedData.body}
-                <div id="msg-reactions-${parsedData.id}" style="margin-top:6px;font-size:13px;color:#555;">No reactions</div>
-            `;
-        } else {
-            const msg = document.createElement("div");
-            msg.id = "msg-" + parsedData.id;
-            msg.innerHTML = `
-                <strong>(edited):</strong> ${parsedData.body}
-                <div id="msg-reactions-${parsedData.id}" style="margin-top:6px;font-size:13px;color:#555;">No reactions</div>
-            `;
-            messageBox.appendChild(msg);
-            messageBox.scrollTop = messageBox.scrollHeight;
+    document.getElementById('send-button').addEventListener('click', sendMessage);
+    document.getElementById('attachment-input').addEventListener('change', updateAttachmentPreview);
+    document.getElementById('clear-attachment').addEventListener('click', clearAttachment);
+    document.getElementById('message-input').addEventListener('keydown', function (event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            sendMessage();
         }
     });
 
-    channel.bind("message.reaction.updated", function (data) {
-        console.log("message.reaction.updated event received:", data);
-
+    channel.bind("Musonza\\Chat\\Eventing\\MessageWasSent", function (data) {
         const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
-        console.log("Parsed reaction data:", parsedData);
+        const message = parsedData.message || parsedData;
+        renderMessage(message);
+    });
+
+    channel.bind("message.updated", function (data) {
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
+        const existing = document.getElementById("msg-" + parsedData.id);
+        const normalizedMessage = {
+            id: parsedData.id,
+            body: parsedData.body,
+            sender_id: parsedData.sender_id || existing?.dataset.senderId,
+            sender_name: parsedData.sender_name || existing?.dataset.senderName || 'User'
+        };
+
+        renderMessage(normalizedMessage, { isEdited: true });
+    });
+
+    channel.bind("message.reaction.updated", function (data) {
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
 
         upsertReactionLine(parsedData.message_id, parsedData.reactions);
-        updateStatus(
-            `Reaction ${parsedData.action} on message #${parsedData.message_id}`,
-            'success'
-        );
+        updateStatus(`Reaction ${parsedData.action} on message #${parsedData.message_id}`, 'success');
     });
 
     channel.bind("message.deleted", function (data) {
-        console.log("message.deleted event received from Pusher:", data);
-        console.log("Data type:", typeof data);
-
         const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
-        console.log("Parsed data:", parsedData);
-
         handleMessageDelete(parsedData);
     });
 
     channel.bind("pusher:subscription_succeeded", function () {
-        console.log("Subscribed successfully to channel: private-mc-chat-conversation." + conversationId);
-        console.log("All event bindings are active");
         updateStatus('Connected! Listening for events on conversation #' + conversationId, 'success');
     });
 
     channel.bind("pusher:subscription_error", function (error) {
-        console.error("Subscription error", error);
         updateStatus('Subscription error: ' + JSON.stringify(error), 'error');
     });
 
-    // Global listener to catch ALL events
     channel.bind_global(function (eventName, data) {
         console.log("Global event captured - Event:", eventName, "Data:", data);
     });
-
-    console.log("Event bindings registered for:",
-        "MessageWasSent, message.updated, message.deleted, message.reaction.updated");
-    console.log("Channel:", "private-mc-chat-conversation." + conversationId);
 </script>
 
 </body>
