@@ -108,7 +108,7 @@ class FollowersController
 
     public function suggestions(Request $request)
     {
-        $user = auth()->user();
+        $user = Auth::user();
         $limit = (int)$request->query('limit', 5);
         $suggestedUsers = app(PeopleSuggestionService::class)->suggestForUser($user, $limit);
 
