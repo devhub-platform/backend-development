@@ -3,18 +3,12 @@
 namespace App\Services\Followers;
 
 use App\Models\User;
-use App\Services\AI\HackAIEmbeddingService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Laravel\Ai\Embeddings;
 
 class PeopleSuggestionService
 {
-    public function __construct(
-        private HackAIEmbeddingService $embeddingService,
-    )
-    {
-    }
-
     public function suggestForUser(User $user, int $limit = 5): Collection
     {
         $limit = max(1, min($limit, 20));
@@ -80,7 +74,11 @@ class PeopleSuggestionService
             ->all();
 
         try {
-            $embeddings = $this->embeddingService->embedBatch(array_merge([$sourceText], $candidateTexts));
+            $response = Embeddings::for(array_merge([$sourceText], $candidateTexts))
+                ->timeout((int) config('services.hackai.embeddings_timeout', 20))
+                ->generate('hackai', (string) config('services.hackai.embeddings_model', 'openai/text-embedding-3-large'));
+
+            $embeddings = $response->embeddings;
         } catch (\Throwable $exception) {
             Log::warning('AI rerank failed for people suggestions, using fallback ranking.', [
                 'user_id' => $user->id,
