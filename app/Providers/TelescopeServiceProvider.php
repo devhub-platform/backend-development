@@ -53,10 +53,10 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
      *
      * This gate determines who can access Telescope in non-local environments.
      */
-    protected function gate(): void
-    {
-        Gate::define('viewTelescope', function ($user) {
-            return true;
-        });
-    }
+    // protected function gate(): void
+    // {
+    //     Gate::define('viewTelescope', function ($user) {
+    //         return true;
+    //     });
+    // }
 }
