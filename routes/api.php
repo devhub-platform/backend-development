@@ -36,6 +36,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\V1\Chats\MessageController;
 use App\Http\Controllers\V1\Auth\SocialiteMediaFlutterController;
 use App\Http\Controllers\V1\TestNotificationController;
+use App\Http\Controllers\V1\Chats\UserOnlineController;
+use App\Http\Controllers\V1\Chats\UserOfflineController;
+use App\Http\Controllers\V1\Chats\UserPresenceShowController;
 
 Route::prefix('v1')->group(function () {
     Route::get('/', function () {
@@ -384,15 +387,21 @@ Route::prefix('v1')->group(function () {
                 Route::post('{messageId}/conversation/{conversationId}/flag', 'makeMessageAsFlagged');
             });
 
+            Route::prefix('chat/presence')->group(function () {
+                Route::put('online', UserOnlineController::class);
+                Route::put('offline', UserOfflineController::class);
+                Route::get('users/{user}', UserPresenceShowController::class);
+            });
+
             // ─── AI Chat ──────────────────────────────────────────────────────────
             Route::prefix('ai-chat')->group(function () {
                 Route::post('send', [AIChatController::class, 'chat']);
 
                 Route::controller(AttachmentController::class)->prefix('attachments')->middleware('throttle:10,1')->group(function () {
-                        Route::post('upload', 'upload');
-                        Route::delete('{attachmentId}', 'destroy');
-                        Route::get('{attachmentId}/status', 'status');
-                    });
+                    Route::post('upload', 'upload');
+                    Route::delete('{attachmentId}', 'destroy');
+                    Route::get('{attachmentId}/status', 'status');
+                });
 
                 Route::prefix('sessions')->controller(HistoryController::class)->group(function () {
                     Route::get('/', 'sessions');

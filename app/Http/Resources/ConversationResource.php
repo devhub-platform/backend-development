@@ -35,6 +35,9 @@ class ConversationResource extends JsonResource
                 'name' => $p->messageable?->name,
                 'username' => $p->messageable?->username,
                 'avatar_url' => $p->messageable?->avatar_url,
+                'status' => $p->messageable?->isOnline() ? 'online' : 'offline',
+                'is_online' => (bool) $p->messageable?->isOnline(),
+                'last_seen_at' => $p->messageable?->lastSeenAtIso(),
             ])->values(),
         ];
     }

@@ -17,6 +17,7 @@ use Laravel\Scout\Searchable;
 use Musonza\Chat\Traits\Messageable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 #[ObservedBy([UserObserver::class])]
 class User extends Authenticatable implements JWTSubject, MustVerifyEmail
@@ -74,7 +75,9 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'alt_email_otp_expires_at',
         'otp_expires_at',
         'orcid_username',
-        'notification_preferences'
+        'notification_preferences',
+        'status',
+        'last_seen_at',
     ];
 
     protected $hidden = [
@@ -96,13 +99,32 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
             'otp_expires_at' => 'datetime',
             'skills' => 'array',
             'notification_preferences' => 'array',
+            'last_seen_at' => 'datetime',
         ];
     }
 
-//    public function getAvatarUrlAttribute($value): ?string
-//    {
-//        return app(HackClubCdnService::class)->resolvePublicUrl($value);
-//    }
+    public function isOnline(?int $timeoutSeconds = null): bool
+    {
+        if ($this->status !== 'online') {
+            return false;
+        }
+
+        if (!$this->last_seen_at) {
+            return false;
+        }
+
+        $seconds = $timeoutSeconds ?? (int) config('chat.presence_timeout_seconds', 120);
+
+        return $this->last_seen_at->greaterThanOrEqualTo(now()->subSeconds($seconds));
+    }
+
+    public function lastSeenAtIso(): ?string
+    {
+        return $this->last_seen_at instanceof Carbon
+            ? $this->last_seen_at->toIso8601String()
+            : null;
+    }
+
 
     public function posts(): HasMany
     {
