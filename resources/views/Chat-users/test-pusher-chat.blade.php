@@ -11,6 +11,15 @@
 <main class="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
     <h2 class="text-xl font-semibold">Realtime Chat Test - Conversation #<span id="conv-id"></span></h2>
     <div id="status" class="mt-3 rounded-lg border px-3 py-2 text-sm font-medium bg-sky-50 text-sky-700 border-sky-200">Connecting to Pusher...</div>
+    <div class="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+        <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+                <span id="presence-dot" class="inline-block h-2.5 w-2.5 rounded-full bg-slate-400"></span>
+                <span id="presence-label" class="font-medium text-slate-700">User status: unknown</span>
+            </div>
+            <span id="last-seen" class="text-xs text-slate-500">Last seen: --</span>
+        </div>
+    </div>
 
     <h3 class="mt-4 text-sm font-semibold uppercase tracking-wide text-slate-500">Messages</h3>
     <div id="messages" class="mt-2 h-80 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3 flex flex-col gap-2"></div>
@@ -34,6 +43,7 @@
     const CLUSTER = "mt1";
     const conversationId = Number(new URLSearchParams(window.location.search).get('conversation_id') || 8);
     const currentUserId = Number(new URLSearchParams(window.location.search).get('viewer_id') || '{{ auth()->id() ?? 0 }}');
+    const peerIdFromQuery = Number(new URLSearchParams(window.location.search).get('peer_id') || 0);
     const AUTH_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2Rldmh1Yi50ZXN0L2FwaS92MS9yZWdpc3RlciIsImlhdCI6MTc3NTYxNjU0NSwiZXhwIjoxNzgzMzkyNTQ1LCJuYmYiOjE3NzU2MTY1NDUsImp0aSI6IjBHWlg3TXpneDFtS0FxNEsiLCJzdWIiOiIyIiwicHJ2IjoiMjNiZDVjODk0OWY2MDBhZGIzOWU3MDFjNDAwODcyZGI3YTU5NzZmNyJ9.COp_UdkwVHqs-rAW_KscCZr00vfQZJOHm1sNejwZfyM";
     const API_BASE_URL = "https://dev-hubs.tech/api/v1";
     const STATUS_BASE_CLASS = 'mt-3 rounded-lg border px-3 py-2 text-sm font-medium';
@@ -42,6 +52,9 @@
         success: 'bg-emerald-50 text-emerald-700 border-emerald-200',
         error: 'bg-rose-50 text-rose-700 border-rose-200'
     };
+    const onlineMemberIds = new Set();
+    let peerUserId = peerIdFromQuery;
+    let peerLastSeenAt = null;
 
     document.getElementById('conv-id').textContent = conversationId;
 
@@ -72,6 +85,112 @@
         const statusDiv = document.getElementById('status');
         statusDiv.textContent = message;
         statusDiv.className = STATUS_BASE_CLASS + ' ' + (STATUS_VARIANTS[type] || STATUS_VARIANTS.info);
+    }
+
+    function formatLastSeen(value) {
+        if (!value) {
+            return '--';
+        }
+
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+            return '--';
+        }
+
+        return date.toLocaleString();
+    }
+
+    function updatePresenceUi(isOnline, lastSeenAt = null) {
+        const dot = document.getElementById('presence-dot');
+        const label = document.getElementById('presence-label');
+        const lastSeen = document.getElementById('last-seen');
+
+        if (isOnline) {
+            dot.className = 'inline-block h-2.5 w-2.5 rounded-full bg-emerald-500';
+            label.textContent = 'User status: online';
+        } else {
+            dot.className = 'inline-block h-2.5 w-2.5 rounded-full bg-slate-400';
+            label.textContent = 'User status: offline';
+        }
+
+        if (lastSeenAt) {
+            peerLastSeenAt = lastSeenAt;
+        }
+
+        lastSeen.textContent = `Last seen: ${formatLastSeen(peerLastSeenAt)}`;
+    }
+
+    function normalizeMemberId(id) {
+        const parsed = Number(id);
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    async function resolvePeerUserId() {
+        if (peerUserId) {
+            return peerUserId;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/chat/conversations/${conversationId}`, {
+                headers: {
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${AUTH_TOKEN}`
+                }
+            });
+
+            if (!response.ok) {
+                return 0;
+            }
+
+            const payload = await response.json();
+            const participants = Array.isArray(payload?.participants) ? payload.participants : [];
+            const candidate = participants.find((participant) => {
+                const id = Number(participant?.messageable_id || participant?.id || participant?.messageable?.id || 0);
+                return id && id !== currentUserId;
+            });
+
+            peerUserId = Number(candidate?.messageable_id || candidate?.id || candidate?.messageable?.id || 0);
+            return peerUserId;
+        } catch (error) {
+            console.error('resolvePeerUserId error:', error);
+            return 0;
+        }
+    }
+
+    async function fetchPeerPresence() {
+        const resolvedPeerId = await resolvePeerUserId();
+        if (!resolvedPeerId) {
+            updatePresenceUi(false, null);
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/chat/presence/users/${resolvedPeerId}`, {
+                headers: {
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${AUTH_TOKEN}`
+                }
+            });
+
+            if (!response.ok) {
+                return;
+            }
+
+            const payload = await response.json();
+            const data = payload?.data || {};
+            updatePresenceUi(Boolean(data.is_online), data.last_seen_at || null);
+        } catch (error) {
+            console.error('fetchPeerPresence error:', error);
+        }
+    }
+
+    function syncPresenceFromMembers() {
+        if (!peerUserId) {
+            return;
+        }
+
+        const online = onlineMemberIds.has(peerUserId);
+        updatePresenceUi(online, online ? new Date().toISOString() : peerLastSeenAt);
     }
 
     function escapeHtml(text) {
@@ -321,7 +440,39 @@
         }
     }
 
+    async function sendHeartbeat() {
+        try {
+            await fetch(`${API_BASE_URL}/chat/presence/online`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${AUTH_TOKEN}`
+                }
+            });
+        } catch (error) {
+            console.error('Heartbeat failed:', error);
+        }
+    }
+
+    // Send heartbeat every 4 minutes to keep user online
+    setInterval(sendHeartbeat, 4 * 60 * 1000);
+    sendHeartbeat(); // Initial heartbeat on load
+
+    // Mark user offline when leaving page
+    window.addEventListener('beforeunload', async () => {
+        await fetch(`${API_BASE_URL}/chat/presence/offline`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${AUTH_TOKEN}`
+            },
+            keepalive: true
+        });
+    });
+
     const channel = pusher.subscribe("private-mc-chat-conversation." + conversationId);
+    const presenceChannel = pusher.subscribe("presence-mc-chat-presence." + conversationId);
+    const statusChannel = pusher.subscribe('chat.user-status');
 
     document.getElementById('send-button').addEventListener('click', sendMessage);
     document.getElementById('attachment-input').addEventListener('change', updateAttachmentPreview);
@@ -369,6 +520,47 @@
         updateStatus('Connected! Listening for events on conversation #' + conversationId, 'success');
     });
 
+    presenceChannel.bind('pusher:subscription_succeeded', async function (members) {
+        onlineMemberIds.clear();
+
+        if (members && typeof members.each === 'function') {
+            members.each(function (member) {
+                onlineMemberIds.add(normalizeMemberId(member.id));
+            });
+        }
+
+        await resolvePeerUserId();
+        syncPresenceFromMembers();
+        fetchPeerPresence();
+    });
+
+    presenceChannel.bind('pusher:member_added', function (member) {
+        onlineMemberIds.add(normalizeMemberId(member.id));
+        syncPresenceFromMembers();
+    });
+
+    presenceChannel.bind('pusher:member_removed', function (member) {
+        onlineMemberIds.delete(normalizeMemberId(member.id));
+        syncPresenceFromMembers();
+        fetchPeerPresence();
+    });
+
+    statusChannel.bind('user.online', function (data) {
+        if (!peerUserId || Number(data?.id) !== peerUserId) {
+            return;
+        }
+
+        updatePresenceUi(true, data?.last_seen_at || new Date().toISOString());
+    });
+
+    statusChannel.bind('user.offline', function (data) {
+        if (!peerUserId || Number(data?.id) !== peerUserId) {
+            return;
+        }
+
+        updatePresenceUi(false, data?.last_seen_at || peerLastSeenAt);
+    });
+
     channel.bind("pusher:subscription_error", function (error) {
         updateStatus('Subscription error: ' + JSON.stringify(error), 'error');
     });
@@ -376,6 +568,8 @@
     channel.bind_global(function (eventName, data) {
         console.log("Global event captured - Event:", eventName, "Data:", data);
     });
+
+    fetchPeerPresence();
 </script>
 
 </body>

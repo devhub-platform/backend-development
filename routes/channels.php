@@ -22,3 +22,28 @@ Broadcast::channel('mc-chat-conversation.{conversationId}', function ($user, $co
     return $isParticipant;
 });
 
+Broadcast::channel('mc-chat-presence.{conversationId}', function ($user, $conversationId) {
+    $conversation = Conversation::find($conversationId);
+
+    if (!$conversation || !$user->can('view', $conversation)) {
+        return false;
+    }
+
+    return [
+        'id' => $user->id,
+        'name' => $user->username ?? $user->name,
+        'avatar' => $user->avatar_url,
+        'status' => $user->isOnline() ? 'online' : 'offline',
+        'is_online' => $user->isOnline(),
+        'last_seen_at' => $user->lastSeenAtIso(),
+    ];
+});
+
+Broadcast::channel('users', function ($user) {
+    return [
+        'id' => $user->id,
+        'username' => $user->username,
+        'status' => $user->isOnline() ? 'online' : 'offline',
+        'is_online' => $user->isOnline(),
+    ];
+});
