@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1;
 
 use App\Http\Requests\ImageUploadRequest;
+use App\Http\Requests\ProfileRequests\UploadCvRequest;
 use App\Http\Requests\ProfileRequests\ProfileRequest;
 use App\Http\Requests\ProfileRequests\UpdatePasswordRequest;
 use App\Http\Requests\ProfileRequests\UpdateProfileRequest;
@@ -11,6 +12,8 @@ use App\Http\Resources\PostResource;
 use App\Http\Resources\UserResource;
 use App\Mail\PasswordUpdatedSuccessfullyMail;
 use App\Models\User;
+use App\Exceptions\HackClubCdnException;
+use App\Services\HackClubCdnService;
 use App\Services\ImageUploadCloudinaryService;
 use App\Services\ViewedPostService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -96,6 +99,77 @@ class ProfileController
             return response()->json([
                 'message' => 'Failed to upload cover image. Please try again.',
                 'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function uploadCv(UploadCvRequest $request, HackClubCdnService $hackClubCdnService)
+    {
+        $request->validated();
+
+        try {
+            $user = Auth::user();
+            $cv = $request->file('cv');
+
+            if (!$cv) {
+                return response()->json([
+                    'message' => 'No CV file provided. Please upload a valid file.',
+                ], 422);
+            }
+
+            $uploadedFileUrl = $hackClubCdnService->uploadFileUrl($cv);
+
+            $user->update(['cv_url' => $uploadedFileUrl]);
+
+            return response()->json([
+                'message' => 'CV uploaded successfully',
+                'data' => new UserResource($user->fresh()),
+                'cv_url' => $uploadedFileUrl,
+            ], 200);
+        } catch (HackClubCdnException $e) {
+            Log::error('CV upload to Hack Club CDN failed for user: ' . Auth::user()->email . ' - ' . $e->getMessage());
+
+            return response()->json([
+                'message' => 'Failed to upload CV to storage. Please try again.',
+                'error' => $e->getMessage(),
+            ], 502);
+        } catch (\Exception $e) {
+            Log::error('CV upload failed for user: ' . Auth::user()->email . ' - ' . $e->getMessage());
+
+            return response()->json([
+                'message' => 'Failed to upload CV. Please try again.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function deleteCv()
+    {
+        try {
+            $user = Auth::user();
+
+            if (!$user) {
+                return response()->json(['message' => 'User not found'], 404);
+            }
+
+            if (!$user->cv_url) {
+                return response()->json([
+                    'message' => 'No CV found to delete.',
+                ], 404);
+            }
+
+            $user->update(['cv_url' => null]);
+
+            return response()->json([
+                'message' => 'CV deleted successfully',
+                'data' => new UserResource($user->fresh()),
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('CV deletion failed for user: ' . Auth::user()->email . ' - ' . $e->getMessage());
+
+            return response()->json([
+                'message' => 'Failed to delete CV. Please try again.',
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -287,5 +361,4 @@ class ProfileController
             ],
         ]);
     }
-
 }

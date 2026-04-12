@@ -75,6 +75,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'alt_email_otp_expires_at',
         'otp_expires_at',
         'orcid_username',
+        'cv_url',
         'notification_preferences',
         'status',
         'last_seen_at',
