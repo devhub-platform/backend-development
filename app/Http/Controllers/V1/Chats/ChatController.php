@@ -7,6 +7,7 @@ use App\Http\Controllers\V1\Controller;
 use App\Http\Resources\ConversationResource;
 use App\Http\Resources\MessageResource;
 use App\Models\User;
+use App\Services\OneSignalService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Musonza\Chat\Facades\ChatFacade as Chat;
@@ -14,6 +15,11 @@ use Musonza\Chat\Models\Conversation;
 
 class ChatController extends Controller
 {
+    public function __construct(
+        private OneSignalService $oneSignalService
+    )
+    {
+    }
     public function index(Request $request): JsonResponse
     {
         $conversations = Chat::conversations()
@@ -109,6 +115,9 @@ class ChatController extends Controller
             ->to($conversation)
             ->send();
 
+        // Send OneSignal notification to recipients
+        $this->sendMessageNotification($conversation, $request->user(), $validated['message']);
+
         return response()->json([
             'message' => 'Message sent.',
             'data' => $message,
@@ -158,6 +167,64 @@ class ChatController extends Controller
             ->clear();
 
         return response()->json(['message' => 'Conversation cleared successfully.']);
+    }
+
+    /**
+     * Send OneSignal push notification to conversation recipients
+     *
+     * @param Conversation $conversation
+     * @param User $sender
+     * @param string $messagePreview
+     * @param string|null $title
+     * @return void
+     */
+    private function sendMessageNotification(Conversation $conversation, User $sender, string $messagePreview, ?string $title = null): void
+    {
+        try {
+            // Get all participants except the sender
+            $participants = $conversation->getParticipants();
+            $recipientPlayerIds = [];
+
+            foreach ($participants as $participant) {
+                // Skip the sender and users without OneSignal player ID
+                if ($participant->id !== $sender->id && $participant->onesignal_player_id) {
+                    // Check notification preferences
+                    $notificationPreferences = $participant->notification_preferences ?? [];
+
+                    // Send if preferences are not set or if chat notifications are enabled
+                    if (empty($notificationPreferences) || ($notificationPreferences['messages'] ?? true)) {
+                        $recipientPlayerIds[] = $participant->onesignal_player_id;
+                    }
+                }
+            }
+
+            // Send notification if there are recipients
+            if (!empty($recipientPlayerIds)) {
+                $heading = $title ?? "{$sender->name} sent a message";
+                $truncatedMessage = strlen($messagePreview) > 100
+                    ? substr($messagePreview, 0, 97) . '...'
+                    : $messagePreview;
+
+                $this->oneSignalService->sendToUsers(
+                    message: $truncatedMessage,
+                    playerIds: $recipientPlayerIds,
+                    heading: $heading,
+                    data: [
+                        'conversation_id' => $conversation->id,
+                        'sender_id' => $sender->id,
+                        'sender_name' => $sender->name,
+                        'type' => 'chat_message',
+                    ]
+                );
+            }
+        } catch (\Exception $e) {
+            // Log the error but don't fail the message sending
+            \Illuminate\Support\Facades\Log::error('Failed to send OneSignal notification', [
+                'conversation_id' => $conversation->id,
+                'sender_id' => $sender->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
 }
