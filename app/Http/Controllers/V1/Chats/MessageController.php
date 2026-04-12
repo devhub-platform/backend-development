@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Musonza\Chat\Facades\ChatFacade as Chat;
 use Musonza\Chat\Models\Conversation;
+use OneSignal;
 
 class MessageController extends Controller
 {
@@ -43,6 +44,16 @@ class MessageController extends Controller
             ->to($conversation)
             ->send();
 
+        OneSignal::sendNotificationToAll(
+            $validated['message'],
+            'deeplink://chats?id=' . $conversation->id,
+            null,
+            null,
+            null,
+            'New message from ' . (auth()->user()->name)
+        );
+
+
         return response()->json([
             'message' => 'Message sent.',
             'data' => new MessageResource($message),
@@ -69,6 +80,15 @@ class MessageController extends Controller
             ->from(auth()->user())
             ->to($conversation)
             ->send();
+
+        OneSignal::sendNotificationToAll(
+            $validated['message'],
+            'deeplink://chats?id=' . $conversation->id,
+            null,
+            null,
+            null,
+            'New attachment from ' . (auth()->user()->name)
+        );
 
         $messages = [
             'attachment' => new MessageResource($attachmentMessage)
@@ -114,6 +134,15 @@ class MessageController extends Controller
             ->from(auth()->user())
             ->to($conversation)
             ->send();
+
+        OneSignal::sendNotificationToAll(
+            $validated['message'],
+            'deeplink://chats?id=' . $conversation->id,
+            null,
+            null,
+            null,
+            'New voice message from ' . (auth()->user()->name)
+        );
 
         return response()->json([
             'message' => 'Voice message sent successfully.',
@@ -243,6 +272,15 @@ class MessageController extends Controller
 
         $reactions = $this->normalizeReactionsSummary(Chat::message($message)->reactionsSummary());
 
+        OneSignal::sendNotificationToAll(
+            $validated['reaction'],
+            'https://dev-hubs.tech',
+            null,
+            null,
+            null,
+            'New reaction from ' . (auth()->user()->name ?? auth()->user()->username)
+        );
+
         broadcast(new MessageReactionUpdated(
             messageId: $messageId,
             conversationId: $conversation->id,
@@ -263,6 +301,7 @@ class MessageController extends Controller
             ]
         ], 201);
     }
+
     public function addReactionToMessage(Request $request, int $messageId, int $conversationId): JsonResponse
     {
         return $this->reactToMessage($request, $messageId, $conversationId);

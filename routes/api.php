@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\V1\AiModels\AIChatController;
 use App\Http\Controllers\V1\Chats\ChatController;
+use Illuminate\Support\Facades\Redis;
 use App\Http\Controllers\V1\AiModels\AttachmentController;
 use App\Http\Controllers\V1\AiModels\HistoryController;
 use App\Http\Controllers\V1\AiModels\PostChatController;
@@ -234,7 +235,7 @@ Route::prefix('v1')->group(function () {
 
                 Route::post('profile/upload/cv', 'uploadCv');
                 Route::delete('profile/delete/cv', 'deleteCv');
-                
+
                 Route::get('profile/activity', 'activity');
                 Route::get('profile/details', 'details');
                 Route::get('profile/share-link', 'shareLink');
@@ -421,11 +422,22 @@ Route::prefix('v1')->group(function () {
     });
 });
 
-Route::post('/test/send-message', [MessageController::class, 'broadcastTest']);
-Route::post('/send-message_notification', TestNotificationController::class);
-
 Route::fallback(function () {
     return response()->json([
         'message' => 'Resource not found, the API endpoint does not exist , can visit the documentation for more details',
     ], 404);
 });
+
+Route::post('/test/send-message', [MessageController::class, 'broadcastTest']);
+Route::post('/send-message_notification', TestNotificationController::class);
+
+# Test Redis connection
+Route::get('/test-redis', function () {
+    Redis::set('test_key', 'Hello Redis Cloud!');
+    $key = Redis::get('test_key');
+    return response()->json([
+        'message' => 'Redis connection successful!',
+        'test_key_value' => $key,
+    ]);
+});
+

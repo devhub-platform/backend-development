@@ -15,12 +15,13 @@ class TestNotificationController extends Controller
             'title' => 'required|string',
             'message' => 'required|string',
             'url' => 'nullable|url',
+            'user_id' => 'nullable',
         ]);
 
         try {
             OneSignal::sendNotificationToAll(
                 $validated['message'],
-                $validated['url'] ?? null,
+                $validated['user_id'] ?? null,
                 null,
                 null,
                 null,
