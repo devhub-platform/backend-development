@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources;
 
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -20,6 +19,7 @@ class UserResource extends JsonResource
 
             'avatar_url' => $this->avatar_url,
             'cover_image' => $this->cover_image,
+            // 'cv_url' => $this->cv_url,
 
             'email' => $this->email,
             'alt_email' => $this->when($this->isOwner($request), $this->alt_email),

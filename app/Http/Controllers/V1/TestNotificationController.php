@@ -18,7 +18,7 @@ class TestNotificationController extends Controller
         ]);
 
         try {
-            OneSignal::sendNotificationToUser(
+            OneSignal::sendNotificationToAll(
                 $validated['message'],
                 $validated['url'] ?? null,
                 null,
