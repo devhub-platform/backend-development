@@ -17,10 +17,12 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Facades\JWTAuth;
+use OneSignal;
 
 class AuthController extends Controller
 {
     use AuthorizesRequests;
+
     public function login(LoginRequest $request): JsonResponse
     {
         $email = $request->input('email');
@@ -73,6 +75,15 @@ class AuthController extends Controller
             DB::commit();
 
             $this->sendWelcomeEmail($user);
+
+            OneSignal::sendNotificationToUser(
+                "Welcome to DevHub, {$user->name}!",
+                auth()->user()->onesignal_player_id,
+                'deeplink://home',
+                null,
+                null,
+                "Explore DevHub and connect with fellow developers."
+            );
 
             return response()->json([
                 'message' => 'User registered successfully',

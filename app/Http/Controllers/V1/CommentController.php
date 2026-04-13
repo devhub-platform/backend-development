@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use App\Services\ModerationService;
+use Illuminate\Support\Str;
+use OneSignal;
 
 class CommentController
 {
@@ -66,6 +68,15 @@ class CommentController
         // Send notification to post author if any one comment in his post, if author comment in his own post do not notify
         if ($post->user_id !== auth()->id() && $post->user->isNotificationEnabled('new_comment')) {
             Notification::send($post->user, new NewCommentNotification($comment));
+            OneSignal::sendNotificationToUser(
+                Str::limit($validated['content'], 50),
+                $post->user->onesignal_player_id,
+                'deeplink://comments?id=' . $comment->id,
+                null,
+                null,
+                null,
+                'You have a new comment on your post "' . $post->title . '"'
+            );
         }
 
         $this->notifyMentionedUsers($comment, auth()->user());
@@ -236,6 +247,14 @@ class CommentController
         // Notify the parent comment author
         if ($parentComment->user_id !== auth()->id() && $parentComment->user->isNotificationEnabled('new_comment')) {
             Notification::send($parentComment->user, new NewCommentNotification($comment));
+            OneSignal::sendNotificationToUser(
+                'You have a new reply on your comment',
+                $parentComment->user->onesignal_player_id,
+                'deeplink://comments?id=' . $comment->id,
+                null,
+                null,
+                'New Reply to Your Comment'
+            );
         }
 
         // Detect and notify mentioned users
@@ -434,6 +453,14 @@ class CommentController
             // Only notify if user has mention notifications enabled
             if ($user->isNotificationEnabled('mention')) {
                 $user->notify(new MentionInCommentNotification($comment->load('post'), $mentionedBy));
+                OneSignal::sendNotificationToUser(
+                    "You were mentioned in a comment",
+                    $user->onesignal_player_id,
+                    'deeplink://comments?id=' . $comment->id,
+                    null,
+                    null,
+                    'Mentioned in a Comment'
+                );
             }
         }
     }
