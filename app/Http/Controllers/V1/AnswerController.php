@@ -16,6 +16,7 @@ use App\Services\VoteService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use OneSignal;
 
 class AnswerController extends \Illuminate\Routing\Controller
 {
@@ -25,7 +26,9 @@ class AnswerController extends \Illuminate\Routing\Controller
         private AnswerService   $answerService,
         private VoteService     $voteService,
         private QuestionService $questionService
-    ) {}
+    )
+    {
+    }
 
     public function index(Question $question, Request $request): JsonResponse
     {
@@ -36,8 +39,8 @@ class AnswerController extends \Illuminate\Routing\Controller
 
         return response()->json([
             'success' => true,
-            'data'    => AnswerResource::collection($answers),
-            'meta'    => $this->paginationMeta($answers),
+            'data' => AnswerResource::collection($answers),
+            'meta' => $this->paginationMeta($answers),
         ]);
     }
 
@@ -53,12 +56,21 @@ class AnswerController extends \Illuminate\Routing\Controller
 
         if ($question->user_id !== $request->user()->id) {
             $question->user->notify(new NewAnswerNotification($answer));
+//            OneSignal::sendNotificationToUser(
+//                'A user you follow posted a new question',
+//                $question->user->onesignal_player_id,
+//                'deeplink://questions/' . $question->id,
+//                null,
+//                null,
+//                null,
+//                'Your question received a new answer'
+//            );
         }
 
         return response()->json([
             'success' => true,
             'message' => 'Answer created successfully',
-            'data'    => new AnswerResource($answer),
+            'data' => new AnswerResource($answer),
         ], 201);
     }
 
@@ -75,7 +87,7 @@ class AnswerController extends \Illuminate\Routing\Controller
 
         return response()->json([
             'success' => true,
-            'data'    => new AnswerResource($answer->load(['user', 'votes'])),
+            'data' => new AnswerResource($answer->load(['user', 'votes'])),
         ]);
     }
 
@@ -95,7 +107,7 @@ class AnswerController extends \Illuminate\Routing\Controller
         return response()->json([
             'success' => true,
             'message' => 'Answer updated successfully',
-            'data'    => new AnswerResource($answer),
+            'data' => new AnswerResource($answer),
         ]);
     }
 
@@ -138,7 +150,7 @@ class AnswerController extends \Illuminate\Routing\Controller
         return response()->json([
             'success' => true,
             'message' => 'Answer accepted successfully',
-            'data'    => new AnswerResource($fresh),
+            'data' => new AnswerResource($fresh),
         ]);
     }
 
@@ -159,7 +171,7 @@ class AnswerController extends \Illuminate\Routing\Controller
         return response()->json([
             'success' => true,
             'message' => 'Answer unaccepted successfully',
-            'data'    => new AnswerResource($answer->fresh()->load(['user', 'votes'])),
+            'data' => new AnswerResource($answer->fresh()->load(['user', 'votes'])),
         ]);
     }
 
@@ -182,15 +194,15 @@ class AnswerController extends \Illuminate\Routing\Controller
 
         // Reload votes from DB after voting to get accurate score
         $answer->load('votes');
-        $upvotes   = $answer->votes->where('vote_type', 'upvote')->count();
+        $upvotes = $answer->votes->where('vote_type', 'upvote')->count();
         $downvotes = $answer->votes->where('vote_type', 'downvote')->count();
 
         return response()->json([
-            'success'           => true,
-            'message'           => $vote ? 'Vote recorded' : 'Vote removed',
-            'data'              => [
-                'answer_id'         => $answer->id,
-                'vote_score'        => $upvotes - $downvotes,
+            'success' => true,
+            'message' => $vote ? 'Vote recorded' : 'Vote removed',
+            'data' => [
+                'answer_id' => $answer->id,
+                'vote_score' => $upvotes - $downvotes,
                 'current_user_vote' => $vote?->vote_type,
             ],
         ]);
@@ -205,8 +217,8 @@ class AnswerController extends \Illuminate\Routing\Controller
 
         return response()->json([
             'success' => true,
-            'data'    => AnswerResource::collection($answers),
-            'meta'    => $this->paginationMeta($answers),
+            'data' => AnswerResource::collection($answers),
+            'meta' => $this->paginationMeta($answers),
         ]);
     }
 
@@ -219,18 +231,18 @@ class AnswerController extends \Illuminate\Routing\Controller
 
         return response()->json([
             'success' => true,
-            'data'    => AnswerResource::collection($answers),
-            'meta'    => $this->paginationMeta($answers),
+            'data' => AnswerResource::collection($answers),
+            'meta' => $this->paginationMeta($answers),
         ]);
     }
 
     private function paginationMeta($paginator): array
     {
         return [
-            'total'        => $paginator->total(),
-            'per_page'     => $paginator->perPage(),
+            'total' => $paginator->total(),
+            'per_page' => $paginator->perPage(),
             'current_page' => $paginator->currentPage(),
-            'last_page'    => $paginator->lastPage(),
+            'last_page' => $paginator->lastPage(),
         ];
     }
 }
