@@ -76,14 +76,14 @@ class AuthController extends Controller
 
             $this->sendWelcomeEmail($user);
 
-            OneSignal::sendNotificationToUser(
-                "Welcome to DevHub, {$user->name}!",
-                auth()->user()->onesignal_player_id,
-                'deeplink://home',
-                null,
-                null,
-                "Explore DevHub and connect with fellow developers."
-            );
+//            OneSignal::sendNotificationToUser(
+//                "Welcome to DevHub, {$user->name}!",
+//                auth()->user()->onesignal_player_id,
+//                'deeplink://home',
+//                null,
+//                null,
+//                "Explore DevHub and connect with fellow developers."
+//            );
 
             return response()->json([
                 'message' => 'User registered successfully',
@@ -99,7 +99,8 @@ class AuthController extends Controller
 
             return response()->json([
                 'message' => $e,
-                'errors' => ['server' => ['An unexpected error occurred. Please try again later.']]
+                'errors' => ['server' => ['An unexpected error occurred. Please try again later.'],
+                    'exception' => [$e->getMessage()]],
             ], 500);
         }
     }

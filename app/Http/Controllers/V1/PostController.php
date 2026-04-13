@@ -24,7 +24,6 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Number;
 use Illuminate\Support\Str;
 use OneSignal;
-//use Illuminate\Support\Str;
 class PostController
 {
     use AuthorizesRequests;
@@ -189,15 +188,15 @@ class PostController
 
             if ($followers->isNotEmpty()) {
                 Notification::send($followers, new NewPostNotification($post->load('user')));
-                OneSignal::sendNotificationToUser(
-                    Str::limit($validated['content'], 100, '...'),
-                    $post->user->onesignal_player_id,
-                    'deeplink://posts?id=' . $post->id,
-                    null,
-                    null,
-                    null,
-                    'New post from ' . $post->user->name
-                );
+//                OneSignal::sendNotificationToUser(
+//                    Str::limit($validated['content'], 100, '...'),
+//                    $post->user->onesignal_player_id,
+//                    'deeplink://posts?id=' . $post->id,
+//                    null,
+//                    null,
+//                    null,
+//                    'New post from ' . $post->user->name
+//                );
             }
         }
 

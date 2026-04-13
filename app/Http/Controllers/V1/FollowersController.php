@@ -35,14 +35,14 @@ class FollowersController
 
         if ($user->isNotificationEnabled('new_follower')) {
             Notification::send($user, new FollowNotification($authUser));
-            OneSignal::sendNotificationToUser(
-                'You have a new follower',
-                $user->onesignal_player_id,
-                'deeplink://followers?id=' . $user->id,
-                null,
-                null,
-                "{$user->name} started following you!"
-            );
+//            OneSignal::sendNotificationToUser(
+//                'You have a new follower',
+//                $user->onesignal_player_id,
+//                'deeplink://followers?id=' . $user->id,
+//                null,
+//                null,
+//                "{$user->name} started following you!"
+//            );
         }
         Log::info("User {$authUser->id} followed user {$user->id}");
 
