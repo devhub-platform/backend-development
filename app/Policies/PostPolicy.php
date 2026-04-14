@@ -17,10 +17,10 @@ class PostPolicy
 
     public function view(User $user, Post $post)
     {
-//        $author = $post->user ?? $post->user()->first();
-//        if ($author && $user->isBlockedWith($author)) {
-//            return false;
-//        }
+        $author = $post->user ?? $post->user()->first();
+        if ($author && $user->isBlockedWith($author)) {
+            return false;
+        }
 
         return true;
     }
@@ -32,26 +32,23 @@ class PostPolicy
 
     public function update(User $user, Post $post)
     {
-//        return $post->user_id == $user->id;
-        return true;
+        return $post->user_id == $user->id;
     }
 
     public function delete(User $user, Post $post)
     {
-//        return $post->user_id == $user->id;
-        return true;
+        return $post->user_id == $user->id;
     }
 
     public function restore(User $user, Post $post)
     {
-//        return $user->id === $post->user_id;
-        return true;
+        return $user->id === $post->user_id;
     }
 
     public function forceDelete(User $user, Post $post)
     {
-//        return $post->user_id === $user->id;
-        return true;
+        return $post->user_id === $user->id;
+//        return true;
     }
 
     public function userPosts(User $user)
@@ -66,8 +63,7 @@ class PostPolicy
 
     public function archive(User $user, Post $post)
     {
-//        return $user->id == $post->user_id;
-        return true;
+        return $user->id == $post->user_id;
     }
 
     public function summarize(Post $post)
