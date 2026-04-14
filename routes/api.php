@@ -39,6 +39,7 @@ use App\Http\Controllers\V1\TestNotificationController;
 use App\Http\Controllers\V1\Chats\UserOnlineController;
 use App\Http\Controllers\V1\Chats\UserOfflineController;
 use App\Http\Controllers\V1\Chats\UserPresenceShowController;
+use App\Http\Controllers\V1\TrendingController;
 
 Route::prefix('v1')->group(function () {
     Route::get('/', function () {
@@ -234,7 +235,7 @@ Route::prefix('v1')->group(function () {
 
                 Route::post('profile/upload/cv', 'uploadCv');
                 Route::delete('profile/delete/cv', 'deleteCv');
-                
+
                 Route::get('profile/activity', 'activity');
                 Route::get('profile/details', 'details');
                 Route::get('profile/share-link', 'shareLink');
@@ -417,6 +418,16 @@ Route::prefix('v1')->group(function () {
                     Route::put('{sessionId}/title', 'updateTitle');
                 });
             });
+            // ─── Trending ─────────────────────────────────────────────────────────────────
+
+            Route::prefix('trending')
+                ->middleware('throttle:30,1')
+                ->controller(TrendingController::class)
+                ->group(function () {
+                    Route::get('posts', 'posts');
+                    Route::get('tags',  'tags');
+                    Route::get('tech',  'tech');
+                });
         });
     });
 });
