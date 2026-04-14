@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Observers\UserObserver;
 use App\Services\HackClubCdnService;
 use Binafy\LaravelReaction\Traits\Reactor;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,7 +22,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 #[ObservedBy([UserObserver::class])]
-class User extends Authenticatable implements JWTSubject, MustVerifyEmail
+class User extends Authenticatable implements JWTSubject, MustVerifyEmail, FilamentUser
 {
     use HasFactory, Notifiable, softDeletes, Reactor, Searchable, Messageable;
 
@@ -32,6 +34,19 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     public function getJWTCustomClaims()
     {
         return [];
+    }
+
+    /**
+     * Check if user can access the admin panel
+     * Only users with admin role can access
+     */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        if ($panel->getId() === 'admin') {
+            return $this->role === 'admin';
+        }
+
+        return true;
     }
 
     public function toSearchableArray()
