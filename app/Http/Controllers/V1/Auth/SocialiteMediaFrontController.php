@@ -88,6 +88,7 @@ class SocialiteMediaFrontController
 
         $frontendUrl = config('app.frontend_url') . '/auth/social-callback?token=' . $token;
         return Redirect::to($frontendUrl);
+        // https://devhub-platform.github.io/frontend-development/auth/social-callback?token={token}
     }
-
 }
+
