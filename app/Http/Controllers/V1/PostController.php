@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Number;
 use Illuminate\Support\Str;
 use OneSignal;
+
 class PostController
 {
     use AuthorizesRequests;
@@ -131,7 +132,6 @@ class PostController
         if ($request->hasFile('image_url')) {
             $validated['image_url'] = $this->hackClubCdnService->uploadFileUrl($request->file('image_url'));
         }
-        // If image_url is a plain URL string (e.g. from AI generation), keep it as-is
 
         $contentToModerate = $validated['content'] . ' ' . $validated['title'];
         $moderationResult = $moderationService->moderateContent($contentToModerate);
@@ -139,6 +139,15 @@ class PostController
         if ($moderationResult['flagged'] ?? false) {
             $reasons = $moderationService->getModerationMessage($moderationResult);
             Log::warning("Post content flagged for user ID: " . auth()->id(), ['reasons' => $reasons]);
+
+            OneSignal::sendNotificationToAll(
+                'A user attempted to create a post that violates content policies reason: ' . $reasons,
+                'deeplink://users/' . auth()->id(),
+                null,
+                null,
+                null,
+                'Content Violation Attempt'
+            );
 
             return response()->json([
                 'message' => 'Post content violates our content policies and cannot be created. Your account may be reviewed.',
