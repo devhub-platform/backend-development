@@ -3,8 +3,14 @@
 namespace App\Models;
 
 use App\Observers\UserObserver;
-use App\Services\HackClubCdnService;
 use Binafy\LaravelReaction\Traits\Reactor;
+use Filament\Auth\MultiFactor\App\Concerns\InteractsWithAppAuthentication;
+use Filament\Auth\MultiFactor\App\Concerns\InteractsWithAppAuthenticationRecovery;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
+use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
+use Filament\Auth\MultiFactor\Email\Concerns\InteractsWithEmailAuthentication;
+use Filament\Auth\MultiFactor\Email\Contracts\HasEmailAuthentication;
+use Filament\Models\Contracts\HasAvatar;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -22,9 +28,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 #[ObservedBy([UserObserver::class])]
-class User extends Authenticatable implements JWTSubject, MustVerifyEmail, FilamentUser
+class User extends Authenticatable implements JWTSubject, MustVerifyEmail, FilamentUser, HasAvatar, HasAppAuthentication, HasAppAuthenticationRecovery, HasEmailAuthentication
 {
     use HasFactory, Notifiable, softDeletes, Reactor, Searchable, Messageable;
+    use InteractsWithAppAuthentication;
+    use InteractsWithAppAuthenticationRecovery;
+    use InteractsWithEmailAuthentication;
 
     public function getJWTIdentifier()
     {
@@ -55,6 +64,11 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail, Filam
             'username' => $this->username,
             'name' => $this->name,
         ];
+    }
+
+    public function getFilamentAvatarUrl(): ?string
+    {
+        return $this->avatar_url;
     }
 
     protected $fillable = [
@@ -100,6 +114,8 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail, Filam
         'password',
         'remember_token',
         'provider_id',
+        'app_authentication_secret',
+        'app_authentication_recovery_codes',
         'alt_email_otp',
         'alt_email_otp_expires_at',
         'notification_preferences',
@@ -114,6 +130,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail, Filam
             'alt_email_otp_expires_at' => 'datetime',
             'otp_expires_at' => 'datetime',
             'skills' => 'array',
+            'has_email_authentication' => 'boolean',
             'notification_preferences' => 'array',
             'last_seen_at' => 'datetime',
         ];

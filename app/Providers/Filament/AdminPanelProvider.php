@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament;
 
+use Filament\Auth\MultiFactor\App\AppAuthentication;
+use Filament\Auth\MultiFactor\Email\EmailAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -12,6 +14,7 @@ use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use App\Filament\Widgets\AdminOverviewStats;
 use App\Filament\Widgets\ContentActivityChart;
+use App\Filament\Widgets\SendEmailWidget;
 use App\Filament\Widgets\TopPostsTable;
 use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -30,6 +33,12 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->profile()
+            ->multiFactorAuthentication([
+                AppAuthentication::make()
+                    ->recoverable(),
+                EmailAuthentication::make(),
+            ])
             ->brandName('Admin Panel')
             ->colors([
                 'primary' => Color::Amber,
@@ -44,6 +53,7 @@ class AdminPanelProvider extends PanelProvider
                 AdminOverviewStats::class,
                 ContentActivityChart::class,
                 TopPostsTable::class,
+                SendEmailWidget::class,
                 AccountWidget::class,
             ])
 //            ->canAccessPanel(fn ($user): bool => $user?->role === 'admin')

@@ -8,6 +8,7 @@ use App\Models\Post;
 use App\Models\Question;
 use App\Models\ReadingList;
 use App\Models\Topic;
+use App\Models\User;
 use App\Policies\AnswerPolicy;
 use App\Policies\ChatPolicy;
 use App\Policies\CommentPolicy;
@@ -15,6 +16,7 @@ use App\Policies\PostPolicy;
 use App\Policies\QuestionPolicy;
 use App\Policies\ReadingListPolicy;
 use App\Policies\TopicPolicy;
+use App\Policies\UserPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Musonza\Chat\Models\Conversation;
 
@@ -28,6 +30,7 @@ class AuthServiceProvider extends ServiceProvider
         Question::class => QuestionPolicy::class,
         Answer::class => AnswerPolicy::class,
         Topic::class => TopicPolicy::class,
+        User::class => UserPolicy::class,
     ];
 
     public function boot(): void
