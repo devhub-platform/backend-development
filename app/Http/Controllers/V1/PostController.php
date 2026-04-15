@@ -13,6 +13,7 @@ use App\Models\Report;
 use App\Models\Tag;
 use App\Notifications\PostReportedNotification;
 use App\Notifications\NewPostNotification;
+use App\Services\AI\AddPostToAI;
 use App\Services\AI\PostAIImageService;
 use App\Services\HackClubCdnService;
 use App\Services\ImageUploadCloudinaryService;
@@ -33,6 +34,7 @@ class PostController
         private ImageUploadCloudinaryService $cloudinaryService,
         private HackClubCdnService           $hackClubCdnService,
         private PostAIImageService           $aiImageService,
+        private AddPostToAI                 $addPostToAIService
     )
     {
     }
@@ -160,6 +162,14 @@ class PostController
         unset($validated['generated_image_id']);
 
         $post = Post::create($validated);
+
+        $aiAddResult = $this->addPostToAIService->addPostToModel($post);
+        if (!$aiAddResult) {
+            Log::warning('Post created but failed to add to AI model', [
+                'post_id' => $post->id,
+                'user_id' => auth()->id()
+            ]);
+        }
 
         if (!empty($requestedTags)) {
             $tagIds = collect($requestedTags)

@@ -10,6 +10,10 @@ class AdminOverviewStats extends StatsOverviewWidget
 {
     protected ?string $heading = 'Admin Analytics';
 
+    protected static ?int $sort = 1;
+
+    protected int | string | array $columnSpan = 'full';
+
     protected function getStats(): array
     {
         $analytics = app(AdminAnalyticsService::class)->overview();
@@ -30,4 +34,3 @@ class AdminOverviewStats extends StatsOverviewWidget
         ];
     }
 }
-

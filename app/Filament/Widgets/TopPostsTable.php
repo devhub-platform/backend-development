@@ -11,6 +11,13 @@ class TopPostsTable extends BaseWidget
 {
     protected static ?string $heading = 'Top posts by views';
 
+    protected static ?int $sort = 3;
+
+    protected int | string | array $columnSpan = [
+        'md' => 1,
+        'xl' => 1,
+    ];
+
     public function table(Table $table): Table
     {
         return $table
@@ -21,22 +28,38 @@ class TopPostsTable extends BaseWidget
                     ->orderByDesc('views')
                     ->limit(10)
             )
+            ->striped()
+            ->paginated(false)
             ->columns([
                 TextColumn::make('title')
+                    ->label('Post')
                     ->searchable()
-                    ->limit(50),
+                    ->limit(58)
+                    ->tooltip(fn (Post $record): string => $record->title)
+                    ->description(fn (Post $record): ?string => $record->slug ? "@{$record->slug}" : null),
                 TextColumn::make('user.name')
                     ->label('Author')
-                    ->placeholder('-'),
+                    ->placeholder('-')
+                    ->toggleable(),
                 TextColumn::make('views')
+                    ->label('Views')
                     ->numeric()
-                    ->sortable(),
+                    ->sortable()
+                    ->badge()
+                    ->icon('heroicon-o-eye')
+                    ->color('primary'),
                 TextColumn::make('status')
-                    ->badge(),
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'published' => 'success',
+                        'draft' => 'warning',
+                        default => 'gray',
+                    }),
                 TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable(),
+                    ->label('Published')
+                    ->since()
+                    ->sortable()
+                    ->toggleable(),
             ]);
     }
 }
-

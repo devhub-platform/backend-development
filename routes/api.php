@@ -48,6 +48,7 @@ Route::prefix('v1')->group(function () {
             'status' => 'OK - Server on azure-cloud is running',
             'base_url' => 'https://dev-hubs.tech/api/v1',
             'api_docs' => 'https://devhub.apidog.io/',
+            'admin_panel' => 'https://dev-hubs.tech/admin',
             'created_by' => 'Created by Eng/Youssef Ahmed & Eng/Menna Ahmed',
         ]);
     });
