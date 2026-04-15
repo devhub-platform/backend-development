@@ -63,9 +63,9 @@ class UsersTable
                 TextColumn::make('email_verified_at')
                     ->dateTime()
                     ->sortable(),
-                TextColumn::make('last_seen_at')
-                    ->dateTime()
-                    ->sortable(),
+                // TextColumn::make('last_seen_at')
+                //     ->dateTime()
+                //     ->sortable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -123,7 +123,7 @@ class UsersTable
                             Mail::to($record->email)->send(new AdminUserMessageMail(
                                 user: $record,
                                 mailSubject: $data['subject'],
-                                message: $data['message'],
+                                mailBody: $data['message'],
                                 senderName: auth()->user()?->name,
                             ));
 

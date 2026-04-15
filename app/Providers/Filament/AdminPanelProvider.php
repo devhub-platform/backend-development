@@ -14,7 +14,6 @@ use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use App\Filament\Widgets\AdminOverviewStats;
 use App\Filament\Widgets\ContentActivityChart;
-use App\Filament\Widgets\SendEmailWidget;
 use App\Filament\Widgets\TopPostsTable;
 use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -34,11 +33,13 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->profile()
-            ->multiFactorAuthentication([
-                AppAuthentication::make()
-                    ->recoverable(),
-                EmailAuthentication::make(),
-            ])
+            ->multiFactorAuthentication(
+                config('filament.mfa.enabled', true) ? [
+                    AppAuthentication::make()
+                        ->recoverable(),
+                    EmailAuthentication::make(),
+                ] : []
+            )
             ->brandName('Admin Panel')
             ->colors([
                 'primary' => Color::Amber,
@@ -53,10 +54,9 @@ class AdminPanelProvider extends PanelProvider
                 AdminOverviewStats::class,
                 ContentActivityChart::class,
                 TopPostsTable::class,
-                SendEmailWidget::class,
                 AccountWidget::class,
             ])
-//            ->canAccessPanel(fn ($user): bool => $user?->role === 'admin')
+            //            ->canAccessPanel(fn ($user): bool => $user?->role === 'admin')
             ->authMiddleware([
                 Authenticate::class,
             ])

@@ -8,6 +8,7 @@ use App\Http\Requests\AuthRequests\RegisteredRequest;
 use App\Http\Resources\UserResource;
 use App\Mail\WelcomeEmailMail;
 use App\Models\User;
+use App\Services\MfaCodeService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +24,13 @@ class AuthController extends Controller
 {
     use AuthorizesRequests;
 
+    protected MfaCodeService $mfaService;
+
+    public function __construct(MfaCodeService $mfaService)
+    {
+        $this->mfaService = $mfaService;
+    }
+
     public function login(LoginRequest $request): JsonResponse
     {
         $email = $request->input('email');
@@ -32,9 +40,21 @@ class AuthController extends Controller
         JWTAuth::factory()->setTTL($remember ? 60 * 24 * 30 : 60 * 24);
 
         if ($token = JWTAuth::attempt(['email' => $email, 'password' => $password])) {
+            $user = Auth::user();
+
+            // Send MFA code if enabled
+            if (config('filament.mfa.enabled')) {
+                $this->mfaService->sendEmailCode($user);
+                return response()->json([
+                    'message' => 'MFA code sent to your email',
+                    'mfa_required' => true,
+                    'user_id' => $user->id,
+                ], 201);
+            }
+
             return response()->json([
                 'message' => 'Login successful',
-                'user' => new UserResource(Auth::user()),
+                'user' => new UserResource($user),
                 'token' => $token,
                 'remember_me' => $remember,
             ]);
