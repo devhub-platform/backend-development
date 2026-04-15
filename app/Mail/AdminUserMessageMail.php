@@ -16,7 +16,7 @@ class AdminUserMessageMail extends Mailable
     public function __construct(
         public User $user,
         public string $mailSubject,
-        public string $message,
+        public string $mailBody,
         public ?string $senderName = null,
     ) {
     }
