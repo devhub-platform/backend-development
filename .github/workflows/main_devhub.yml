@@ -26,6 +26,24 @@ jobs:
         with:
           files: 'composer.json'
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install NPM dependencies
+        run: npm install
+
+      - name: Clean development files
+        run: |
+          rm -f public/hot
+          rm -rf storage/framework/cache/*
+          rm -rf storage/framework/views/*
+          rm -rf bootstrap/cache/*
+
+      - name: Build frontend
+        run: npm run build
+
       - name: Run composer install if composer.json exists
         if: steps.check_files.outputs.files_exists == 'true'
         env:
@@ -39,7 +57,24 @@ jobs:
         run: composer validate --no-check-publish && composer install --no-interaction --prefer-dist --no-progress --optimize-autoloader
 
       - name: Create deploy package
-        run: zip -r release.zip . \ -x ".git/*" "node_modules/*" "vendor/*" "tests/*" ".github/*"
+        run: |
+          # Remove non-essential files first
+          zip -r release.zip . \
+            -x ".git/*" ".github/*" "node_modules/*" "tests/*" \
+            "storage/framework/*" "bootstrap/cache/*" \
+            "*.env*" "public/hot" "public/storage" \
+            ".env" ".env.backup" ".env.production"
+
+          # Then add public/build contents at zip root level
+          if [ -d "public/build" ]; then
+            echo "Adding public/build to zip at root level..."
+            cd public/build
+            zip -r ../../release.zip . -x "*/.git/*"
+            cd ../..
+          else
+            echo "public/build folder not found after npm run build"
+            exit 1
+          fi
 
 
       - name: Upload artifact for deployment job
