@@ -91,4 +91,3 @@ class SocialiteMediaFrontController
         // https://devhub-platform.github.io/frontend-development/auth/social-callback?token={token}
     }
 }
-
