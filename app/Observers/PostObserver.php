@@ -4,7 +4,7 @@ namespace App\Observers;
 
 use App\Models\Post;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
+use App\Services\AI\AddPostToAI;
 
 class PostObserver
 {
@@ -16,6 +16,11 @@ class PostObserver
 
     public function created(Post $post): void
     {
+//        $ok = app(AddPostToAI::class)->addPostToModel($post);
+//
+//        if (! $ok) {
+//            Log::warning('Post created but AI sync failed', ['post_id' => $post->id]);
+//        }
     }
 
     public function updated(Post $post): void

@@ -9,8 +9,8 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Schema;
 use Filament\Widgets\Widget;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
@@ -19,9 +19,16 @@ class SendEmailWidget extends Widget implements HasForms
 {
     use InteractsWithForms;
 
-    protected static string $view = 'filament.widgets.send-email-widget';
+    protected static bool $isDiscovered = false;
 
-    protected int|string|array $columnSpan = 'full';
+    protected string $view = 'filament.widgets.send-email-widget';
+
+    protected static ?int $sort = 4;
+
+    protected int|string|array $columnSpan = [
+        'md' => 1,
+        'xl' => 1,
+    ];
 
     public ?array $data = [];
 
@@ -35,7 +42,7 @@ class SendEmailWidget extends Widget implements HasForms
         return auth()->user()?->role === 'admin';
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $form): Schema
     {
         return $form
             ->schema([
@@ -43,13 +50,15 @@ class SendEmailWidget extends Widget implements HasForms
                     ->label('Recipient user')
                     ->required()
                     ->searchable()
+                    ->placeholder('Search by name or email')
+                    ->columnSpan(1)
                     ->getSearchResultsUsing(function (string $search): array {
                         return User::query()
                             ->where('name', 'like', "%{$search}%")
                             ->orWhere('email', 'like', "%{$search}%")
                             ->limit(50)
                             ->get()
-                            ->mapWithKeys(fn (User $user): array => [
+                            ->mapWithKeys(fn(User $user): array => [
                                 $user->id => "{$user->name} ({$user->email})",
                             ])
                             ->all();
@@ -66,13 +75,18 @@ class SendEmailWidget extends Widget implements HasForms
                 TextInput::make('subject')
                     ->label('Subject')
                     ->required()
+                    ->placeholder('Write a clear subject line')
+                    ->columnSpan(1)
                     ->maxLength(150),
                 Textarea::make('message')
                     ->label('Message')
                     ->required()
+                    ->placeholder('Write your message to the selected user')
                     ->rows(8)
+                    ->columnSpanFull()
                     ->maxLength(5000),
             ])
+            ->columns(2)
             ->statePath('data');
     }
 
@@ -94,7 +108,7 @@ class SendEmailWidget extends Widget implements HasForms
             Mail::to($recipient->email)->send(new AdminUserMessageMail(
                 user: $recipient,
                 mailSubject: $state['subject'],
-                message: $state['message'],
+                mailBody: $state['message'],
                 senderName: auth()->user()?->name,
             ));
 

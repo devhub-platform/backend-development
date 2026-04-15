@@ -54,7 +54,7 @@
         <div class="content">
             <p style="margin-top: 0;">Hello {{ $user->name ?? 'there' }},</p>
 
-            <p>{!! nl2br(e($message)) !!}</p>
+            <p>{!! nl2br(e($mailBody)) !!}</p>
 
             <p style="margin-bottom: 0;">
                 Regards,<br>

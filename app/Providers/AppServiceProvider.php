@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Post;
+use App\Observers\PostObserver;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
@@ -44,6 +46,8 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(function (SocialiteWasCalled $event) {
             $event->extendSocialite('microsoft', MicrosoftProvider::class);
         });
+
+        Post::observe(PostObserver::class);
 
 //        if (config('app.env') === 'production') {
 //            URL::forceScheme('https');

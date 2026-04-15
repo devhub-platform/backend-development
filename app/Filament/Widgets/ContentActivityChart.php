@@ -9,6 +9,10 @@ class ContentActivityChart extends ChartWidget
 {
     protected ?string $heading = 'Content activity (last 14 days)';
 
+    protected static ?int $sort = 2;
+
+    protected int | string | array $columnSpan = 'full';
+
     protected function getData(): array
     {
         $trend = app(AdminAnalyticsService::class)->contentTrend(14);
@@ -37,4 +41,3 @@ class ContentActivityChart extends ChartWidget
         return 'line';
     }
 }
-
