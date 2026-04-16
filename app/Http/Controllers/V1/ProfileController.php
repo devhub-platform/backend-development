@@ -8,7 +8,7 @@ use App\Http\Requests\ProfileRequests\ProfileRequest;
 use App\Http\Requests\ProfileRequests\UpdatePasswordRequest;
 use App\Http\Requests\ProfileRequests\UpdateProfileRequest;
 use App\Http\Resources\CommentResource;
-use App\Http\Resources\PostResource;
+use App\Http\Resources\TrendingPostResource;
 use App\Http\Resources\UserResource;
 use App\Mail\PasswordUpdatedSuccessfullyMail;
 use App\Models\User;
@@ -219,7 +219,7 @@ class ProfileController
         $posts = $query->paginate($perPage);
 
         return response()->json([
-            'data' => PostResource::collection($posts),
+            'data' => TrendingPostResource::collection($posts),
             'pagination' => [
                 'total' => $posts->total(),
                 'per_page' => $posts->perPage(),

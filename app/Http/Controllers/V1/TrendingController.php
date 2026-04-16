@@ -4,6 +4,7 @@ namespace App\Http\Controllers\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Trending\TrendingPostRequest;
+use App\Http\Resources\TrendingPostResource;
 use App\Services\Trending\TechTrendService;
 use App\Services\Trending\TrendingService;
 use Illuminate\Http\JsonResponse;
@@ -15,19 +16,18 @@ class TrendingController extends Controller
         private TechTrendService $techTrendService,
     ) {}
 
-    /**
-     * GET /api/v1/trending/posts?tag_id={id}&per_page={n}
-     */
     public function posts(TrendingPostRequest $request): JsonResponse
     {
+        $perPage = min($request->integer('per_page', 10), 50);
+
         $posts = $this->trendingService->getTrendingPosts(
             tagId:   $request->integer('tag_id') ?: null,
-            perPage: $request->integer('per_page', 10),
+            perPage: $perPage,
         );
 
         return response()->json([
             'success' => true,
-            'data'    => $posts->items(),
+            'data'    => TrendingPostResource::collection($posts),
             'meta'    => [
                 'total'        => $posts->total(),
                 'per_page'     => $posts->perPage(),
@@ -37,22 +37,14 @@ class TrendingController extends Controller
         ]);
     }
 
-    /**
-     * GET /api/v1/trending/tags
-     */
     public function tags(): JsonResponse
     {
-        $tags = $this->trendingService->getTrendingTags();
-
         return response()->json([
             'success' => true,
-            'data'    => $tags,
+            'data'    => $this->trendingService->getTrendingTags(),
         ]);
     }
 
-    /**
-     * GET /api/v1/trending/tech
-     */
     public function tech(): JsonResponse
     {
         $trends = $this->techTrendService->getTechTrends();

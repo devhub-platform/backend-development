@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\V1;
 
-use App\Http\Resources\PostResource;
+use App\Http\Resources\TrendingPostResource;
 use App\Http\Resources\TagResource;
 use App\Models\Post;
 use App\Models\Tag;
@@ -79,7 +79,7 @@ class TagController
 
         return response()->json([
             'message' => "Tags attached to post successfully",
-            'data' => new PostResource($post),
+            'data' => new TrendingPostResource($post),
         ], 200);
     }
 
@@ -92,7 +92,7 @@ class TagController
 
         return response()->json([
             'message' => "Tag detached from post successfully",
-            'data' => new PostResource($post),
+            'data' => new TrendingPostResource($post),
         ], 200);
     }
 }
