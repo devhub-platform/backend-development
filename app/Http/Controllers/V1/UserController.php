@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\V1;
 
 use App\Http\Resources\CommentResource;
-use App\Http\Resources\PostResource;
+use App\Http\Resources\TrendingPostResource;
 use App\Http\Resources\UserResource;
 use App\Http\Resources\UsersCollection;
 use App\Models\User;
@@ -52,7 +52,7 @@ class UserController extends Controller
         $posts = $query->paginate($perPage);
 
         return response()->json([
-            'data' => PostResource::collection($posts),
+            'data' => TrendingPostResource::collection($posts),
             'pagination' => $this->getPaginationData($posts),
         ]);
     }

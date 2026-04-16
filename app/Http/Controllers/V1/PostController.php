@@ -6,7 +6,7 @@ use App\Http\Requests\PostsRequests\PostStoreRequest;
 use App\Http\Requests\PostsRequests\PostUpdateRequest;
 use App\Http\Requests\PostsRequests\ReportPostRequest;
 use App\Http\Resources\PostCollection;
-use App\Http\Resources\PostResource;
+use App\Http\Resources\TrendingPostResource;
 use App\Models\Post;
 use App\Models\PostView;
 use App\Models\Report;
@@ -58,7 +58,7 @@ class PostController
         ])->toArray();
 
         return response()->json([
-            'data' => PostResource::collection($topPosts),
+            'data' => TrendingPostResource::collection($topPosts),
             'views_count' => $viewsMap,
         ]);
     }
@@ -87,7 +87,7 @@ class PostController
         $post->load('comments.user');
 
         return response()->json([
-            'data' => new PostResource($post),
+            'data' => new TrendingPostResource($post),
         ]);
     }
 
@@ -101,7 +101,7 @@ class PostController
             ->paginate(15);
 
         return response()->json([
-            'data' => PostResource::collection($posts),
+            'data' => TrendingPostResource::collection($posts),
             'meta' => [
                 'current_page' => $posts->currentPage(),
                 'last_page' => $posts->lastPage(),
@@ -193,7 +193,7 @@ class PostController
 
         return response()->json([
             'message' => "Post '{$post->title}' created successfully",
-            'data' => new PostResource($post->loadMissing(['user', 'tags']))
+            'data' => new TrendingPostResource($post->loadMissing(['user', 'tags']))
         ], 201);
     }
 
@@ -228,7 +228,7 @@ class PostController
         }
 
         return response()->json([
-            'data' => new PostResource($post),
+            'data' => new TrendingPostResource($post),
             'views' => Number::abbreviate((int)$post->fresh()->views),
         ]);
     }
@@ -256,7 +256,7 @@ class PostController
 
         return response()->json([
             'message' => "Post '{$post->title}' updated successfully",
-            'data' => new PostResource($post)
+            'data' => new TrendingPostResource($post)
         ]);
     }
 
@@ -281,7 +281,7 @@ class PostController
             ->paginate(15);
 
         return response()->json([
-            'data' => PostResource::collection($posts),
+            'data' => TrendingPostResource::collection($posts),
             'meta' => [
                 'current_page' => $posts->currentPage(),
                 'last_page' => $posts->lastPage(),
@@ -302,7 +302,7 @@ class PostController
             ->get();
 
         return response()->json([
-            'data' => PostResource::collection($posts),
+            'data' => TrendingPostResource::collection($posts),
         ]);
     }
 
@@ -345,7 +345,7 @@ class PostController
 
         return response()->json([
             'message' => 'Post restored successfully (Unarchived)',
-            'data' => new PostResource($post),
+            'data' => new TrendingPostResource($post),
         ]);
     }
 
@@ -358,7 +358,7 @@ class PostController
             ->paginate(15);
 
         return response()->json([
-            'data' => PostResource::collection($drafts),
+            'data' => TrendingPostResource::collection($drafts),
             'meta' => [
                 'current_page' => $drafts->currentPage(),
                 'last_page' => $drafts->lastPage(),
@@ -376,7 +376,7 @@ class PostController
             ->paginate(15);
 
         return response()->json([
-            'data' => PostResource::collection($archivedPosts),
+            'data' => TrendingPostResource::collection($archivedPosts),
             'meta' => [
                 'current_page' => $archivedPosts->currentPage(),
                 'last_page' => $archivedPosts->lastPage(),

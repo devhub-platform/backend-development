@@ -31,7 +31,11 @@ class AnswerResource extends JsonResource
             'user_upvotes'     => $upvotes,
             'user_downvotes'   => $downvotes,
             'current_user_vote'=> $currentUserVote,
-            'user'             => new UserResource($this->whenLoaded('user')),
+            'user' => [
+                'id'     => $this->user?->id,
+                'name'   => $this->user?->name,
+                'avatar' => $this->user?->avatar_url,
+            ],
             'question_id'      => $this->question_id,
             'question'         => new QuestionResource($this->whenLoaded('question')),
             'created_at'       => $this->created_at->diffForHumans(),
