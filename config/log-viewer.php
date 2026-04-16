@@ -20,7 +20,7 @@ return [
 
     'api_only' => env('LOG_VIEWER_API_ONLY', false),
 
-    'require_auth_in_production' => true,
+    'require_auth_in_production' => false,
 
     /*
     |--------------------------------------------------------------------------
@@ -82,7 +82,7 @@ return [
     |
     */
 
-    'timezone' => null,
+    'timezone' => 'Africa/Cairo',
 
     /*
     |--------------------------------------------------------------------------
@@ -138,15 +138,15 @@ return [
             'name' => ucfirst(env('APP_ENV', 'local')),
         ],
 
-        // 'staging' => [
-        //     'name' => 'Staging',
-        //     'host' => 'https://staging.example.com/log-viewer',
-        //     'auth' => [      // Example of HTTP Basic auth
-        //         'username' => 'username',
-        //         'password' => 'password',
-        //     ],
-        //     'verify_server_certificate' => true,
-        // ],
+         'staging' => [
+             'name' => 'Staging',
+             'host' => 'https://devhubs.free.laravel.cloud/log-viewer',
+             'auth' => [      // Example of HTTP Basic auth
+                 'username' => 'devhub',
+                 'password' => 'A419386Yy=*',
+             ],
+             'verify_server_certificate' => true,
+         ],
         //
         // 'production' => [
         //     'name' => 'Production',
