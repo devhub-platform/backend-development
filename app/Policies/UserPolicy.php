@@ -28,11 +28,21 @@ class UserPolicy
 
     public function update(User $user, User $model): bool
     {
+        // Admins cannot update other admins
+        if ($model->role === 'admin' && $user->id !== $model->id) {
+            return false;
+        }
+
         return $user->id === $model->id || $user->role === 'admin';
     }
 
     public function delete(User $user, User $model): bool
     {
+        // Admins cannot delete other admins
+        if ($model->role === 'admin' && $user->id !== $model->id) {
+            return false;
+        }
+
         return $user->id === $model->id || $user->role === 'admin';
     }
 
@@ -48,11 +58,21 @@ class UserPolicy
 
     public function restore(User $user, User $model): bool
     {
+        // Admins cannot restore other admins
+        if ($model->role === 'admin' && $user->id !== $model->id) {
+            return false;
+        }
+
         return $user->role === 'admin';
     }
 
     public function forceDelete(User $user, User $model): bool
     {
+        // Admins cannot permanently delete other admins
+        if ($model->role === 'admin' && $user->id !== $model->id) {
+            return false;
+        }
+
         return $user->role === 'admin';
     }
 }

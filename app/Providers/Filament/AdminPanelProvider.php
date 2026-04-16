@@ -15,6 +15,7 @@ use Filament\Support\Colors\Color;
 use App\Filament\Widgets\AdminOverviewStats;
 use App\Filament\Widgets\ContentActivityChart;
 use App\Filament\Widgets\TopPostsTable;
+use Filament\Navigation\NavigationItem;
 use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -55,6 +56,25 @@ class AdminPanelProvider extends PanelProvider
                 ContentActivityChart::class,
                 TopPostsTable::class,
                 AccountWidget::class,
+            ])
+            ->navigationItems([
+                NavigationItem::make('AI Analytics')
+                    ->icon('heroicon-o-sparkles')
+                    ->badge('Monitor', color: 'success')
+                    ->url('#')  // Links to dashboard section
+                    ->group('Tools'),
+                NavigationItem::make('Log Viewer')
+                    ->url('/log-viewer')
+                    ->icon('heroicon-o-document-text')
+                    ->openUrlInNewTab()
+                    ->badge('Logs', color: 'info')
+                    ->group('Tools'),
+                NavigationItem::make('Telescope')
+                    ->url('/' . config('telescope.path', 'telescope'))
+                    ->icon('heroicon-o-eye')
+                    ->openUrlInNewTab()
+                    ->badge('Debug', color: 'warning')
+                    ->group('Tools'),
             ])
             //            ->canAccessPanel(fn ($user): bool => $user?->role === 'admin')
             ->authMiddleware([

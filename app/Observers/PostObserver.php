@@ -8,6 +8,10 @@ use App\Services\AI\AddPostToAI;
 
 class PostObserver
 {
+    public function __construct(protected AddPostToAI $addPostToAIService)
+    {
+    }
+
     public function creating(Post $post): void
     {
 //        $post->title = Str::title($post->title);
@@ -16,11 +20,13 @@ class PostObserver
 
     public function created(Post $post): void
     {
-//        $ok = app(AddPostToAI::class)->addPostToModel($post);
-//
-//        if (! $ok) {
-//            Log::warning('Post created but AI sync failed', ['post_id' => $post->id]);
-//        }
+        $aiAddResult = $this->addPostToAIService->addPostToModel($post);
+        if (!$aiAddResult) {
+            Log::warning('Post created but failed to add to AI model', [
+                'post_id' => $post->id,
+                'user_id' => auth()->id()
+            ]);
+        }
     }
 
     public function updated(Post $post): void
