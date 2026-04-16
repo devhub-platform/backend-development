@@ -19,6 +19,7 @@ use App\Policies\TopicPolicy;
 use App\Policies\UserPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Musonza\Chat\Models\Conversation;
+use Illuminate\Support\Facades\Gate;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -36,5 +37,11 @@ class AuthServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerPolicies();
+
+        // Define the gate for Log Viewer access
+        // In production, only admin users can access Log Viewer
+        Gate::define('viewLogViewer', function (User $user) {
+            return $user->role === 'admin';
+        });
     }
 }
