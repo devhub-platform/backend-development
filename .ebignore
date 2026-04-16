@@ -48,4 +48,3 @@ phpunit.xml
 # Git
 .git/
 .gitattributes
-/.github/workflows/main_devhub.yml
