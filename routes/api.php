@@ -40,6 +40,7 @@ use App\Http\Controllers\V1\TestNotificationController;
 use App\Http\Controllers\V1\Chats\UserOnlineController;
 use App\Http\Controllers\V1\Chats\UserOfflineController;
 use App\Http\Controllers\V1\Chats\UserPresenceShowController;
+use App\Http\Controllers\V1\FeedbackController;
 
 Route::prefix('v1')->group(function () {
     Route::get('/', function () {
@@ -366,6 +367,17 @@ Route::prefix('v1')->group(function () {
                 Route::delete('settings/alt-email/remove', 'removeAltEmail');
                 Route::post('settings/alt-email/send-reset-otp', 'resendAltEmailOtp');
                 Route::post('settings/alt-email/make-as-primary', 'makeAsPrimaryEmail');
+            });
+
+            Route::controller(FeedbackController::class)->group(function () {
+                Route::post('feedbacks', 'store');
+//                Route::get('feedbacks', 'index');
+//                Route::get('feedbacks/{feedbackId}', 'show');
+//                Route::delete('feedbacks/{feedbackId}', 'destroy');
+
+                Route::get('feedbacks/admin/all', 'getAllFeedback');
+                Route::patch('feedbacks/{feedbackId}/status', 'updateStatus');
+                Route::get('feedbacks/admin/statistics', 'statistics');
             });
 
             // ─── Chat ─────────────────────────────────────────────────────────────

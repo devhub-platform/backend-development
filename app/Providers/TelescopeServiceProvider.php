@@ -28,6 +28,8 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
                 $entry->isScheduledTask() ||
                 $entry->hasMonitoredTag();
         });
+
+        $this->gate();
     }
 
     /**
@@ -56,9 +58,8 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
     protected function gate(): void
     {
         Gate::define('viewTelescope', function ($user) {
-            return in_array($user->email, [
-                's5sys.wffe@inbox.testmail.app'
-            ]);
+            // Allow access if user is an admin
+            return $user && method_exists($user, 'hasRole') && $user->hasRole('admin');
         });
     }
 }
