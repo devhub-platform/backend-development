@@ -13,6 +13,7 @@ use Musonza\Chat\Models\Conversation;
 use SocialiteProviders\Manager\SocialiteWasCalled;
 use SocialiteProviders\Microsoft\Provider as MicrosoftProvider;
 use Illuminate\Support\Facades\URL;
+use Opcodes\LogViewer\Facades\LogViewer;
 use Throwable;
 
 class AppServiceProvider extends ServiceProvider
@@ -48,6 +49,14 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Post::observe(PostObserver::class);
+
+        // Configure Log Viewer authorization
+        // This provides an additional layer of security on top of the viewLogViewer gate
+        LogViewer::auth(function ($request) {
+            // Only authenticated admin users can access Log Viewer
+            // This works in conjunction with the viewLogViewer gate defined in AuthServiceProvider
+            return $request->user() && $request->user()->role === 'admin';
+        });
 
 //        if (config('app.env') === 'production') {
 //            URL::forceScheme('https');
