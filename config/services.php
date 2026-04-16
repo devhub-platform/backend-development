@@ -90,6 +90,7 @@ return [
         'deep_link_scheme' => env('PROFILE_SHARE_DEEP_LINK_SCHEME', 'devhub'),
         'deep_link_profile_path' => env('PROFILE_SHARE_DEEP_LINK_PROFILE_PATH', 'profile'),
     ],
+
     'ai_main_model' => [
         'base_url' => env('AI_MAIN_MODEL_BASE_URL'),
     ]

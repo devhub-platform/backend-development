@@ -34,7 +34,7 @@ class PostController
         private ImageUploadCloudinaryService $cloudinaryService,
         private HackClubCdnService           $hackClubCdnService,
         private PostAIImageService           $aiImageService,
-        private AddPostToAI                 $addPostToAIService
+        private AddPostToAI                  $addPostToAIService
     )
     {
     }
@@ -162,14 +162,6 @@ class PostController
         unset($validated['generated_image_id']);
 
         $post = Post::create($validated);
-
-        $aiAddResult = $this->addPostToAIService->addPostToModel($post);
-        if (!$aiAddResult) {
-            Log::warning('Post created but failed to add to AI model', [
-                'post_id' => $post->id,
-                'user_id' => auth()->id()
-            ]);
-        }
 
         if (!empty($requestedTags)) {
             $tagIds = collect($requestedTags)

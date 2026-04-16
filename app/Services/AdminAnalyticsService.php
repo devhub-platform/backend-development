@@ -15,15 +15,29 @@ class AdminAnalyticsService
     {
         $today = now()->startOfDay();
 
+        $totalPosts = Post::query()->count();
+        $publishedPosts = Post::query()->where('status', 'published')->count();
+        $draftPosts = Post::query()->where('status', 'draft')->count();
+        $totalQuestions = Question::query()->count();
+        $resolvedQuestions = Question::query()->where('is_resolved', true)->count();
+        $postViews = DB::table('post_views')->count();
+        $questionViews = QuestionView::query()->count();
+        $totalUsers = User::query()->count();
+        $activeToday = User::query()->where('last_seen_at', '>=', $today)->count();
+
         return [
-            'total_users' => User::query()->count(),
-            'active_today' => User::query()->where('last_seen_at', '>=', $today)->count(),
-            'total_posts' => Post::query()->count(),
-            'published_posts' => Post::query()->where('status', 'published')->count(),
-            'total_questions' => Question::query()->count(),
-            'resolved_questions' => Question::query()->where('is_resolved', true)->count(),
-            'post_views' => DB::table('post_views')->count(),
-            'question_views' => QuestionView::query()->count(),
+            'total_users' => $totalUsers,
+            'active_today' => $activeToday,
+            'total_posts' => $totalPosts,
+            'published_posts' => $publishedPosts,
+            'draft_posts' => $draftPosts,
+            'archived_posts' => $totalPosts - $publishedPosts - $draftPosts,
+            'total_questions' => $totalQuestions,
+            'resolved_questions' => $resolvedQuestions,
+            'unanswered_questions' => $totalQuestions - $resolvedQuestions,
+            'post_views' => $postViews,
+            'question_views' => $questionViews,
+            'total_views' => $postViews + $questionViews,
         ];
     }
 
