@@ -20,6 +20,7 @@ use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
@@ -69,13 +70,21 @@ class AdminPanelProvider extends PanelProvider
                     ->icon('heroicon-o-document-text')
                     ->openUrlInNewTab()
                     ->badge('Logs', color: 'info')
-                    ->group('Tools'),
+                    ->group('Tools')->visible(fn(): bool => Auth::user()?->role === 'admin'),
                 NavigationItem::make('Telescope')
                     ->url('/' . config('telescope.path', 'telescope'))
                     ->icon('heroicon-o-eye')
                     ->openUrlInNewTab()
                     ->badge('Debug', color: 'warning')
-                    ->group('Tools'),
+                    ->group('Tools')
+                    ->visible(fn(): bool => Auth::user()?->role === 'admin'),
+                NavigationItem::make('Pulse')
+                    ->url('/' . ltrim((string) config('pulse.path', 'pulse'), '/'))
+                    ->icon('heroicon-o-heart')
+                    ->openUrlInNewTab()
+                    ->badge('Pulse', color: 'danger')
+                    ->group('Tools')
+                    ->visible(fn(): bool => Auth::user()?->role === 'admin'),
             ])
             //            ->canAccessPanel(fn ($user): bool => $user?->role === 'admin')
             ->authMiddleware([

@@ -10,8 +10,9 @@ export default defineConfig({
         }),
         tailwindcss(),
     ],
-    build: {
-        manifest: true,        // تأكد من إنشاء manifest
-        outDir: 'public/build', // واضح
+    server: {
+        watch: {
+            ignored: ['**/storage/framework/views/**'],
+        },
     },
 });

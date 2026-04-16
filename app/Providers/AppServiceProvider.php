@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\Post;
 use App\Observers\PostObserver;
+use App\Models\User;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
@@ -12,7 +13,7 @@ use Illuminate\Validation\Rules\Password;
 use Musonza\Chat\Models\Conversation;
 use SocialiteProviders\Manager\SocialiteWasCalled;
 use SocialiteProviders\Microsoft\Provider as MicrosoftProvider;
-use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Gate;
 use Opcodes\LogViewer\Facades\LogViewer;
 use Throwable;
 
@@ -44,6 +45,10 @@ class AppServiceProvider extends ServiceProvider
                 ->mixedCase();
         });
 
+        Gate::define('viewPulse', function (User $user) {
+            return $user->role === 'admin';
+        });
+
         Event::listen(function (SocialiteWasCalled $event) {
             $event->extendSocialite('microsoft', MicrosoftProvider::class);
         });
@@ -58,9 +63,9 @@ class AppServiceProvider extends ServiceProvider
             return $request->user() !== null;
         });
 
-//        if (config('app.env') === 'production') {
-//            URL::forceScheme('https');
-//        }
+        //        if (config('app.env') === 'production') {
+        //            URL::forceScheme('https');
+        //        }
     }
 
     /**

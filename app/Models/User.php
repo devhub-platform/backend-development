@@ -58,6 +58,11 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail, Filam
         return true;
     }
 
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
     public function toSearchableArray()
     {
         return [
