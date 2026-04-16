@@ -18,9 +18,9 @@ return [
 
     'enabled' => env('LOG_VIEWER_ENABLED', true),
 
-    'api_only' => env('LOG_VIEWER_API_ONLY', false),
+    'api_only' => env('LOG_VIEWER_API_ONLY', true),
 
-    'require_auth_in_production' => false,
+    'require_auth_in_production' => true,
 
     /*
     |--------------------------------------------------------------------------
