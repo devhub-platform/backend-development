@@ -4,6 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use App\Http\Middleware\BlockedUserMiddleware;
+use App\Http\Middleware\LogViewerMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -16,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'blocked.user' => BlockedUserMiddleware::class,
+            'log-viewer' => LogViewerMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
