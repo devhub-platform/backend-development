@@ -14,6 +14,8 @@ class LogViewerMiddleware
 
     public function handle(Request $request, Closure $next)
     {
+        // Skip IP check if allowedIps is empty (unrestricted access)
+        // Only enforce IP restrictions if allowedIps is explicitly configured
         if (!empty($this->allowedIps)) {
             if (!in_array($request->ip(), $this->allowedIps)) {
                 \Illuminate\Support\Facades\Log::warning('Log Viewer access denied for IP: ' . $request->ip(), [
