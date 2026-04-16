@@ -39,9 +39,9 @@ class AuthServiceProvider extends ServiceProvider
         $this->registerPolicies();
 
         // Define the gate for Log Viewer access
-        // In production, only admin users can access Log Viewer
+        // Allow any authenticated user to access Log Viewer
         Gate::define('viewLogViewer', function (User $user) {
-            return $user->role === 'admin';
+            return true;
         });
     }
 }
