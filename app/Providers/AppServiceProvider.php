@@ -53,9 +53,9 @@ class AppServiceProvider extends ServiceProvider
         // Configure Log Viewer authorization
         // This provides an additional layer of security on top of the viewLogViewer gate
         LogViewer::auth(function ($request) {
-            // Only authenticated admin users can access Log Viewer
-            // This works in conjunction with the viewLogViewer gate defined in AuthServiceProvider
-            return $request->user() && $request->user()->role === 'admin';
+            // Allow any authenticated user to access Log Viewer
+            // Adjust this logic if you need different access rules
+            return $request->user() !== null;
         });
 
 //        if (config('app.env') === 'production') {
