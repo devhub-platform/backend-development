@@ -6,6 +6,13 @@
       0 => 'Aerni\\Cloudflared\\CloudflaredServiceProvider',
     ),
   ),
+  'alizharb/filament-activity-log' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'AlizHarb\\ActivityLog\\ActivityLogServiceProvider',
+    ),
+  ),
   'anourvalar/eloquent-serialize' => 
   array (
     'aliases' => 
@@ -306,6 +313,13 @@
       0 => 'Opcodes\\LogViewer\\LogViewerServiceProvider',
     ),
   ),
+  'phiki/phiki' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'Phiki\\Adapters\\Laravel\\PhikiServiceProvider',
+    ),
+  ),
   'prism-php/prism' => 
   array (
     'aliases' => 
@@ -333,6 +347,13 @@
     'providers' => 
     array (
       0 => 'SocialiteProviders\\Manager\\ServiceProvider',
+    ),
+  ),
+  'spatie/laravel-activitylog' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'Spatie\\Activitylog\\ActivitylogServiceProvider',
     ),
   ),
   'spatie/laravel-fractal' => 

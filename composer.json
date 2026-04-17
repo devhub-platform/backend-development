@@ -12,6 +12,7 @@
         "php": "^8.3",
         "aerni/cloudflared": "^1.1",
         "algolia/algoliasearch-client-php": "^4.35",
+        "alizharb/filament-activity-log": "^1.3",
         "api-platform/laravel": "^4.2",
         "awssat/laravel-visits": "^6.2",
         "berkayk/onesignal-laravel": "^2.4",
