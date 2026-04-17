@@ -455,6 +455,7 @@ Route::post('/send-message_notification', TestNotificationController::class);
 # Test Redis connection
 Route::get('/test-redis', function () {
     Redis::set('test_key', 'Hello Redis Cloud!');
+    \Illuminate\Support\Facades\Log::info('Set test_key in Redis: Hello Redis Cloud!');
     $key = Redis::get('test_key');
     return response()->json([
         'message' => 'Redis connection successful!',

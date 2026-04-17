@@ -26,6 +26,9 @@ use Musonza\Chat\Traits\Messageable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
+
 
 #[ObservedBy([UserObserver::class])]
 class User extends Authenticatable implements JWTSubject, MustVerifyEmail, FilamentUser, HasAvatar, HasAppAuthentication, HasAppAuthenticationRecovery, HasEmailAuthentication
@@ -34,6 +37,13 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail, Filam
     use InteractsWithAppAuthentication;
     use InteractsWithAppAuthenticationRecovery;
     use InteractsWithEmailAuthentication;
+    use LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logAll();
+    }
 
     public function getJWTIdentifier()
     {
@@ -151,7 +161,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail, Filam
             return false;
         }
 
-        $seconds = $timeoutSeconds ?? (int) config('chat.presence_timeout_seconds', 120);
+        $seconds = $timeoutSeconds ?? (int)config('chat.presence_timeout_seconds', 120);
 
         return $this->last_seen_at->greaterThanOrEqualTo(now()->subSeconds($seconds));
     }

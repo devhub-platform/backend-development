@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use AlizHarb\ActivityLog\ActivityLogPlugin;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -58,6 +59,12 @@ class AdminPanelProvider extends PanelProvider
                 ContentActivityChart::class,
                 TopPostsTable::class,
                 AccountWidget::class,
+            ])->plugins([
+                ActivityLogPlugin::make()
+                    ->label('Log')
+                    ->pluralLabel('Logs')
+                    ->navigationGroup('System')
+//                    ->cluster('System'), // Optional: Group inside a cluster
             ])
             ->navigationItems([
                 NavigationItem::make('AI Analytics')
@@ -79,7 +86,7 @@ class AdminPanelProvider extends PanelProvider
                     ->group('Tools')
                     ->visible(fn(): bool => Auth::user()?->role === 'admin'),
                 NavigationItem::make('Pulse')
-                    ->url('/' . ltrim((string) config('pulse.path', 'pulse'), '/'))
+                    ->url('/' . ltrim((string)config('pulse.path', 'pulse'), '/'))
                     ->icon('heroicon-o-heart')
                     ->openUrlInNewTab()
                     ->badge('Pulse', color: 'danger')
