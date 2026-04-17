@@ -7,23 +7,28 @@ use App\Models\Tag;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 
 class TrendingService
 {
     /**
-     * Get paginated trending posts.
+     * Return a paginated list of trending posts, optionally filtered by tag.
      *
-     * If a tag is provided, results are filtered by that tag.
-     * Trending is calculated using reactions, comments, views, and recency decay.
+     * Trending Score Formula:
+     *   engagement = (reactions * 3) + (comments * 5) + SQRT(views * 1.5)
+     *   decay      = EXP(-age_in_hours / 72)
+     *   score      = engagement × decay
      *
-     * Results are cached per page and per tag for performance optimization.
+     * - Reactions weight ×3: positive signal but easily inflated.
+     * - Comments weight ×5: higher-effort engagement, stronger quality signal.
+     * - Views: square-root scaled to dampen viral spikes.
+     * - Decay over 72h: ensures older posts gradually leave trending.
+     *
+     * Results are cached per tag + page + per_page to prevent redundant queries.
+     * Falls back to latest posts if no trending content is available.
      */
     public function getTrendingPosts(?int $tagId = null, int $perPage = 10): LengthAwarePaginator
     {
-        $page = request()->get('page', 1);
-
-        // Cache key includes tag + pagination to avoid cache collisions
+        $page     = request()->get('page', 1);
         $cacheKey = "trending:posts:{$tagId}:page:{$page}:per:{$perPage}";
 
         return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($tagId, $perPage) {
@@ -39,10 +44,9 @@ class TrendingService
                     'posts.created_at',
                     'posts.updated_at',
                 ])
-
                 /**
-                 * Subquery: count reactions per post
-                 * Used as a component of the trending score
+                 * Correlated subquery: reaction count per post.
+                 * Avoids a heavy JOIN that would require GROUP BY on all selected columns.
                  */
                 ->selectSub(function ($q) {
                     $q->from('reactions')
@@ -50,10 +54,9 @@ class TrendingService
                         ->whereColumn('reactions.reactable_id', 'posts.id')
                         ->where('reactions.reactable_type', Post::class);
                 }, 'reactions_count')
-
                 /**
-                 * Subquery: count active comments per post
-                 * Excludes soft-deleted comments
+                 * Correlated subquery: comment count per post.
+                 * Excludes soft-deleted comments from the count.
                  */
                 ->selectSub(function ($q) {
                     $q->from('comments')
@@ -61,47 +64,41 @@ class TrendingService
                         ->whereColumn('comments.post_id', 'posts.id')
                         ->whereNull('comments.deleted_at');
                 }, 'comments_count')
-
                 /**
-                 * Trending Score Formula:
+                 * Trending score computed inline using correlated subqueries.
                  *
-                 * - Reactions weight: x3
-                 * - Comments weight: x5 (higher engagement value)
-                 * - Views: sqrt scaling to reduce impact of viral spikes
-                 * - Time decay: exponential decay over 72 hours
-                 *
-                 * Final score prioritizes recent and highly engaging content
+                 * COALESCE guards against NULL views on newly created posts.
+                 * TIMESTAMPDIFF in hours provides precise time-based decay.
                  */
                 ->selectRaw("
-                    (
-                        (COALESCE((SELECT COUNT(*) FROM reactions
-                            WHERE reactions.reactable_id = posts.id
-                            AND reactions.reactable_type = '" . Post::class . "'), 0) * 3)
-                        +
-                        (COALESCE((SELECT COUNT(*) FROM comments
-                            WHERE comments.post_id = posts.id
-                            AND comments.deleted_at IS NULL), 0) * 5)
-                        +
-                        (SQRT(COALESCE(posts.views, 0)) * 1.5)
-                    )
-                    * EXP(-TIMESTAMPDIFF(HOUR, posts.created_at, NOW()) / 72)
-                    AS trending_score
+                    ROUND(
+                        (
+                            (COALESCE((
+                                SELECT COUNT(*) FROM reactions
+                                WHERE reactions.reactable_id = posts.id
+                                  AND reactions.reactable_type = '" . addslashes(Post::class) . "'
+                            ), 0) * 3)
+                            +
+                            (COALESCE((
+                                SELECT COUNT(*) FROM comments
+                                WHERE comments.post_id = posts.id
+                                  AND comments.deleted_at IS NULL
+                            ), 0) * 5)
+                            +
+                            (SQRT(COALESCE(posts.views, 0) * 1.5))
+                        )
+                        * EXP(-TIMESTAMPDIFF(HOUR, posts.created_at, NOW()) / 72)
+                    , 4) AS trending_score
                 ")
-
-                // Only published and non-deleted posts are eligible for trending
                 ->where('posts.status', 'published')
                 ->whereNull('posts.deleted_at')
-
-                // Order by computed trending score descending
                 ->orderByDesc('trending_score')
-
-                // Eager load relationships to prevent N+1 queries
                 ->with([
+                    // Select only safe fields — never expose password, tokens, or private data
                     'user:id,name,avatar_url',
                     'tags:id,name',
                 ]);
 
-            // Optional filtering by tag
             if ($tagId) {
                 $query->whereHas('tags', fn($q) => $q->where('tags.id', $tagId));
             }
@@ -109,23 +106,19 @@ class TrendingService
             $results = $query->paginate($perPage);
 
             /**
-             * Fallback strategy:
-             * If no trending results exist, return latest published posts
-             * without scoring (safe degradation)
+             * Graceful degradation:
+             * If no posts have enough engagement to produce a meaningful score,
+             * fall back to the most recently published posts.
+             * This ensures the API never returns an empty response unnecessarily.
              */
             if ($results->isEmpty()) {
                 return Post::query()
                     ->select([
-                        'posts.id',
-                        'posts.user_id',
-                        'posts.title',
-                        'posts.content',
-                        'posts.status',
-                        'posts.views',
-                        'posts.created_at',
-                        'posts.updated_at',
+                        'posts.id', 'posts.user_id', 'posts.title',
+                        'posts.content', 'posts.status', 'posts.views',
+                        'posts.created_at', 'posts.updated_at',
                     ])
-                    ->selectRaw('0 as reactions_count, 0 as comments_count, 0 as trending_score')
+                    ->selectRaw('0 AS reactions_count, 0 AS comments_count, 0 AS trending_score')
                     ->where('status', 'published')
                     ->whereNull('deleted_at')
                     ->orderByDesc('created_at')
@@ -138,25 +131,22 @@ class TrendingService
     }
 
     /**
-     * Get trending tags based on recent usage (last 7 days).
+     * Return the top trending tags based on usage within the last 7 days.
      *
-     * Counts tag usage across published posts only.
-     * Cached to reduce heavy aggregation queries.
+     * Only counts tags attached to published, non-deleted posts.
+     * Cached for 20 minutes to reduce aggregation query frequency.
      */
     public function getTrendingTags(int $limit = 10): Collection
     {
         return Cache::remember('trending:tags', now()->addMinutes(20), function () use ($limit) {
-
             return Tag::select('tags.id', 'tags.name')
                 ->selectRaw('COUNT(post_tags.post_id) as usage_count')
                 ->join('post_tags', 'post_tags.tag_id', '=', 'tags.id')
                 ->join('posts', 'posts.id', '=', 'post_tags.post_id')
                 ->where('posts.status', 'published')
                 ->whereNull('posts.deleted_at')
-
-                // Only consider recent tag usage (last 7 days)
+                // Limit to recent activity — tags trending 2 months ago are not relevant
                 ->where('post_tags.created_at', '>=', now()->subDays(7))
-
                 ->groupBy('tags.id', 'tags.name')
                 ->orderByDesc('usage_count')
                 ->limit($limit)
