@@ -356,6 +356,28 @@
       0 => 'Spatie\\Activitylog\\ActivitylogServiceProvider',
     ),
   ),
+  'spatie/laravel-error-share' => 
+  array (
+    'aliases' => 
+    array (
+      'LaravelErrorShare' => 'Spatie\\LaravelErrorShare\\Facades\\LaravelErrorShare',
+    ),
+    'providers' => 
+    array (
+      0 => 'Spatie\\LaravelErrorShare\\LaravelErrorShareServiceProvider',
+    ),
+  ),
+  'spatie/laravel-flare' => 
+  array (
+    'aliases' => 
+    array (
+      'Flare' => 'Spatie\\LaravelFlare\\Facades\\Flare',
+    ),
+    'providers' => 
+    array (
+      0 => 'Spatie\\LaravelFlare\\FlareServiceProvider',
+    ),
+  ),
   'spatie/laravel-fractal' => 
   array (
     'aliases' => 

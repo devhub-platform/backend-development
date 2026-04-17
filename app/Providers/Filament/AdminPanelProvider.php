@@ -76,12 +76,12 @@ class AdminPanelProvider extends PanelProvider
                     ->badge('Monitor', color: 'success')
                     ->url('#')  // Links to dashboard section
                     ->group('Tools'),
-                NavigationItem::make('Log Viewer')
-                    ->url('/log-viewer')
-                    ->icon('heroicon-o-document-text')
+                NavigationItem::make('Errors')
+                    ->url('https://flareapp.io/107264-laravel/errors')
+                    ->icon('heroicon-o-exclamation-triangle')
                     ->openUrlInNewTab()
-                    ->badge('Logs', color: 'info')
-                    ->group('Tools')->visible(fn(): bool => Auth::user()?->role === 'admin'),
+                    ->badge('Error', color: 'danger')
+                    ->group('Tools'),
                 NavigationItem::make('Telescope')
                     ->url('/' . config('telescope.path', 'telescope'))
                     ->icon('heroicon-o-eye')
