@@ -7,6 +7,7 @@ use App\Http\Requests\PostsRequests\PostUpdateRequest;
 use App\Http\Requests\PostsRequests\ReportPostRequest;
 use App\Http\Resources\PostCollection;
 use App\Http\Resources\PostResource;
+use App\Http\Resources\TrendingPostResource;
 use App\Models\Post;
 use App\Models\PostView;
 use App\Models\Report;
