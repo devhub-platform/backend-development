@@ -41,10 +41,10 @@
 <script>
     const APP_KEY = "8386ec29a087993e4c57";
     const CLUSTER = "mt1";
-    const conversationId = Number(new URLSearchParams(window.location.search).get('conversation_id') || 8);
+    const conversationId = Number(new URLSearchParams(window.location.search).get('conversation_id') || 10);
     const currentUserId = Number(new URLSearchParams(window.location.search).get('viewer_id') || '{{ auth()->id() ?? 0 }}');
     const peerIdFromQuery = Number(new URLSearchParams(window.location.search).get('peer_id') || 0);
-    const AUTH_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2Rldmh1Yi50ZXN0L2FwaS92MS9yZWdpc3RlciIsImlhdCI6MTc3NTYxNjU0NSwiZXhwIjoxNzgzMzkyNTQ1LCJuYmYiOjE3NzU2MTY1NDUsImp0aSI6IjBHWlg3TXpneDFtS0FxNEsiLCJzdWIiOiIyIiwicHJ2IjoiMjNiZDVjODk0OWY2MDBhZGIzOWU3MDFjNDAwODcyZGI3YTU5NzZmNyJ9.COp_UdkwVHqs-rAW_KscCZr00vfQZJOHm1sNejwZfyM";
+    const AUTH_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZGV2LWh1YnMudGVjaC9hcGkvdjEvbG9naW4iLCJpYXQiOjE3NzYzNjk5NDgsImV4cCI6MTc3ODk2MTk0OCwibmJmIjoxNzc2MzY5OTQ4LCJqdGkiOiJmNURGOFBKZDU0YkQxQkxDIiwic3ViIjoiNjk5IiwicHJ2IjoiMjNiZDVjODk0OWY2MDBhZGIzOWU3MDFjNDAwODcyZGI3YTU5NzZmNyJ9.vu8R9lj4pnzsaRsdyFXBZ12lUES1TK_mTG4arO6YvxY";
     const API_BASE_URL = "https://dev-hubs.tech/api/v1";
     const STATUS_BASE_CLASS = 'mt-3 rounded-lg border px-3 py-2 text-sm font-medium';
     const STATUS_VARIANTS = {
