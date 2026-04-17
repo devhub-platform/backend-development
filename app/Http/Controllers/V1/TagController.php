@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1;
 
 use App\Http\Resources\PostResource;
+use App\Http\Resources\TrendingPostResource;
 use App\Http\Resources\TagResource;
 use App\Models\Post;
 use App\Models\Tag;

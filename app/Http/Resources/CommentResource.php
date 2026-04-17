@@ -34,12 +34,12 @@ class CommentResource extends JsonResource
             }),
 
             'replies_count' => $this->whenCounted('replies') ?? 0,
-            
+
             'created_at' => $this->created_at->diffForHumans(),
             'updated_at' => $this->updated_at->diffForHumans(),
 
 
-            'post' => new PostResource($this->whenLoaded('post')),
+            'post' => new TrendingPostResource($this->whenLoaded('post')),
             'replies' => CommentResource::collection($this->whenLoaded('replies')),
             'full_user' => new UserResource($this->whenLoaded('user')),
         ];
