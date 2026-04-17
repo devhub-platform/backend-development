@@ -43,7 +43,7 @@ class AuthController extends Controller
             $user = Auth::user();
 
             // Send MFA code if enabled
-            if (config('filament.mfa.enabled')) {
+            if ((bool) config('filament.mfa.enabled', true)) {
                 $this->mfaService->sendEmailCode($user);
                 return response()->json([
                     'message' => 'MFA code sent to your email',

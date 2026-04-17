@@ -30,6 +30,9 @@ class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
+        $isMfaEnabled = (bool) config('filament.mfa.enabled', true);
+        $isMfaRequired = $isMfaEnabled && (bool) config('filament.mfa.required', false);
+
         return $panel
             ->default()
             ->id('admin')
@@ -38,11 +41,12 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->profile()
             ->multiFactorAuthentication(
-                config('filament.mfa.enabled', true) ? [
+                $isMfaEnabled ? [
                     AppAuthentication::make()
                         ->recoverable(),
                     EmailAuthentication::make(),
-                ] : []
+                ] : [],
+                isRequired: $isMfaRequired,
             )
             ->brandName('Admin Panel')
             ->colors([
