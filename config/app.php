@@ -138,5 +138,5 @@ return [
         'OneSignal' => \Berkayk\OneSignal\OneSignalFacade::class,
     ],
 
-
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:3000'),
 ];
