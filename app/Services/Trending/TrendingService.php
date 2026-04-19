@@ -3,154 +3,213 @@
 namespace App\Services\Trending;
 
 use App\Models\Post;
-use App\Models\Tag;
+use App\Services\AI\EmbeddingService;
+use App\Services\AI\FeedMixer;
+use App\Services\AI\TopicDetector;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
+/**
+ * TrendingService
+ *
+ * Clean production pipeline:
+ * - Score computation
+ * - Deduplication
+ * - Topic detection
+ * - Diversity mixing
+ */
 class TrendingService
 {
+    private const CACHE_TTL = 30;
+    private const DEDUP_THRESHOLD = 0.88;
+
+    public function __construct(
+        private EmbeddingService $embedding,
+        private TopicDetector $topicDetector,
+        private FeedMixer $feedMixer,
+    ) {}
+
     /**
-     * Return a paginated list of trending posts, optionally filtered by tag.
-     *
-     * Trending Score Formula:
-     *   engagement = (reactions * 3) + (comments * 5) + SQRT(views * 1.5)
-     *   decay      = EXP(-age_in_hours / 72)
-     *   score      = engagement × decay
-     *
-     * - Reactions weight ×3: positive signal but easily inflated.
-     * - Comments weight ×5: higher-effort engagement, stronger quality signal.
-     * - Views: square-root scaled to dampen viral spikes.
-     * - Decay over 72h: ensures older posts gradually leave trending.
-     *
-     * Results are cached per tag + page + per_page to prevent redundant queries.
-     * Falls back to latest posts if no trending content is available.
+     * Public API
      */
     public function getTrendingPosts(?int $tagId = null, int $perPage = 10): LengthAwarePaginator
     {
-        $page     = request()->get('page', 1);
-        $cacheKey = "trending:posts:{$tagId}:page:{$page}:per:{$perPage}";
+        $page = request()->get('page', 1);
 
-        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($tagId, $perPage) {
+        $cacheKey = 'trending:v5:' . md5(json_encode([
+                $tagId,
+                request()->query(),
+            ]));
 
-            $query = Post::query()
-                ->select([
-                    'posts.id',
-                    'posts.user_id',
-                    'posts.title',
-                    'posts.content',
-                    'posts.status',
-                    'posts.views',
-                    'posts.created_at',
-                    'posts.updated_at',
-                ])
-                /**
-                 * Correlated subquery: reaction count per post.
-                 * Avoids a heavy JOIN that would require GROUP BY on all selected columns.
-                 */
-                ->selectSub(function ($q) {
-                    $q->from('reactions')
-                        ->selectRaw('COUNT(*)')
-                        ->whereColumn('reactions.reactable_id', 'posts.id')
-                        ->where('reactions.reactable_type', Post::class);
-                }, 'reactions_count')
-                /**
-                 * Correlated subquery: comment count per post.
-                 * Excludes soft-deleted comments from the count.
-                 */
-                ->selectSub(function ($q) {
-                    $q->from('comments')
-                        ->selectRaw('COUNT(*)')
-                        ->whereColumn('comments.post_id', 'posts.id')
-                        ->whereNull('comments.deleted_at');
-                }, 'comments_count')
-                /**
-                 * Trending score computed inline using correlated subqueries.
-                 *
-                 * COALESCE guards against NULL views on newly created posts.
-                 * TIMESTAMPDIFF in hours provides precise time-based decay.
-                 */
-                ->selectRaw("
-                    ROUND(
-                        (
-                            (COALESCE((
-                                SELECT COUNT(*) FROM reactions
-                                WHERE reactions.reactable_id = posts.id
-                                  AND reactions.reactable_type = '" . addslashes(Post::class) . "'
-                            ), 0) * 3)
-                            +
-                            (COALESCE((
-                                SELECT COUNT(*) FROM comments
-                                WHERE comments.post_id = posts.id
-                                  AND comments.deleted_at IS NULL
-                            ), 0) * 5)
-                            +
-                            (SQRT(COALESCE(posts.views, 0) * 1.5))
-                        )
-                        * EXP(-TIMESTAMPDIFF(HOUR, posts.created_at, NOW()) / 72)
-                    , 4) AS trending_score
-                ")
-                ->where('posts.status', 'published')
-                ->whereNull('posts.deleted_at')
-                ->orderByDesc('trending_score')
-                ->with([
-                    // Select only safe fields — never expose password, tokens, or private data
-                    'user:id,name,avatar_url',
-                    'tags:id,name',
-                ]);
+        $allItems = Cache::remember(
+            $cacheKey,
+            now()->addMinutes(self::CACHE_TTL),
+            fn() => $this->buildPipeline($tagId)
+        );
 
-            if ($tagId) {
-                $query->whereHas('tags', fn($q) => $q->where('tags.id', $tagId));
-            }
+        $slice = array_slice($allItems, ($page - 1) * $perPage, $perPage);
 
-            $results = $query->paginate($perPage);
-
-            /**
-             * Graceful degradation:
-             * If no posts have enough engagement to produce a meaningful score,
-             * fall back to the most recently published posts.
-             * This ensures the API never returns an empty response unnecessarily.
-             */
-            if ($results->isEmpty()) {
-                return Post::query()
-                    ->select([
-                        'posts.id', 'posts.user_id', 'posts.title',
-                        'posts.content', 'posts.status', 'posts.views',
-                        'posts.created_at', 'posts.updated_at',
-                    ])
-                    ->selectRaw('0 AS reactions_count, 0 AS comments_count, 0 AS trending_score')
-                    ->where('status', 'published')
-                    ->whereNull('deleted_at')
-                    ->orderByDesc('created_at')
-                    ->with(['user:id,name,avatar_url', 'tags:id,name'])
-                    ->paginate($perPage);
-            }
-
-            return $results;
-        });
+        return new LengthAwarePaginator(
+            $slice,
+            count($allItems),
+            $perPage,
+            $page,
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
 
     /**
-     * Return the top trending tags based on usage within the last 7 days.
-     *
-     * Only counts tags attached to published, non-deleted posts.
-     * Cached for 20 minutes to reduce aggregation query frequency.
+     * PIPELINE CORE
      */
-    public function getTrendingTags(int $limit = 10): Collection
+    private function buildPipeline(?int $tagId): array
     {
-        return Cache::remember('trending:tags', now()->addMinutes(20), function () use ($limit) {
-            return Tag::select('tags.id', 'tags.name')
-                ->selectRaw('COUNT(post_tags.post_id) as usage_count')
-                ->join('post_tags', 'post_tags.tag_id', '=', 'tags.id')
-                ->join('posts', 'posts.id', '=', 'post_tags.post_id')
-                ->where('posts.status', 'published')
-                ->whereNull('posts.deleted_at')
-                // Limit to recent activity — tags trending 2 months ago are not relevant
+        $posts = Post::query()
+            ->where('status', 'published')
+            ->with(['user', 'tags'])
+            ->when($tagId, fn($q) =>
+            $q->whereHas('tags', fn($q) => $q->where('tags.id', $tagId))
+            )
+            ->limit(80)
+            ->get();
+
+        if ($posts->isEmpty()) {
+            return [];
+        }
+
+        /**
+         * STEP 1: Normalize + scoring
+         */
+        $items = $posts->map(function ($post) {
+
+            $score = $this->calculateTrendingScore($post);
+
+            return [
+                'id'      => $post->id,
+                'title'   => $post->title,
+                'content' => Str::limit($post->content, 800),
+
+                'views' => $post->views,
+
+                // core ranking
+                'score' => $score,
+
+                // for debugging/API
+                'trending_score' => $score,
+
+                // topic hint (fallback)
+                'topic' => $post->tags->first()->name ?? 'general',
+
+                '_model' => $post,
+            ];
+        })->toArray();
+
+        /**
+         * STEP 2: Deduplication
+         */
+        $deduped = $this->deduplicate($items);
+
+        /**
+         * STEP 3: Topic detection
+         */
+        $withTopics = $this->topicDetector->detectBatch($deduped);
+
+        /**
+         * STEP 4: Feed mixing
+         */
+        $mixed = $this->feedMixer->mix($withTopics);
+
+        /**
+         * STEP 5: FIX (IMPORTANT)
+         * Inject computed fields into model safely
+         */
+        return array_map(function ($item) {
+            $post = $item['_model'];
+
+            $post->trending_score = $item['trending_score'] ?? 0;
+            $post->score = $item['score'] ?? 0;
+            $post->topic = $item['topic'] ?? 'general';
+
+            return $post;
+        }, $mixed);
+    }
+
+    /**
+     * Trending score (balanced version)
+     */
+    private function calculateTrendingScore(Post $post): float
+    {
+        $viewsScore = log($post->views + 1) * 10;
+
+        $daysOld = max(1, now()->diffInDays($post->created_at));
+        $recency = 100 / $daysOld;
+
+        return ($viewsScore * 0.6) + ($recency * 0.4);
+    }
+
+    /**
+     * Deduplication engine
+     */
+    private function deduplicate(array $items): array
+    {
+        $vectors = [];
+        $kept = [];
+
+        foreach ($items as $i => $item) {
+            $post = $item['_model'];
+
+            $vectors[$i] = !empty($post->embedding)
+                ? (is_array($post->embedding)
+                    ? $post->embedding
+                    : json_decode($post->embedding, true))
+                : null;
+        }
+
+        foreach ($items as $i => $item) {
+
+            if (empty($vectors[$i])) {
+                $kept[] = $i;
+                continue;
+            }
+
+            $duplicate = false;
+
+            foreach ($kept as $k) {
+                if (empty($vectors[$k])) continue;
+
+                if ($this->embedding->cosine($vectors[$i], $vectors[$k]) >= self::DEDUP_THRESHOLD) {
+                    $duplicate = true;
+                    break;
+                }
+            }
+
+            if (!$duplicate) {
+                $kept[] = $i;
+            }
+        }
+
+        return array_values(array_intersect_key($items, array_flip($kept)));
+    }
+
+    /**
+     * Trending tags
+     */
+    public function getTrendingTags(): array
+    {
+        return Cache::remember('trending:tags:v2', now()->addMinutes(60), function () {
+            return DB::table('post_tags')
+                ->join('tags', 'tags.id', '=', 'post_tags.tag_id')
+                ->select('tags.id', 'tags.name', DB::raw('COUNT(*) as post_count'))
                 ->where('post_tags.created_at', '>=', now()->subDays(7))
                 ->groupBy('tags.id', 'tags.name')
-                ->orderByDesc('usage_count')
-                ->limit($limit)
-                ->get();
+                ->orderByDesc('post_count')
+                ->limit(20)
+                ->get()
+                ->toArray();
         });
     }
 }
