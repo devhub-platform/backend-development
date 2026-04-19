@@ -2,6 +2,10 @@
 
 namespace App\Services\Trending;
 
+use App\Services\AI\AIContentService;
+use App\Services\AI\EmbeddingService;
+use App\Services\AI\FeedMixer;
+use App\Services\AI\TopicDetector;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -10,14 +14,10 @@ use Illuminate\Support\Facades\Log;
 
 class TechTrendService
 {
-    private const CACHE_KEY = 'tech_trending';
-    private const CACHE_TTL = 60; // minutes
+    private const CACHE_KEY      = 'tech_trending';
+    private const CACHE_TTL      = 60;
     private const MAX_PER_SOURCE = 5;
 
-    /**
-     * Keywords that indicate non-technical content.
-     * Uses word-boundary matching to avoid false positives.
-     */
     private const REJECT_KEYWORDS = [
         'win this week', 'week recap', 'top 7 featured', 'introduce yourself',
         'what was your win', 'hiring', 'podcast', 'off topic', 'rant',
@@ -26,123 +26,99 @@ class TechTrendService
         'interview tips', 'motivat',
     ];
 
+    public function __construct(
+        private EmbeddingService $embedding,
+        private AIContentService $ai,
+        private TopicDetector    $topicDetector,
+        private FeedMixer        $feedMixer,
+    ) {}
+
     // ─── Public Entry Point ───────────────────────────────────────────────────
 
-    /**
-     * Fetch, score, and return a ranked list of trending tech items.
-     *
-     * Results are cached globally for anonymous users and per-user
-     * for authenticated users with personalization topics.
-     */
     public function getTechTrends(): array
     {
         $userTopics = $this->getUserTopics();
+        $userId     = Auth::id();
 
-        // Personalized cache per user; shared cache for guests
-        $cacheKey = empty($userTopics)
-            ? self::CACHE_KEY
-            : self::CACHE_KEY . ':user:' . Auth::id();
+        $cacheKey = ($userId && !empty($userTopics))
+            ? self::CACHE_KEY . ':user:' . $userId
+            : self::CACHE_KEY;
 
         return Cache::remember($cacheKey, now()->addMinutes(self::CACHE_TTL), function () use ($userTopics) {
             $github = $this->fetchGitHub();
             $devto  = $this->fetchDevTo();
             $hn     = $this->fetchHackerNews();
 
-            return $this->rankAndMix($github, $devto, $hn, $userTopics);
+            return $this->buildFeed($github, $devto, $hn, $userTopics);
         });
     }
 
-    // ─── Ranking & Mixing ─────────────────────────────────────────────────────
+    // ─── Feed Pipeline ────────────────────────────────────────────────────────
 
     /**
-     * Normalize, score, and merge results from all three sources.
+     * Full pipeline:
+     *   normalize → deduplicate → detect topics → score → AI enrich → mix
      *
-     * Normalization is done per-source to avoid scale bias
-     * (GitHub stars can reach 400k while DEV.to reactions rarely exceed 500).
-     * Source diversity is enforced by capping each source at MAX_PER_SOURCE.
+     * Order rationale:
+     *   Dedup first reduces the pool before any AI calls.
+     *   Topic detection is free (keywords), so it runs before scoring.
+     *   AI enrichment runs last on the already-trimmed candidate set,
+     *   keeping LLM calls as small as possible (≤15).
      */
-    private function rankAndMix(array $github, array $devto, array $hn, array $userTopics): array
+    private function buildFeed(array $github, array $devto, array $hn, array $userTopics): array
     {
-        // Normalize stats within each source independently
         $github = $this->normalizeStats($github);
         $devto  = $this->normalizeStats($devto);
         $hn     = $this->normalizeStats($hn);
 
-        $all = collect(array_merge($github, $devto, $hn));
+        $all = array_merge($github, $devto, $hn);
 
-        if ($all->isEmpty()) {
+        if (empty($all)) {
             return [];
         }
 
-        return $all
-            ->map(function ($item) use ($userTopics) {
-                // Enrich item with generated content fields
-                $item['content'] = $this->expandContent($item);
-                // Compute final ranking score
-                $item['score']   = $this->calculateScore($item, $userTopics);
-                return $item;
-            })
-            ->sortByDesc('score')
-            // Enforce source diversity: cap each source to MAX_PER_SOURCE items
-            ->groupBy('source')
-            ->flatMap(fn($group) => $group->take(self::MAX_PER_SOURCE))
-            ->sortByDesc('score')
-            ->take(15)
-            ->values()
-            ->toArray();
-    }
+        // 1. Semantic deduplication — uses cached embeddings
+        $deduped = $this->embedding->deduplicate($all, 0.88);
 
-    /**
-     * Normalize the 'stats' field within a single source to a 0–1 scale.
-     * Prevents high-star GitHub repos from dominating DEV.to articles.
-     */
-    private function normalizeStats(array $items): array
-    {
-        if (empty($items)) {
-            return [];
-        }
+        // 2. Keyword topic detection — zero cost
+        $withTopics = $this->topicDetector->detectBatch($deduped);
 
-        $max = max(array_column($items, 'stats'));
-
-        if ($max === 0) {
-            return $items;
-        }
-
-        return array_map(function ($item) use ($max) {
-            $item['normalized_stats'] = $item['stats'] / $max;
+        // 3. Score each item
+        $scored = array_map(function ($item) use ($userTopics) {
+            $item['score'] = $this->calculateScore($item, $userTopics);
             return $item;
-        }, $items);
+        }, $withTopics);
+
+        // 4. AI enrichment — each call is individually cached 6h
+        //    Template fields are the fallback base; AI fields override them
+        $enriched = array_map(function ($item) {
+            $item['content'] = array_merge(
+                $this->expandContent($item),
+                $this->ai->generateTrendExplanation($item)
+            );
+            return $item;
+        }, $scored);
+
+        // 5. Diversity-aware feed mixing
+        return $this->feedMixer->mix($enriched);
     }
 
-    // ─── Scoring ──────────────────────────────────────────────────────────────
+    // ─── Scoring ─────────────────────────────────────────────────────────────
 
-    /**
-     * Calculate the final ranking score for a single item.
-     *
-     * Formula:
-     *   normalized_engagement * 0.5
-     *   + recency_score        * 0.3
-     *   + personalization_boost * 0.2
-     *
-     * Source weight is applied via log-normalization to dampen outlier stats.
-     */
     private function calculateScore(array $item, array $userTopics): float
     {
-        // Source weight: GitHub > HackerNews > DEV.to (subjective editorial quality)
         $sourceWeight = match ($item['source']) {
-            'github'      => 1.0,
-            'hackernews'  => 0.9,
-            'devto'       => 0.8,
-            default       => 0.7,
+            'github'     => 1.0,
+            'hackernews' => 0.9,
+            'devto'      => 0.8,
+            default      => 0.7,
         };
 
-        // Log-scale normalization to reduce outlier dominance (e.g. 400k stars)
-        $logStats  = log($item['stats'] + 1);
-        $maxLog    = log(($item['stats'] + 1) * $sourceWeight + 1);
+        $logStats   = log($item['stats'] + 1);
+        $maxLog     = log(($item['stats'] + 1) * $sourceWeight + 1);
         $normalized = $maxLog > 0 ? ($logStats / $maxLog) * $sourceWeight : 0;
 
-        // Recency decay: exp(-hours/24) — drops to ~0.37 after 24h, ~0.14 after 48h
-        $recency = 0.5; // neutral fallback when date is unavailable
+        $recency = 0.5;
         if (!empty($item['created_at'])) {
             try {
                 $hours   = max(now()->diffInHours(Carbon::parse($item['created_at'])), 1);
@@ -154,20 +130,12 @@ class TechTrendService
 
         $boost = $this->personalizeBoost($item, $userTopics);
 
-        return ($normalized * 0.5)
-            + ($recency   * 0.3)
-            + ($boost     * 0.2);
+        return ($normalized * 0.5) + ($recency * 0.3) + ($boost * 0.2);
     }
 
     /**
-     * Compute a personalization boost based on the user's selected topics.
-     *
-     * Matching priority:
-     *   1. Exact tag match         → +0.5
-     *   2. Topic keyword in text   → +0.3
-     *   3. Single word in text     → +0.1 per word
-     *
-     * Capped at 0.8 to prevent personalization from overwhelming quality signals.
+     * Personalization boost using embedding similarity.
+     * Falls back to keyword matching when the embedding API is unavailable.
      */
     private function personalizeBoost(array $item, array $userTopics): float
     {
@@ -175,31 +143,43 @@ class TechTrendService
             return 0.0;
         }
 
-        $text = strtolower(
-            ($item['title']       ?? '') . ' ' .
-            ($item['description'] ?? '') . ' ' .
-            implode(' ', $item['tags'] ?? [])
-        );
+        $titleVec = $this->embedding->embed($item['title'] ?? '');
 
+        if (empty($titleVec)) {
+            return $this->keywordBoostFallback($item, $userTopics);
+        }
+
+        $boost = 0.0;
+
+        foreach ($userTopics as $topic) {
+            $topicVec = $this->embedding->embed($topic);
+
+            if (empty($topicVec)) {
+                continue;
+            }
+
+            $sim    = $this->embedding->cosine($titleVec, $topicVec);
+            $boost += match (true) {
+                $sim >= 0.85 => 0.5,
+                $sim >= 0.70 => 0.3,
+                $sim >= 0.50 => 0.1,
+                default      => 0.0,
+            };
+        }
+
+        return min($boost, 0.8);
+    }
+
+    private function keywordBoostFallback(array $item, array $userTopics): float
+    {
+        $text     = strtolower(($item['title'] ?? '') . ' ' . ($item['description'] ?? '') . ' ' . implode(' ', $item['tags'] ?? []));
         $itemTags = array_map('strtolower', $item['tags'] ?? []);
         $boost    = 0.0;
 
         foreach ($userTopics as $topic) {
             $topic = strtolower($topic);
-
-            // Exact tag match (highest signal)
-            if (in_array($topic, $itemTags)) {
-                $boost += 0.5;
-                continue;
-            }
-
-            // Full topic phrase found in text
-            if (str_contains($text, $topic)) {
-                $boost += 0.3;
-                continue;
-            }
-
-            // Individual words within the topic phrase
+            if (in_array($topic, $itemTags)) { $boost += 0.5; continue; }
+            if (str_contains($text, $topic))  { $boost += 0.3; continue; }
             foreach (explode(' ', $topic) as $word) {
                 if (strlen($word) > 2 && preg_match('/\b' . preg_quote($word, '/') . '\b/i', $text)) {
                     $boost += 0.1;
@@ -207,76 +187,74 @@ class TechTrendService
             }
         }
 
-        // Cap boost to prevent topic bias from overshadowing engagement quality
         return min($boost, 0.8);
     }
 
-    // ─── Content Enrichment ───────────────────────────────────────────────────
+    // ─── Content Enrichment (template fallback) ───────────────────────────────
 
     /**
-     * Generate a structured content block for each trending item.
-     *
-     * Returns a rich description, trend rationale, potential impact,
-     * and associated tech stack — all based on source-specific templates.
+     * Template-based content fields — used as fallback base before AI overlay.
+     * AI enrichment overrides 'summary', 'why_trending', 'impact'.
      */
     private function expandContent(array $item): array
     {
-        $title  = $item['title']  ?? '';
-        $source = $item['source'] ?? '';
-        $author = $item['author'] ?? '';
-        $stats  = $item['stats']  ?? 0;
-
+        $title    = $item['title']    ?? '';
+        $source   = $item['source']   ?? '';
+        $author   = $item['author']   ?? '';
+        $stats    = $item['stats']    ?? 0;
         $lang     = $item['language'] ?? ($item['tags'][0] ?? null);
-        $langText = (!empty($lang) && $lang !== 'general tech')
-            ? $lang
-            : 'modern software development';
+        $langText = (!empty($lang) && $lang !== 'general tech') ? $lang : 'modern software development';
 
         $openers = ["Recently,", "Currently,", "Right now,", "In the developer community,"];
         $prefix  = $openers[array_rand($openers)];
 
-        $content = match ($source) {
-            'github'      => "{$prefix} the project \"{$title}\" is gaining traction with around {$stats} stars on GitHub. Maintained by {$author}, it reflects growing developer interest in {$langText}.",
-            'devto'       => "{$prefix} an article titled \"{$title}\" by {$author} is getting noticeable engagement with {$stats} reactions, highlighting practical insights in modern development.",
-            'hackernews'  => "{$prefix} a discussion titled \"{$title}\" is trending on Hacker News with a score of {$stats}, actively debated by developers and engineers.",
-            default       => "{$prefix} \"{$title}\" is attracting attention across the tech space.",
+        $summary = match ($source) {
+            'github'     => "{$prefix} the project \"{$title}\" is gaining traction with around {$stats} stars on GitHub. Maintained by {$author}, it reflects growing developer interest in {$langText}.",
+            'devto'      => "{$prefix} an article titled \"{$title}\" by {$author} is getting noticeable engagement with {$stats} reactions.",
+            'hackernews' => "{$prefix} a discussion titled \"{$title}\" is trending on Hacker News with a score of {$stats}.",
+            default      => "{$prefix} \"{$title}\" is attracting attention across the tech space.",
         };
 
-        $whyTrending = match ($source) {
-            'github'      => "Driven by continuous stars, forks, and developer contributions.",
-            'devto'       => "Strong engagement and relevance among developers.",
-            'hackernews'  => "Active discussion and upvotes from the tech community.",
-            default       => "Increasing visibility in the tech ecosystem.",
-        };
-
-        $techStack = !empty($item['tags'])
-            ? implode(', ', array_slice($item['tags'], 0, 3))
-            : $langText;
+        $techStack = !empty($item['tags']) ? implode(', ', array_slice($item['tags'], 0, 3)) : $langText;
 
         return [
-            'content'      => $content,
-            'why_trending' => $whyTrending,
-            'impact'       => "This could influence developers working in {$langText}, especially in how tools, workflows, and architectures evolve.",
-            'tech_stack'   => $techStack,
-            'tags'         => $item['tags'] ?? [],
-            'url'          => $item['url']  ?? null,
+            'summary'      => $summary,
+            'why_trending' => match ($source) {
+                'github'     => "Driven by continuous stars, forks, and developer contributions.",
+                'devto'      => "Strong engagement and relevance among developers.",
+                'hackernews' => "Active discussion and upvotes from the tech community.",
+                default      => "Increasing visibility in the tech ecosystem.",
+            },
+            'impact'     => "Could influence developers working in {$langText}.",
+            'tech_stack' => $techStack,
+            'tags'       => $item['tags'] ?? [],
+            'url'        => $item['url']  ?? null,
         ];
+    }
+
+    // ─── Stat Normalization ───────────────────────────────────────────────────
+
+    private function normalizeStats(array $items): array
+    {
+        if (empty($items)) return [];
+
+        $max = max(array_column($items, 'stats'));
+        if ($max === 0) return $items;
+
+        return array_map(function ($item) use ($max) {
+            $item['normalized_stats'] = $item['stats'] / $max;
+            return $item;
+        }, $items);
     }
 
     // ─── GitHub ───────────────────────────────────────────────────────────────
 
-    /**
-     * Fetch trending repositories from GitHub.
-     *
-     * Filters to repos pushed within the last 7 days with >100 stars.
-     * Requires a description and a primary language to ensure content quality.
-     */
     private function fetchGitHub(): array
     {
         try {
             $since    = now()->subDays(7)->toDateString();
             $response = Http::withToken(config('services.github.token'))
-                ->timeout(10)
-                ->retry(2, 500)
+                ->timeout(10)->retry(2, 500)
                 ->get('https://api.github.com/search/repositories', [
                     'q'        => "stars:>100 pushed:>{$since} has:description",
                     'sort'     => 'stars',
@@ -290,12 +268,10 @@ class TechTrendService
             }
 
             return collect($response->json('items', []))
-                ->filter(fn($repo) => $this->isValidGithubRepo($repo))
+                ->filter(fn($r) => !empty(trim($r['description'] ?? '')) && !empty($r['language']))
                 ->take(self::MAX_PER_SOURCE)
                 ->map(function ($repo) {
                     $desc = strtolower($repo['description'] ?? '');
-
-                    // Derive secondary tags from description keywords
                     $tags = array_values(array_filter([
                         strtolower($repo['language'] ?? ''),
                         str_contains($desc, 'ai')       ? 'ai'       : null,
@@ -305,201 +281,134 @@ class TechTrendService
 
                     return [
                         'source'      => 'github',
-                        'title'       => $repo['full_name']          ?? '',
-                        'description' => $repo['description']        ?? '',
-                        'author'      => $repo['owner']['login']     ?? '',
-                        'language'    => $repo['language']           ?? null,
+                        'title'       => $repo['full_name']      ?? '',
+                        'description' => $repo['description']    ?? '',
+                        'author'      => $repo['owner']['login'] ?? '',
+                        'language'    => $repo['language']       ?? null,
                         'stats'       => (int) ($repo['stargazers_count'] ?? 0),
-                        'url'         => $repo['html_url']           ?? '',
-                        'created_at'  => $repo['pushed_at']          ?? null,
+                        'url'         => $repo['html_url']       ?? '',
+                        'created_at'  => $repo['pushed_at']      ?? null,
                         'tags'        => $tags,
                     ];
-                })
-                ->values()
-                ->toArray();
+                })->values()->toArray();
 
         } catch (\Exception $e) {
-            Log::error('GitHub trending fetch failed', ['error' => $e->getMessage()]);
+            Log::error('GitHub fetch failed', ['error' => $e->getMessage()]);
             return [];
         }
-    }
-
-    /**
-     * A valid GitHub repo must have a non-empty description and a primary language.
-     * This filters out list repos, books, and non-code projects.
-     */
-    private function isValidGithubRepo(array $repo): bool
-    {
-        return !empty(trim($repo['description'] ?? '')) && !empty($repo['language']);
     }
 
     // ─── DEV.to ───────────────────────────────────────────────────────────────
 
-    /**
-     * Fetch top articles from DEV.to from the past 7 days.
-     *
-     * Uses a single broad request (no per-tag looping) for performance.
-     * Filters out non-technical and low-engagement content.
-     */
     private function fetchDevTo(): array
     {
         try {
-            $response = Http::timeout(10)
-                ->retry(2, 500)
-                ->get('https://dev.to/api/articles', [
-                    'top'      => 7,
-                    'per_page' => 20,
-                ]);
+            $response = Http::timeout(10)->retry(2, 500)
+                ->get('https://dev.to/api/articles', ['top' => 7, 'per_page' => 20]);
 
             if (!$response->successful()) {
-                Log::warning('DEV.to trending API failed', ['status' => $response->status()]);
+                Log::warning('DEV.to API failed', ['status' => $response->status()]);
                 return [];
             }
 
             return collect($response->json())
-                ->filter(fn($article) => $this->isValidDevToArticle($article))
+                ->filter(fn($a) => $this->isValidDevToArticle($a))
                 ->sortByDesc('positive_reactions_count')
                 ->take(self::MAX_PER_SOURCE)
-                ->map(fn($article) => [
+                ->map(fn($a) => [
                     'source'      => 'devto',
-                    'title'       => $article['title']                    ?? '',
-                    'description' => $article['description']              ?? '',
-                    'author'      => $article['user']['name']             ?? '',
-                    'stats'       => (int) ($article['positive_reactions_count'] ?? 0),
-                    'url'         => $article['url']                      ?? '',
-                    'created_at'  => $article['published_at']             ?? null,
-                    'tags'        => collect($article['tag_list'] ?? [])->take(3)->toArray(),
-                ])
-                ->values()
-                ->toArray();
+                    'title'       => $a['title']                          ?? '',
+                    'description' => $a['description']                    ?? '',
+                    'author'      => $a['user']['name']                   ?? '',
+                    'stats'       => (int) ($a['positive_reactions_count'] ?? 0),
+                    'url'         => $a['url']                            ?? '',
+                    'created_at'  => $a['published_at']                   ?? null,
+                    'tags'        => collect($a['tag_list'] ?? [])->take(3)->toArray(),
+                ])->values()->toArray();
 
         } catch (\Exception $e) {
-            Log::error('DEV.to trending fetch failed', ['error' => $e->getMessage()]);
+            Log::error('DEV.to fetch failed', ['error' => $e->getMessage()]);
             return [];
         }
     }
 
-    /**
-     * Reject non-technical DEV.to articles using word-boundary matching.
-     * Minimum reaction threshold ensures only engaged content is included.
-     */
     private function isValidDevToArticle(array $article): bool
     {
         $title = $article['title'] ?? '';
-
-        foreach (self::REJECT_KEYWORDS as $keyword) {
-            if (preg_match('/\b' . preg_quote($keyword, '/') . '\b/i', $title)) {
-                return false;
-            }
+        foreach (self::REJECT_KEYWORDS as $kw) {
+            if (preg_match('/\b' . preg_quote($kw, '/') . '\b/i', $title)) return false;
         }
-
         return ($article['positive_reactions_count'] ?? 0) >= 10;
     }
 
     // ─── HackerNews ───────────────────────────────────────────────────────────
 
-    /**
-     * Fetch top stories from HackerNews using concurrent HTTP requests.
-     *
-     * Uses Http::pool() to fetch multiple story details in parallel,
-     * significantly reducing total wait time compared to sequential calls.
-     */
     private function fetchHackerNews(): array
     {
         try {
-            $response = Http::timeout(10)
-                ->retry(2, 500)
+            $response = Http::timeout(10)->retry(2, 500)
                 ->get('https://hacker-news.firebaseio.com/v0/topstories.json');
 
             if (!$response->successful()) {
-                Log::warning('HackerNews trending API failed', ['status' => $response->status()]);
+                Log::warning('HackerNews API failed', ['status' => $response->status()]);
                 return [];
             }
 
-            $ids = collect($response->json())->take(20)->values();
-
-            // Concurrent requests — fetch all story details simultaneously
+            $ids       = collect($response->json())->take(20)->values();
             $responses = Http::pool(fn($pool) =>
             $ids->map(fn($id) =>
-            $pool->as((string) $id)
-                ->timeout(5)
+            $pool->as((string) $id)->timeout(5)
                 ->get("https://hacker-news.firebaseio.com/v0/item/{$id}.json")
             )->toArray()
             );
 
-            return $ids
-                ->map(function ($id) use ($responses) {
-                    try {
-                        $item = $responses[(string) $id]?->json();
+            return $ids->map(function ($id) use ($responses) {
+                try {
+                    $item = $responses[(string) $id]?->json();
+                    if (!$this->isValidHackerNewsItem($item)) return null;
 
-                        if (!$this->isValidHackerNewsItem($item)) {
-                            return null;
-                        }
-
-                        return [
-                            'source'      => 'hackernews',
-                            'title'       => $item['title'] ?? '',
-                            'description' => $item['text']  ?? '',
-                            'author'      => $item['by']    ?? '',
-                            'stats'       => (int) ($item['score'] ?? 0),
-                            'url'         => $item['url'] ?? "https://news.ycombinator.com/item?id={$id}",
-                            'created_at'  => isset($item['time'])
-                                ? Carbon::createFromTimestamp($item['time'])->toIso8601String()
-                                : null,
-                            'tags'        => $this->extractTechKeywords($item['title'] ?? ''),
-                        ];
-                    } catch (\Exception $e) {
-                        Log::warning('HackerNews item fetch failed', [
-                            'id'    => $id,
-                            'error' => $e->getMessage(),
-                        ]);
-                        return null;
-                    }
-                })
-                ->filter()
-                ->take(self::MAX_PER_SOURCE)
-                ->values()
-                ->toArray();
+                    return [
+                        'source'      => 'hackernews',
+                        'title'       => $item['title'] ?? '',
+                        'description' => $item['text']  ?? '',
+                        'author'      => $item['by']    ?? '',
+                        'stats'       => (int) ($item['score'] ?? 0),
+                        'url'         => $item['url'] ?? "https://news.ycombinator.com/item?id={$id}",
+                        'created_at'  => isset($item['time'])
+                            ? Carbon::createFromTimestamp($item['time'])->toIso8601String()
+                            : null,
+                        'tags'        => $this->extractTechKeywords($item['title'] ?? ''),
+                    ];
+                } catch (\Exception $e) {
+                    Log::warning('HN item failed', ['id' => $id, 'error' => $e->getMessage()]);
+                    return null;
+                }
+            })->filter()->take(self::MAX_PER_SOURCE)->values()->toArray();
 
         } catch (\Exception $e) {
-            Log::error('HackerNews trending fetch failed', ['error' => $e->getMessage()]);
+            Log::error('HackerNews fetch failed', ['error' => $e->getMessage()]);
             return [];
         }
     }
 
     /**
-     * A valid HackerNews item must have a URL, a score above 50,
-     * and at least one recognized tech keyword in its title.
+     * Validates a HackerNews item.
+     * URL check removed — fetchHackerNews() builds a fallback URL from the item id.
+     * Keywords check removed — too restrictive, many valid items have non-standard titles.
+     * Only filters by score threshold and reject keywords.
      */
     private function isValidHackerNewsItem(?array $item): bool
     {
-        if (empty($item) || empty($item['url'])) {
-            return false;
-        }
+        if (empty($item) || empty($item['title'])) return false;
+        if (($item['score'] ?? 0) < 30) return false;
 
-        if (($item['score'] ?? 0) < 50) {
-            return false;
-        }
-
-        $title = $item['title'] ?? '';
-
-        if (empty($this->extractTechKeywords($title))) {
-            return false;
-        }
-
-        foreach (self::REJECT_KEYWORDS as $keyword) {
-            if (preg_match('/\b' . preg_quote($keyword, '/') . '\b/i', $title)) {
-                return false;
-            }
+        foreach (self::REJECT_KEYWORDS as $kw) {
+            if (preg_match('/\b' . preg_quote($kw, '/') . '\b/i', $item['title'] ?? '')) return false;
         }
 
         return true;
     }
 
-    /**
-     * Extract recognized tech keywords from a text string.
-     * Used to classify HackerNews stories as technical content.
-     */
     private function extractTechKeywords(string $text): array
     {
         $keywords = [
@@ -520,21 +429,19 @@ class TechTrendService
     // ─── User Topics ──────────────────────────────────────────────────────────
 
     /**
-     * Retrieve the authenticated user's selected topics as lowercase strings.
-     * Returns an empty array for guests or users with no topics.
+     * Fetch the authenticated user's active topics for personalization.
+     * Uses topics() relation (topic_user pivot) — not followedTags().
+     * is_active is on the topics table itself, not on the pivot.
      */
     private function getUserTopics(): array
     {
         $user = Auth::user();
-
-        if (!$user) {
-            return [];
-        }
+        if (!$user) return [];
 
         return $user->topics()
-            ->where('is_active', true)
-            ->pluck('name')
-            ->map(fn($name) => strtolower(trim($name)))
+            ->where('topics.is_active', true)
+            ->pluck('topics.name')
+            ->map(fn($n) => strtolower(trim($n)))
             ->toArray();
     }
 }
