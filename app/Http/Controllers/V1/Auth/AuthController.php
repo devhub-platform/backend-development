@@ -24,12 +24,12 @@ class AuthController extends Controller
 {
     use AuthorizesRequests;
 
-    protected MfaCodeService $mfaService;
+    // protected MfaCodeService $mfaService;
 
-    public function __construct(MfaCodeService $mfaService)
-    {
-        $this->mfaService = $mfaService;
-    }
+    // public function __construct(MfaCodeService $mfaService)
+    // {
+    //     $this->mfaService = $mfaService;
+    // }
 
     public function login(LoginRequest $request): JsonResponse
     {
@@ -43,14 +43,14 @@ class AuthController extends Controller
             $user = Auth::user();
 
             // Send MFA code if enabled
-            if ((bool) config('filament.mfa.enabled', true)) {
-                $this->mfaService->sendEmailCode($user);
-                return response()->json([
-                    'message' => 'MFA code sent to your email',
-                    'mfa_required' => true,
-                    'user_id' => $user->id,
-                ], 201);
-            }
+            // if ((bool) config('filament.mfa.enabled', true)) {
+            //     $this->mfaService->sendEmailCode($user);
+            //     return response()->json([
+            //         'message' => 'MFA code sent to your email',
+            //         'mfa_required' => true,
+            //         'user_id' => $user->id,
+            //     ], 201);
+            // }
 
             return response()->json([
                 'message' => 'Login successful',
