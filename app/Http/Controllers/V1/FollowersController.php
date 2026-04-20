@@ -83,7 +83,7 @@ class FollowersController
     public function myFollowers()
     {
         $user = auth()->user();
-        $followers = $user->followers()->get(['name', 'username', 'avatar_url']);
+        $followers = $user->followers()->get(['users.id', 'users.name', 'users.username', 'users.avatar_url']);
 
         if ($followers->isEmpty()) {
             return response()->json([
@@ -92,16 +92,15 @@ class FollowersController
         }
 
         return response()->json([
-            'number of followers: ' => $followers->count(),
-            'Followers' => $followers->makeHidden('pivot'),
-
+            'followers_count' => $followers->count(),
+            'followers' => $followers->makeHidden('pivot'),
         ]);
     }
 
     public function myFollowing()
     {
         $user = auth()->user();
-        $following = $user->following()->get(['name', 'username', 'avatar_url']);
+        $following = $user->following()->get(['users.id', 'users.name', 'users.username', 'users.avatar_url']);
 
         if ($following->isEmpty()) {
             return response()->json([
@@ -110,8 +109,8 @@ class FollowersController
         }
 
         return response()->json([
-            'number of following: ' => $following->count(),
-            'Following' => $following->makeHidden('pivot'),
+            'following_count' => $following->count(),
+            'following' => $following->makeHidden('pivot'),
         ]);
     }
 
