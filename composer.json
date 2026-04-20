@@ -40,7 +40,7 @@
         "smalot/pdfparser": "^2.12",
         "socialiteproviders/medium": "^4.1",
         "socialiteproviders/microsoft": "^4.7",
-        "spatie/laravel-flare": "2.2",
+        "spatie/laravel-flare": "^2.8",
         "spatie/laravel-permission": "*",
         "tymon/jwt-auth": "^2.2"
     },

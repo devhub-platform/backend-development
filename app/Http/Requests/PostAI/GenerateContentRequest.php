@@ -14,7 +14,9 @@ class GenerateContentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'prompt' => ['required', 'string', 'min:10', 'max:1000'],
+            'prompt'         => ['required', 'string', 'min:10', 'max:1000'],
+            'length'         => ['sometimes', 'string', 'in:short,medium,long'],
+            'generate_title' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -24,6 +26,7 @@ class GenerateContentRequest extends FormRequest
             'prompt.required' => 'A prompt is required to generate content.',
             'prompt.min'      => 'Prompt must be at least 10 characters.',
             'prompt.max'      => 'Prompt must not exceed 1000 characters.',
+            'length.in'       => 'Length must be short, medium, or long.',
         ];
     }
 }

@@ -47,12 +47,12 @@ use Illuminate\Support\Facades\Log;
 Route::prefix('v1')->group(function () {
     Route::get('/', function () {
         return response()->json([
-            'message' => 'Devhub API v2',
-            'status' => 'OK - Server on azure-cloud is running',
-            'base_url' => 'https://dev-hubs.tech/api/v1',
-            'api_docs' => 'https://devhub.apidog.io/',
-            'admin_panel' => 'https://dev-hubs.tech/admin',
-            'created_by' => 'Created by Eng/Youssef Ahmed & Eng/Menna Ahmed',
+            'message'      => 'Devhub API v2',
+            'status'       => 'OK - Server on azure-cloud is running',
+            'base_url'     => 'https://dev-hubs.tech/api/v1',
+            'api_docs'     => 'https://devhub.apidog.io/',
+            'admin_panel'  => 'https://dev-hubs.tech/admin',
+            'created_by'   => 'Created by Eng/Youssef Ahmed & Eng/Menna Ahmed',
         ]);
     });
 
@@ -73,7 +73,6 @@ Route::prefix('v1')->group(function () {
             Route::post('mobile/auth/github/login', 'loginGithub');
             Route::get('auth/github/callback', 'callbackGithub');
         });
-
 
         Route::controller(AuthController::class)->group(function () {
             Route::post('login', 'login');
@@ -107,9 +106,9 @@ Route::prefix('v1')->group(function () {
                 Route::get('my-topics', 'getUserTopics');
                 Route::get('/', 'index');
 
-                Route::post('/', 'store'); // Admin only
+                Route::post('/', 'store');           // Admin only
                 Route::delete('{topic}', 'destroy'); // Admin only
-                Route::delete('{topic}', 'update'); // Admin only
+                Route::delete('{topic}', 'update');  // Admin only
 
                 Route::post('add', 'addTopics');
                 Route::post('remove', 'removeTopics');
@@ -133,10 +132,12 @@ Route::prefix('v1')->group(function () {
             });
             Route::apiResource('posts', PostController::class);
 
+            // ─── Post AI ──────────────────────────────────────────────────────────
             Route::prefix('posts/ai')->middleware('throttle:10,1')->controller(PostAIController::class)
                 ->group(function () {
-                    Route::post('generate-image', 'generateImage');
+                    Route::post('generate-image',   'generateImage');
                     Route::post('generate-content', 'generateContent');
+                    Route::post('generate-title',   'generateTitle');   // ← new
                     Route::delete('generated-images/{id}', 'discardImage');
                 });
 
@@ -373,10 +374,6 @@ Route::prefix('v1')->group(function () {
 
             Route::controller(FeedbackController::class)->group(function () {
                 Route::post('feedbacks', 'store');
-//                Route::get('feedbacks', 'index');
-//                Route::get('feedbacks/{feedbackId}', 'show');
-//                Route::delete('feedbacks/{feedbackId}', 'destroy');
-
                 Route::get('feedbacks/admin/all', 'getAllFeedback');
                 Route::patch('feedbacks/{feedbackId}/status', 'updateStatus');
                 Route::get('feedbacks/admin/statistics', 'statistics');
@@ -432,8 +429,8 @@ Route::prefix('v1')->group(function () {
                     Route::put('{sessionId}/title', 'updateTitle');
                 });
             });
-            // ─── Trending ─────────────────────────────────────────────────────────────────
 
+            // ─── Trending ────────────────────────────────────────────────────────
             Route::prefix('trending')->middleware('throttle:30,1')->controller(TrendingController::class)
                 ->group(function () {
                     Route::get('posts', 'posts');
@@ -453,14 +450,12 @@ Route::fallback(function () {
 Route::post('/test/send-message', [MessageController::class, 'broadcastTest']);
 Route::post('/send-message_notification', TestNotificationController::class);
 
-# Test Redis connection
 Route::get('/test-redis', function () {
     Redis::set('test_key', 'Hello Redis Cloud!');
     Log::info('Set test_key in Redis: Hello Redis Cloud!');
     $key = Redis::get('test_key');
     return response()->json([
-        'message' => 'Redis connection successful!',
+        'message'        => 'Redis connection successful!',
         'test_key_value' => $key,
     ]);
 });
-
