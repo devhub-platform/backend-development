@@ -2,84 +2,50 @@
 
 namespace App\Services\AI;
 
-/**
- * TopicDetector
- *
- * Lightweight rule-based classifier for feed routing.
- *
- * Design choice:
- * - Zero runtime dependencies (no LLM / no API calls)
- * - Deterministic mapping for caching consistency
- * - Keyword precedence reflects topic specificity
- */
 class TopicDetector
 {
-    /**
-     * Ordered taxonomy.
-     * Higher precision topics must appear first to avoid misclassification.
-     */
-    private const TOPIC_MAP = [
-        'ai' => [
-            'ai', 'ml', 'llm', 'gpt', 'machine learning', 'deep learning',
-            'neural network', 'embedding', 'transformer', 'openai', 'rag'
-        ],
-
-        'security' => [
-            'vulnerability', 'exploit', 'cve', 'xss', 'sql injection',
-            'authentication', 'encryption', 'pentest', 'malware'
-        ],
-
-        'web' => [
-            'react', 'vue', 'angular', 'javascript', 'typescript',
-            'frontend', 'backend', 'api', 'graphql', 'node'
-        ],
-
-        'devops' => [
-            'docker', 'kubernetes', 'ci/cd', 'terraform', 'aws',
-            'deployment', 'pipeline', 'observability'
-        ],
-
-        'systems' => [
-            'linux', 'kernel', 'concurrency', 'database',
-            'redis', 'performance', 'memory'
-        ],
+    private const MAP = [
+        'ai' => ['ai','ml','llm','gpt','embedding','neural'],
+        'security' => ['vulnerability','cve','xss','exploit','security'],
+        'web' => ['react','vue','angular','api','frontend','backend'],
+        'devops' => ['docker','kubernetes','aws','ci/cd','deployment'],
+        'systems' => ['linux','database','redis','performance'],
     ];
 
-    /**
-     * Classifies a single item into a topic bucket.
-     *
-     * @param array $item
-     * @return string
-     */
     public function detect(array $item): string
     {
-        $text = strtolower(implode(' ', [
-            $item['title'] ?? '',
-            implode(' ', $item['tags'] ?? []),
-        ]));
+        $text = strtolower(
+            ($item['title'] ?? '') . ' ' .
+            ($item['content'] ?? '') . ' ' .
+            implode(' ', $item['tags'] ?? [])
+        );
 
-        foreach (self::TOPIC_MAP as $topic => $keywords) {
-            foreach ($keywords as $keyword) {
-                if (str_contains($text, $keyword)) {
-                    return $topic;
+        $best = 'general';
+        $score = 0;
+
+        foreach (self::MAP as $topic => $keys) {
+            $tmp = 0;
+
+            foreach ($keys as $k) {
+                if (str_contains($text, $k)) {
+                    $tmp += strlen($k);
                 }
+            }
+
+            if ($tmp > $score) {
+                $score = $tmp;
+                $best = $topic;
             }
         }
 
-        return 'general';
+        return $best;
     }
 
-    /**
-     * Batch classification pass.
-     *
-     * @param array $items
-     * @return array
-     */
     public function detectBatch(array $items): array
     {
-        return array_map(function ($item) {
-            $item['topic'] = $this->detect($item);
-            return $item;
+        return array_map(function ($i) {
+            $i['topic'] = $this->detect($i);
+            return $i;
         }, $items);
     }
 }
