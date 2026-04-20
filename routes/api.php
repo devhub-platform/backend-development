@@ -47,12 +47,13 @@ use Illuminate\Support\Facades\Log;
 Route::prefix('v1')->group(function () {
     Route::get('/', function () {
         return response()->json([
-            'message'      => 'Devhub API v2',
-            'status'       => 'OK - Server on azure-cloud is running',
-            'base_url'     => 'https://dev-hubs.tech/api/v1',
-            'api_docs'     => 'https://devhub.apidog.io/',
-            'admin_panel'  => 'https://dev-hubs.tech/admin',
-            'created_by'   => 'Created by Eng/Youssef Ahmed & Eng/Menna Ahmed',
+            'message' => 'Devhub API v2',
+            'status' => 'OK - Server on azure-cloud is running',
+            'base_url' => 'https://dev-hubs.tech/api/v1',
+            'api_docs' => 'https://devhub.apidog.io/',
+            'admin_panel' => 'https://dev-hubs.tech/admin',
+            'mentoring ' => 'https://dev-hubs.tech/pulse',
+            'created_by' => 'Created by Eng/Youssef Ahmed & Eng/Menna Ahmed',
         ]);
     });
 
@@ -135,9 +136,9 @@ Route::prefix('v1')->group(function () {
             // ─── Post AI ──────────────────────────────────────────────────────────
             Route::prefix('posts/ai')->middleware('throttle:10,1')->controller(PostAIController::class)
                 ->group(function () {
-                    Route::post('generate-image',   'generateImage');
+                    Route::post('generate-image', 'generateImage');
                     Route::post('generate-content', 'generateContent');
-                    Route::post('generate-title',   'generateTitle');   // ← new
+                    Route::post('generate-title', 'generateTitle');   // ← new
                     Route::delete('generated-images/{id}', 'discardImage');
                 });
 
@@ -434,17 +435,18 @@ Route::prefix('v1')->group(function () {
             Route::prefix('trending')->middleware('throttle:30,1')->controller(TrendingController::class)
                 ->group(function () {
                     Route::get('posts', 'posts');
-                    Route::get('tags',  'tags');
-                    Route::get('tech',  'tech');
+                    Route::get('tags', 'tags');
+                    Route::get('tech', 'tech');
                 });
         });
     });
-});
 
-Route::fallback(function () {
-    return response()->json([
-        'message' => 'Resource not found, the API endpoint does not exist , can visit the documentation for more details',
-    ], 404);
+    Route::fallback(function () {
+        return response()->json([
+            'message' => 'Resource not found, the API endpoint does not exist , can visit the documentation for more details',
+        ], 404);
+    });
+
 });
 
 Route::post('/test/send-message', [MessageController::class, 'broadcastTest']);
@@ -455,7 +457,7 @@ Route::get('/test-redis', function () {
     Log::info('Set test_key in Redis: Hello Redis Cloud!');
     $key = Redis::get('test_key');
     return response()->json([
-        'message'        => 'Redis connection successful!',
+        'message' => 'Redis connection successful!',
         'test_key_value' => $key,
     ]);
 });
