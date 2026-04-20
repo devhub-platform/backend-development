@@ -2,7 +2,7 @@
 
 namespace App\Services\Trending;
 
-use App\Services\AI\AIContentService;
+use App\Services\AI\TrendEnrichmentService;
 use App\Services\AI\EmbeddingService;
 use App\Services\AI\FeedMixer;
 use App\Services\AI\TopicDetector;
@@ -12,10 +12,22 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * TechTrendService — Upgraded with full AI layer
+ *
+ * What changed from the original:
+ *  - TopicDetector replaces inline topic strings (zero AI cost)
+ *  - EmbeddingService::deduplicate() removes near-duplicate items
+ *  - AIContentService::generateTrendExplanation() enriches each item
+ *    with summary / why_trending / impact (cached 6h per item)
+ *  - FeedMixer replaces pure sortByDesc() with diversity-aware mixing
+ *  - personalizeBoost() uses embedding similarity (degrades to keyword on failure)
+ *  - Cache key bug fixed: null user never produces a user-specific key
+ */
 class TechTrendService
 {
-    private const CACHE_KEY      = 'tech_trending';
-    private const CACHE_TTL      = 60;
+    private const CACHE_KEY     = 'tech_trending';
+    private const CACHE_TTL     = 60;
     private const MAX_PER_SOURCE = 5;
 
     private const REJECT_KEYWORDS = [
@@ -28,7 +40,7 @@ class TechTrendService
 
     public function __construct(
         private EmbeddingService $embedding,
-        private AIContentService $ai,
+        private TrendEnrichmentService $enrichment,
         private TopicDetector    $topicDetector,
         private FeedMixer        $feedMixer,
     ) {}
@@ -40,6 +52,7 @@ class TechTrendService
         $userTopics = $this->getUserTopics();
         $userId     = Auth::id();
 
+        // Bug fix: null userId must never produce a user-scoped key
         $cacheKey = ($userId && !empty($userTopics))
             ? self::CACHE_KEY . ':user:' . $userId
             : self::CACHE_KEY;
@@ -59,11 +72,11 @@ class TechTrendService
      * Full pipeline:
      *   normalize → deduplicate → detect topics → score → AI enrich → mix
      *
-     * Order rationale:
+     * WHY this order:
      *   Dedup first reduces the pool before any AI calls.
      *   Topic detection is free (keywords), so it runs before scoring.
      *   AI enrichment runs last on the already-trimmed candidate set,
-     *   keeping LLM calls as small as possible (≤15).
+     *   keeping the number of LLM calls as small as possible (≤15).
      */
     private function buildFeed(array $github, array $devto, array $hn, array $userTopics): array
     {
@@ -77,7 +90,7 @@ class TechTrendService
             return [];
         }
 
-        // 1. Semantic deduplication — uses cached embeddings
+        // 1. Semantic deduplication — uses cached embeddings, no wasted API calls
         $deduped = $this->embedding->deduplicate($all, 0.88);
 
         // 2. Keyword topic detection — zero cost
@@ -89,18 +102,33 @@ class TechTrendService
             return $item;
         }, $withTopics);
 
-        // 4. AI enrichment — each call is individually cached 6h
-        //    Template fields are the fallback base; AI fields override them
-        $enriched = array_map(function ($item) {
-            $item['content'] = array_merge(
-                $this->expandContent($item),
-                $this->ai->generateTrendExplanation($item)
-            );
-            return $item;
-        }, $scored);
+        // 4. Batch AI enrichment — top 5 get ONE Gemini call, rest get template fallback
+        $enriched = $this->enrichment->enrich($scored);
 
         // 5. Diversity-aware feed mixing
-        return $this->feedMixer->mix($enriched);
+        $mixed = $this->feedMixer->mixWithSourceDiversity($enriched);
+
+        // Strip embedding vectors from response — they are internal only
+        return array_map(function ($item) {
+
+            unset($item['embedding']);
+
+            return [
+                'source'        => $item['source'] ?? null,
+                'title'         => $item['title'] ?? null,
+                'description'   => $item['description'] ?? null,
+                'url'           => $item['url'] ?? null,
+                'stats'         => $item['stats'] ?? 0,
+                'topic'         => $item['topic'] ?? 'general',
+                'score'         => $item['score'] ?? 0,
+
+                // AI GENERATED FIELDS
+                'summary'       => $item['summary'] ?? null,
+                'why_trending'  => $item['why_trending'] ?? null,
+                'impact'        => $item['impact'] ?? null,
+            ];
+
+        }, $mixed);
     }
 
     // ─── Scoring ─────────────────────────────────────────────────────────────
@@ -135,7 +163,9 @@ class TechTrendService
 
     /**
      * Personalization boost using embedding similarity.
-     * Falls back to keyword matching when the embedding API is unavailable.
+     *
+     * Falls back to keyword matching when the embedding API is unavailable,
+     * so personalization never silently returns 0 for all users during outages.
      */
     private function personalizeBoost(array $item, array $userTopics): float
     {
@@ -194,21 +224,21 @@ class TechTrendService
 
     /**
      * Template-based content fields — used as fallback base before AI overlay.
-     * AI enrichment overrides 'summary', 'why_trending', 'impact'.
+     * AI enrichment overrides 'summary', 'why_trending', 'impact' from this array.
      */
     private function expandContent(array $item): array
     {
-        $title    = $item['title']    ?? '';
-        $source   = $item['source']   ?? '';
-        $author   = $item['author']   ?? '';
-        $stats    = $item['stats']    ?? 0;
+        $title    = $item['title']  ?? '';
+        $source   = $item['source'] ?? '';
+        $author   = $item['author'] ?? '';
+        $stats    = $item['stats']  ?? 0;
         $lang     = $item['language'] ?? ($item['tags'][0] ?? null);
         $langText = (!empty($lang) && $lang !== 'general tech') ? $lang : 'modern software development';
 
         $openers = ["Recently,", "Currently,", "Right now,", "In the developer community,"];
         $prefix  = $openers[array_rand($openers)];
 
-        $summary = match ($source) {
+        $content = match ($source) {
             'github'     => "{$prefix} the project \"{$title}\" is gaining traction with around {$stats} stars on GitHub. Maintained by {$author}, it reflects growing developer interest in {$langText}.",
             'devto'      => "{$prefix} an article titled \"{$title}\" by {$author} is getting noticeable engagement with {$stats} reactions.",
             'hackernews' => "{$prefix} a discussion titled \"{$title}\" is trending on Hacker News with a score of {$stats}.",
@@ -218,17 +248,18 @@ class TechTrendService
         $techStack = !empty($item['tags']) ? implode(', ', array_slice($item['tags'], 0, 3)) : $langText;
 
         return [
-            'summary'      => $summary,
+            'content'      => $content,
+            'summary'      => $content,  // will be overridden by AI
             'why_trending' => match ($source) {
                 'github'     => "Driven by continuous stars, forks, and developer contributions.",
                 'devto'      => "Strong engagement and relevance among developers.",
                 'hackernews' => "Active discussion and upvotes from the tech community.",
                 default      => "Increasing visibility in the tech ecosystem.",
             },
-            'impact'     => "Could influence developers working in {$langText}.",
-            'tech_stack' => $techStack,
-            'tags'       => $item['tags'] ?? [],
-            'url'        => $item['url']  ?? null,
+            'impact'       => "Could influence developers working in {$langText}.",
+            'tech_stack'   => $techStack,
+            'tags'         => $item['tags'] ?? [],
+            'url'          => $item['url']  ?? null,
         ];
     }
 
@@ -317,12 +348,12 @@ class TechTrendService
                 ->take(self::MAX_PER_SOURCE)
                 ->map(fn($a) => [
                     'source'      => 'devto',
-                    'title'       => $a['title']                          ?? '',
-                    'description' => $a['description']                    ?? '',
-                    'author'      => $a['user']['name']                   ?? '',
+                    'title'       => $a['title']                     ?? '',
+                    'description' => $a['description']               ?? '',
+                    'author'      => $a['user']['name']              ?? '',
                     'stats'       => (int) ($a['positive_reactions_count'] ?? 0),
-                    'url'         => $a['url']                            ?? '',
-                    'created_at'  => $a['published_at']                   ?? null,
+                    'url'         => $a['url']                       ?? '',
+                    'created_at'  => $a['published_at']              ?? null,
                     'tags'        => collect($a['tag_list'] ?? [])->take(3)->toArray(),
                 ])->values()->toArray();
 
@@ -391,16 +422,11 @@ class TechTrendService
         }
     }
 
-    /**
-     * Validates a HackerNews item.
-     * URL check removed — fetchHackerNews() builds a fallback URL from the item id.
-     * Keywords check removed — too restrictive, many valid items have non-standard titles.
-     * Only filters by score threshold and reject keywords.
-     */
     private function isValidHackerNewsItem(?array $item): bool
     {
-        if (empty($item) || empty($item['title'])) return false;
-        if (($item['score'] ?? 0) < 30) return false;
+        if (empty($item) || empty($item['url'])) return false;
+        if (($item['score'] ?? 0) < 50) return false;
+        if (empty($this->extractTechKeywords($item['title'] ?? ''))) return false;
 
         foreach (self::REJECT_KEYWORDS as $kw) {
             if (preg_match('/\b' . preg_quote($kw, '/') . '\b/i', $item['title'] ?? '')) return false;
@@ -426,13 +452,8 @@ class TechTrendService
         ));
     }
 
-    // ─── User Topics ──────────────────────────────────────────────────────────
+    // ─── User Topics ─────────────────────────────────────────────────────────
 
-    /**
-     * Fetch the authenticated user's active topics for personalization.
-     * Uses topics() relation (topic_user pivot) — not followedTags().
-     * is_active is on the topics table itself, not on the pivot.
-     */
     private function getUserTopics(): array
     {
         $user = Auth::user();

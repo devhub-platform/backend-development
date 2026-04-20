@@ -10,25 +10,17 @@ class TrendingPostResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'          => $this->id,
-            'title'       => $this->title,
-            'content'     => $this->content,
+            'id'              => data_get($this, 'id'),
+            'title'           => data_get($this, 'title'),
+            'content'         => data_get($this, 'content'),
 
-            'views'       => $this->views,
-            'created_at'  => $this->created_at,
+            'views'           => data_get($this, 'views', 0),
 
-            'trending_score' => $this->trending_score ?? null,
+            'trending_score'  => data_get($this, 'trending_score', 0),
 
-            'user' => [
-                'id' => $this->user?->id,
-                'name' => $this->user?->name,
-                'avatar' => $this->user?->avatar_url,
-            ],
+            'tags'            => data_get($this, 'tags', []),
 
-            'tags' => $this->tags->map(fn ($tag) => [
-                'id' => $tag->id,
-                'name' => $tag->name,
-            ]),
+            'has_embedding'   => data_get($this, 'has_embedding', false),
         ];
     }
 }
