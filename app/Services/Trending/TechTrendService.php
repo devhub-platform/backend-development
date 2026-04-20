@@ -2,183 +2,216 @@
 
 namespace App\Services\Trending;
 
+use App\Services\AI\TrendEnrichmentService;
+use App\Services\AI\EmbeddingService;
+use App\Services\AI\FeedMixer;
+use App\Services\AI\TopicDetector;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
 
+/**
+ * TechTrendService — Upgraded with full AI layer
+ *
+ * What changed from the original:
+ *  - TopicDetector replaces inline topic strings (zero AI cost)
+ *  - EmbeddingService::deduplicate() removes near-duplicate items
+ *  - AIContentService::generateTrendExplanation() enriches each item
+ *    with summary / why_trending / impact (cached 6h per item)
+ *  - FeedMixer replaces pure sortByDesc() with diversity-aware mixing
+ *  - personalizeBoost() uses embedding similarity (degrades to keyword on failure)
+ *  - Cache key bug fixed: null user never produces a user-specific key
+ */
 class TechTrendService
 {
-    private const CACHE_KEY = 'tech_trending';
-    private const CACHE_TTL = 60;
+    private const CACHE_KEY     = 'tech_trending';
+    private const CACHE_TTL     = 60;
+    private const MAX_PER_SOURCE = 5;
 
-    // ─────────────────────────────
-    // MAIN ENTRY
-    // ─────────────────────────────
+    private const REJECT_KEYWORDS = [
+        'win this week', 'week recap', 'top 7 featured', 'introduce yourself',
+        'what was your win', 'hiring', 'podcast', 'off topic', 'rant',
+        'mental health', 'mental', 'career', 'burnout', 'productivity tips',
+        'daily standup', 'good morning', 'coffee', 'life lesson', 'salary',
+        'interview tips', 'motivat',
+    ];
+
+    public function __construct(
+        private EmbeddingService $embedding,
+        private TrendEnrichmentService $enrichment,
+        private TopicDetector    $topicDetector,
+        private FeedMixer        $feedMixer,
+    ) {}
+
+    // ─── Public Entry Point ───────────────────────────────────────────────────
+
     public function getTechTrends(): array
     {
         $userTopics = $this->getUserTopics();
+        $userId     = Auth::id();
 
-        $cacheKey = empty($userTopics)
-            ? self::CACHE_KEY
-            : self::CACHE_KEY . ':user:' . Auth::id();
+        // Bug fix: null userId must never produce a user-scoped key
+        $cacheKey = ($userId && !empty($userTopics))
+            ? self::CACHE_KEY . ':user:' . $userId
+            : self::CACHE_KEY;
 
         return Cache::remember($cacheKey, now()->addMinutes(self::CACHE_TTL), function () use ($userTopics) {
-
             $github = $this->fetchGitHub();
             $devto  = $this->fetchDevTo();
             $hn     = $this->fetchHackerNews();
 
-            return $this->rankAndMix($github, $devto, $hn, $userTopics);
+            return $this->buildFeed($github, $devto, $hn, $userTopics);
         });
     }
 
-    // ─────────────────────────────
-    private function rankAndMix(array $github, array $devto, array $hn, array $userTopics): array
+    // ─── Feed Pipeline ────────────────────────────────────────────────────────
+
+    /**
+     * Full pipeline:
+     *   normalize → deduplicate → detect topics → score → AI enrich → mix
+     *
+     * WHY this order:
+     *   Dedup first reduces the pool before any AI calls.
+     *   Topic detection is free (keywords), so it runs before scoring.
+     *   AI enrichment runs last on the already-trimmed candidate set,
+     *   keeping the number of LLM calls as small as possible (≤15).
+     */
+    private function buildFeed(array $github, array $devto, array $hn, array $userTopics): array
     {
-        $all = collect(array_merge($github, $devto, $hn));
+        $github = $this->normalizeStats($github);
+        $devto  = $this->normalizeStats($devto);
+        $hn     = $this->normalizeStats($hn);
 
-        if ($all->isEmpty()) return [];
+        $all = array_merge($github, $devto, $hn);
 
-        $maxStats = max($all->max('stats'), 1);
+        if (empty($all)) {
+            return [];
+        }
 
-        return $all->map(function ($item) use ($maxStats, $userTopics) {
+        // 1. Semantic deduplication — uses cached embeddings, no wasted API calls
+        $deduped = $this->embedding->deduplicate($all, 0.88);
 
-            $item['content'] = $this->expandContent($item);
-            $item['score']   = $this->calculateScore($item, $maxStats, $userTopics);
+        // 2. Keyword topic detection — zero cost
+        $withTopics = $this->topicDetector->detectBatch($deduped);
 
+        // 3. Score each item
+        $scored = array_map(function ($item) use ($userTopics) {
+            $item['score'] = $this->calculateScore($item, $userTopics);
             return $item;
+        }, $withTopics);
 
-        })
-            ->sortByDesc('score')
-            ->groupBy('source')
-            ->flatMap(fn($g) => $g->take(5))
-            ->take(15)
-            ->values()
-            ->toArray();
+        // 4. Batch AI enrichment — top 5 get ONE Gemini call, rest get template fallback
+        $enriched = $this->enrichment->enrich($scored);
+
+        // 5. Diversity-aware feed mixing
+        $mixed = $this->feedMixer->mixWithSourceDiversity($enriched);
+
+        // Strip embedding vectors from response — they are internal only
+        return array_map(function ($item) {
+
+            unset($item['embedding']);
+
+            return [
+                'source'        => $item['source'] ?? null,
+                'title'         => $item['title'] ?? null,
+                'description'   => $item['description'] ?? null,
+                'url'           => $item['url'] ?? null,
+                'stats'         => $item['stats'] ?? 0,
+                'topic'         => $item['topic'] ?? 'general',
+                'score'         => $item['score'] ?? 0,
+
+                // AI GENERATED FIELDS
+                'summary'       => $item['summary'] ?? null,
+                'why_trending'  => $item['why_trending'] ?? null,
+                'impact'        => $item['impact'] ?? null,
+            ];
+
+        }, $mixed);
     }
 
-    // ─────────────────────────────
-    // 🔥 CONTENT FIXED
-    // ─────────────────────────────
-    private function expandContent(array $item): array
-    {
-        $title  = $item['title'] ?? '';
-        $source = $item['source'] ?? '';
-        $author = $item['author'] ?? '';
-        $stats  = $item['stats'] ?? 0;
+    // ─── Scoring ─────────────────────────────────────────────────────────────
 
-        // ✅ FIX language fallback
-        $lang = $item['language']
-            ?? ($item['tags'][0] ?? null);
-
-        $langText = !empty($lang) && $lang !== 'general tech'
-            ? $lang
-            : 'modern software development';
-
-        $openers = ["Recently,", "Currently,", "Right now,", "In the developer community,"];
-        $prefix = $openers[array_rand($openers)];
-
-        $content = match ($source) {
-
-            'github' => "{$prefix} the project \"{$title}\" is gaining serious traction with around {$stats} stars on GitHub. Maintained by {$author}, it reflects growing developer interest in {$langText}, especially as more engineers adopt open-source tools to solve real-world problems.",
-
-            'devto' => "{$prefix} an article titled \"{$title}\" by {$author} is getting noticeable engagement among developers. With {$stats} reactions, it highlights practical insights and ongoing conversations around modern development, making it relevant for engineers exploring real-world solutions.",
-
-            'hackernews' => "{$prefix} a discussion titled \"{$title}\" is trending on Hacker News with a score of {$stats}. It’s actively debated by developers and often signals emerging ideas, tools, or shifts that could influence how engineers think about building and scaling systems.",
-
-            default => "{$prefix} \"{$title}\" is currently attracting attention across the tech space."
-        };
-
-        $whyTrending = match ($source) {
-            'github' => "Driven by continuous stars, forks, and developer contributions.",
-            'devto' => "Strong engagement and relevance among developers.",
-            'hackernews' => "Active discussion and upvotes from the tech community.",
-            default => "Increasing visibility in the tech ecosystem."
-        };
-
-        $impact = "This could influence developers working in {$langText}, especially in how tools, workflows, and architectures evolve over time.";
-
-        $techStack = !empty($item['tags'])
-            ? implode(', ', array_slice($item['tags'], 0, 3))
-            : $langText;
-
-        return [
-            'content'      => $content,
-            'why_trending' => $whyTrending,
-            'impact'       => $impact,
-            'tech_stack'   => $techStack,
-            'tags'         => $item['tags'] ?? [],
-            'url'          => $item['url'] ?? null,
-        ];
-    }
-
-    // ─────────────────────────────
-    // SCORE
-    // ─────────────────────────────
-    private function calculateScore(array $item, int $maxStats, array $userTopics): float
+    private function calculateScore(array $item, array $userTopics): float
     {
         $sourceWeight = match ($item['source']) {
-            'github' => 1.0,
+            'github'     => 1.0,
             'hackernews' => 0.9,
-            'devto' => 0.8,
-            default => 0.7,
+            'devto'      => 0.8,
+            default      => 0.7,
         };
 
-        $logStats = log($item['stats'] + 1);
-        $maxLog   = log($maxStats + 1);
-
-        $normalized = $maxLog > 0 ? ($logStats / $maxLog) : 0;
-        $normalized *= $sourceWeight;
+        $logStats   = log($item['stats'] + 1);
+        $maxLog     = log(($item['stats'] + 1) * $sourceWeight + 1);
+        $normalized = $maxLog > 0 ? ($logStats / $maxLog) * $sourceWeight : 0;
 
         $recency = 0.5;
-
         if (!empty($item['created_at'])) {
             try {
-                $created = Carbon::parse($item['created_at']);
-                $hours = max(now()->diffInHours($created), 1);
-                $recency = 1 / ($hours + 2);
-            } catch (\Exception $e) {
+                $hours   = max(now()->diffInHours(Carbon::parse($item['created_at'])), 1);
+                $recency = exp(-$hours / 24);
+            } catch (\Exception) {
                 $recency = 0.5;
             }
         }
 
         $boost = $this->personalizeBoost($item, $userTopics);
 
-        return ($normalized * 0.5)
-            + ($recency * 0.3)
-            + ($boost * 0.2);
+        return ($normalized * 0.5) + ($recency * 0.3) + ($boost * 0.2);
     }
 
-    // ─────────────────────────────
+    /**
+     * Personalization boost using embedding similarity.
+     *
+     * Falls back to keyword matching when the embedding API is unavailable,
+     * so personalization never silently returns 0 for all users during outages.
+     */
     private function personalizeBoost(array $item, array $userTopics): float
     {
-        if (empty($userTopics)) return 0;
+        if (empty($userTopics)) {
+            return 0.0;
+        }
 
-        $text = strtolower(
-            ($item['title'] ?? '') . ' ' .
-            ($item['description'] ?? '') . ' ' .
-            json_encode($item['tags'] ?? [])
-        );
+        $titleVec = $this->embedding->embed($item['title'] ?? '');
 
-        $boost = 0;
+        if (empty($titleVec)) {
+            return $this->keywordBoostFallback($item, $userTopics);
+        }
+
+        $boost = 0.0;
 
         foreach ($userTopics as $topic) {
+            $topicVec = $this->embedding->embed($topic);
 
-            $topic = strtolower($topic);
-
-            if (in_array($topic, array_map('strtolower', $item['tags'] ?? []))) {
-                $boost += 0.5;
+            if (empty($topicVec)) {
                 continue;
             }
 
-            if (str_contains($text, $topic)) {
-                $boost += 0.3;
-            }
+            $sim    = $this->embedding->cosine($titleVec, $topicVec);
+            $boost += match (true) {
+                $sim >= 0.85 => 0.5,
+                $sim >= 0.70 => 0.3,
+                $sim >= 0.50 => 0.1,
+                default      => 0.0,
+            };
+        }
 
+        return min($boost, 0.8);
+    }
+
+    private function keywordBoostFallback(array $item, array $userTopics): float
+    {
+        $text     = strtolower(($item['title'] ?? '') . ' ' . ($item['description'] ?? '') . ' ' . implode(' ', $item['tags'] ?? []));
+        $itemTags = array_map('strtolower', $item['tags'] ?? []);
+        $boost    = 0.0;
+
+        foreach ($userTopics as $topic) {
+            $topic = strtolower($topic);
+            if (in_array($topic, $itemTags)) { $boost += 0.5; continue; }
+            if (str_contains($text, $topic))  { $boost += 0.3; continue; }
             foreach (explode(' ', $topic) as $word) {
-                if (strlen($word) > 2 && str_contains($text, $word)) {
+                if (strlen($word) > 2 && preg_match('/\b' . preg_quote($word, '/') . '\b/i', $text)) {
                     $boost += 0.1;
                 }
             }
@@ -187,125 +220,249 @@ class TechTrendService
         return min($boost, 0.8);
     }
 
-    // ─────────────────────────────
-    // 🔥 GITHUB FIXED TAGS
-    // ─────────────────────────────
+    // ─── Content Enrichment (template fallback) ───────────────────────────────
+
+    /**
+     * Template-based content fields — used as fallback base before AI overlay.
+     * AI enrichment overrides 'summary', 'why_trending', 'impact' from this array.
+     */
+    private function expandContent(array $item): array
+    {
+        $title    = $item['title']  ?? '';
+        $source   = $item['source'] ?? '';
+        $author   = $item['author'] ?? '';
+        $stats    = $item['stats']  ?? 0;
+        $lang     = $item['language'] ?? ($item['tags'][0] ?? null);
+        $langText = (!empty($lang) && $lang !== 'general tech') ? $lang : 'modern software development';
+
+        $openers = ["Recently,", "Currently,", "Right now,", "In the developer community,"];
+        $prefix  = $openers[array_rand($openers)];
+
+        $content = match ($source) {
+            'github'     => "{$prefix} the project \"{$title}\" is gaining traction with around {$stats} stars on GitHub. Maintained by {$author}, it reflects growing developer interest in {$langText}.",
+            'devto'      => "{$prefix} an article titled \"{$title}\" by {$author} is getting noticeable engagement with {$stats} reactions.",
+            'hackernews' => "{$prefix} a discussion titled \"{$title}\" is trending on Hacker News with a score of {$stats}.",
+            default      => "{$prefix} \"{$title}\" is attracting attention across the tech space.",
+        };
+
+        $techStack = !empty($item['tags']) ? implode(', ', array_slice($item['tags'], 0, 3)) : $langText;
+
+        return [
+            'content'      => $content,
+            'summary'      => $content,  // will be overridden by AI
+            'why_trending' => match ($source) {
+                'github'     => "Driven by continuous stars, forks, and developer contributions.",
+                'devto'      => "Strong engagement and relevance among developers.",
+                'hackernews' => "Active discussion and upvotes from the tech community.",
+                default      => "Increasing visibility in the tech ecosystem.",
+            },
+            'impact'       => "Could influence developers working in {$langText}.",
+            'tech_stack'   => $techStack,
+            'tags'         => $item['tags'] ?? [],
+            'url'          => $item['url']  ?? null,
+        ];
+    }
+
+    // ─── Stat Normalization ───────────────────────────────────────────────────
+
+    private function normalizeStats(array $items): array
+    {
+        if (empty($items)) return [];
+
+        $max = max(array_column($items, 'stats'));
+        if ($max === 0) return $items;
+
+        return array_map(function ($item) use ($max) {
+            $item['normalized_stats'] = $item['stats'] / $max;
+            return $item;
+        }, $items);
+    }
+
+    // ─── GitHub ───────────────────────────────────────────────────────────────
+
     private function fetchGitHub(): array
     {
         try {
-            $res = Http::timeout(10)->get('https://api.github.com/search/repositories', [
-                'q' => 'stars:>100',
-                'sort' => 'stars',
-                'per_page' => 10,
-            ]);
-
-            if (!$res->successful()) return [];
-
-            return collect($res->json('items', []))->map(function ($r) {
-
-                $desc = strtolower($r['description'] ?? '');
-
-                $tags = array_filter([
-                    strtolower($r['language'] ?? ''),
-                    str_contains($desc, 'ai') ? 'ai' : null,
-                    str_contains($desc, 'security') ? 'security' : null,
-                    str_contains($desc, 'api') ? 'api' : null,
+            $since    = now()->subDays(7)->toDateString();
+            $response = Http::withToken(config('services.github.token'))
+                ->timeout(10)->retry(2, 500)
+                ->get('https://api.github.com/search/repositories', [
+                    'q'        => "stars:>100 pushed:>{$since} has:description",
+                    'sort'     => 'stars',
+                    'order'    => 'desc',
+                    'per_page' => 15,
                 ]);
 
-                return [
-                    'source' => 'github',
-                    'title' => $r['full_name'] ?? '',
-                    'description' => $r['description'] ?? '',
-                    'author' => $r['owner']['login'] ?? '',
-                    'stats' => (int) ($r['stargazers_count'] ?? 0),
-                    'created_at' => $r['pushed_at'] ?? null,
-                    'language' => $r['language'] ?? null,
-                    'tags' => $tags,
-                    'url' => $r['html_url'] ?? '',
-                ];
-            })->toArray();
+            if (!$response->successful()) {
+                Log::warning('GitHub trending API failed', ['status' => $response->status()]);
+                return [];
+            }
+
+            return collect($response->json('items', []))
+                ->filter(fn($r) => !empty(trim($r['description'] ?? '')) && !empty($r['language']))
+                ->take(self::MAX_PER_SOURCE)
+                ->map(function ($repo) {
+                    $desc = strtolower($repo['description'] ?? '');
+                    $tags = array_values(array_filter([
+                        strtolower($repo['language'] ?? ''),
+                        str_contains($desc, 'ai')       ? 'ai'       : null,
+                        str_contains($desc, 'security') ? 'security' : null,
+                        str_contains($desc, 'api')      ? 'api'      : null,
+                    ]));
+
+                    return [
+                        'source'      => 'github',
+                        'title'       => $repo['full_name']      ?? '',
+                        'description' => $repo['description']    ?? '',
+                        'author'      => $repo['owner']['login'] ?? '',
+                        'language'    => $repo['language']       ?? null,
+                        'stats'       => (int) ($repo['stargazers_count'] ?? 0),
+                        'url'         => $repo['html_url']       ?? '',
+                        'created_at'  => $repo['pushed_at']      ?? null,
+                        'tags'        => $tags,
+                    ];
+                })->values()->toArray();
 
         } catch (\Exception $e) {
-            Log::error($e->getMessage());
+            Log::error('GitHub fetch failed', ['error' => $e->getMessage()]);
             return [];
         }
     }
 
-    // ─────────────────────────────
+    // ─── DEV.to ───────────────────────────────────────────────────────────────
+
     private function fetchDevTo(): array
     {
         try {
-            $res = Http::timeout(10)->get('https://dev.to/api/articles', [
-                'per_page' => 10,
-            ]);
+            $response = Http::timeout(10)->retry(2, 500)
+                ->get('https://dev.to/api/articles', ['top' => 7, 'per_page' => 20]);
 
-            if (!$res->successful()) return [];
+            if (!$response->successful()) {
+                Log::warning('DEV.to API failed', ['status' => $response->status()]);
+                return [];
+            }
 
-            return collect($res->json())->map(fn($a) => [
-                'source' => 'devto',
-                'title' => $a['title'] ?? '',
-                'description' => $a['description'] ?? '',
-                'author' => $a['user']['name'] ?? '',
-                'stats' => (int) ($a['positive_reactions_count'] ?? 0),
-                'created_at' => $a['published_at'] ?? null,
-                'tags' => $a['tag_list'] ?? [],
-                'url' => $a['url'] ?? '',
-            ])->toArray();
+            return collect($response->json())
+                ->filter(fn($a) => $this->isValidDevToArticle($a))
+                ->sortByDesc('positive_reactions_count')
+                ->take(self::MAX_PER_SOURCE)
+                ->map(fn($a) => [
+                    'source'      => 'devto',
+                    'title'       => $a['title']                     ?? '',
+                    'description' => $a['description']               ?? '',
+                    'author'      => $a['user']['name']              ?? '',
+                    'stats'       => (int) ($a['positive_reactions_count'] ?? 0),
+                    'url'         => $a['url']                       ?? '',
+                    'created_at'  => $a['published_at']              ?? null,
+                    'tags'        => collect($a['tag_list'] ?? [])->take(3)->toArray(),
+                ])->values()->toArray();
 
         } catch (\Exception $e) {
-            Log::error($e->getMessage());
+            Log::error('DEV.to fetch failed', ['error' => $e->getMessage()]);
             return [];
         }
     }
 
-    // ─────────────────────────────
+    private function isValidDevToArticle(array $article): bool
+    {
+        $title = $article['title'] ?? '';
+        foreach (self::REJECT_KEYWORDS as $kw) {
+            if (preg_match('/\b' . preg_quote($kw, '/') . '\b/i', $title)) return false;
+        }
+        return ($article['positive_reactions_count'] ?? 0) >= 10;
+    }
+
+    // ─── HackerNews ───────────────────────────────────────────────────────────
+
     private function fetchHackerNews(): array
     {
         try {
-            $ids = Http::timeout(10)
-                ->get('https://hacker-news.firebaseio.com/v0/topstories.json')
-                ->json();
+            $response = Http::timeout(10)->retry(2, 500)
+                ->get('https://hacker-news.firebaseio.com/v0/topstories.json');
 
-            if (!$ids) return [];
+            if (!$response->successful()) {
+                Log::warning('HackerNews API failed', ['status' => $response->status()]);
+                return [];
+            }
 
-            return collect(array_slice($ids, 0, 10))->map(function ($id) {
+            $ids       = collect($response->json())->take(20)->values();
+            $responses = Http::pool(fn($pool) =>
+            $ids->map(fn($id) =>
+            $pool->as((string) $id)->timeout(5)
+                ->get("https://hacker-news.firebaseio.com/v0/item/{$id}.json")
+            )->toArray()
+            );
 
-                $item = Http::timeout(10)
-                    ->get("https://hacker-news.firebaseio.com/v0/item/{$id}.json")
-                    ->json();
+            return $ids->map(function ($id) use ($responses) {
+                try {
+                    $item = $responses[(string) $id]?->json();
+                    if (!$this->isValidHackerNewsItem($item)) return null;
 
-                if (!$item) return null;
-
-                return [
-                    'source' => 'hackernews',
-                    'title' => $item['title'] ?? '',
-                    'description' => '',
-                    'author' => $item['by'] ?? '',
-                    'stats' => (int) ($item['score'] ?? 0),
-                    'created_at' => isset($item['time'])
-                        ? Carbon::createFromTimestamp($item['time'])
-                        : null,
-                    'tags' => ['tech'],
-                    'url' => $item['url'] ?? "https://news.ycombinator.com/item?id={$id}",
-                ];
-
-            })->filter()->values()->toArray();
+                    return [
+                        'source'      => 'hackernews',
+                        'title'       => $item['title'] ?? '',
+                        'description' => $item['text']  ?? '',
+                        'author'      => $item['by']    ?? '',
+                        'stats'       => (int) ($item['score'] ?? 0),
+                        'url'         => $item['url'] ?? "https://news.ycombinator.com/item?id={$id}",
+                        'created_at'  => isset($item['time'])
+                            ? Carbon::createFromTimestamp($item['time'])->toIso8601String()
+                            : null,
+                        'tags'        => $this->extractTechKeywords($item['title'] ?? ''),
+                    ];
+                } catch (\Exception $e) {
+                    Log::warning('HN item failed', ['id' => $id, 'error' => $e->getMessage()]);
+                    return null;
+                }
+            })->filter()->take(self::MAX_PER_SOURCE)->values()->toArray();
 
         } catch (\Exception $e) {
-            Log::error($e->getMessage());
+            Log::error('HackerNews fetch failed', ['error' => $e->getMessage()]);
             return [];
         }
     }
 
-    // ─────────────────────────────
+    private function isValidHackerNewsItem(?array $item): bool
+    {
+        if (empty($item) || empty($item['url'])) return false;
+        if (($item['score'] ?? 0) < 50) return false;
+        if (empty($this->extractTechKeywords($item['title'] ?? ''))) return false;
+
+        foreach (self::REJECT_KEYWORDS as $kw) {
+            if (preg_match('/\b' . preg_quote($kw, '/') . '\b/i', $item['title'] ?? '')) return false;
+        }
+
+        return true;
+    }
+
+    private function extractTechKeywords(string $text): array
+    {
+        $keywords = [
+            'ai', 'ml', 'llm', 'gpt', 'api', 'cloud', 'security', 'web',
+            'database', 'open source', 'linux', 'python', 'javascript',
+            'typescript', 'rust', 'go', 'docker', 'kubernetes', 'devops',
+            'backend', 'frontend', 'mobile', 'ios', 'android', 'framework',
+            'library', 'github', 'software', 'programming', 'developer',
+            'startup', 'saas', 'infrastructure', 'server', 'network',
+        ];
+
+        return array_values(array_filter(
+            $keywords,
+            fn($k) => preg_match('/\b' . preg_quote($k, '/') . '\b/i', $text)
+        ));
+    }
+
+    // ─── User Topics ─────────────────────────────────────────────────────────
+
     private function getUserTopics(): array
     {
         $user = Auth::user();
         if (!$user) return [];
 
         return $user->topics()
-            ->pluck('name')
-            ->map(fn($t) => strtolower($t))
+            ->where('topics.is_active', true)
+            ->pluck('topics.name')
+            ->map(fn($n) => strtolower(trim($n)))
             ->toArray();
     }
 }

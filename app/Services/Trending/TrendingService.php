@@ -3,164 +3,214 @@
 namespace App\Services\Trending;
 
 use App\Models\Post;
-use App\Models\Tag;
+use App\Services\AI\EmbeddingService;
+use App\Services\AI\FeedMixer;
+use App\Services\AI\TopicDetector;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class TrendingService
 {
-    /**
-     * Get paginated trending posts.
-     *
-     * If a tag is provided, results are filtered by that tag.
-     * Trending is calculated using reactions, comments, views, and recency decay.
-     *
-     * Results are cached per page and per tag for performance optimization.
-     */
+    private const CACHE_TTL = 5;
+
+    public function __construct(
+        private EmbeddingService $embedding,
+        private TopicDetector $topicDetector,
+        private FeedMixer $feedMixer,
+    ) {}
+
     public function getTrendingPosts(?int $tagId = null, int $perPage = 10): LengthAwarePaginator
     {
         $page = request()->get('page', 1);
 
-        // Cache key includes tag + pagination to avoid cache collisions
-        $cacheKey = "trending:posts:{$tagId}:page:{$page}:per:{$perPage}";
+        $cacheKey = 'trending:v14:' . md5(json_encode([
+                $tagId,
+                request()->query(),
+            ]));
 
-        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($tagId, $perPage) {
+        $allItems = Cache::remember(
+            $cacheKey,
+            now()->addMinutes(self::CACHE_TTL),
+            fn() => $this->buildPipeline($tagId)
+        );
 
-            $query = Post::query()
-                ->select([
-                    'posts.id',
-                    'posts.user_id',
-                    'posts.title',
-                    'posts.content',
-                    'posts.status',
-                    'posts.views',
-                    'posts.created_at',
-                    'posts.updated_at',
-                ])
+        $slice = array_slice($allItems, ($page - 1) * $perPage, $perPage);
 
-                /**
-                 * Subquery: count reactions per post
-                 * Used as a component of the trending score
-                 */
-                ->selectSub(function ($q) {
-                    $q->from('reactions')
-                        ->selectRaw('COUNT(*)')
-                        ->whereColumn('reactions.reactable_id', 'posts.id')
-                        ->where('reactions.reactable_type', Post::class);
-                }, 'reactions_count')
-
-                /**
-                 * Subquery: count active comments per post
-                 * Excludes soft-deleted comments
-                 */
-                ->selectSub(function ($q) {
-                    $q->from('comments')
-                        ->selectRaw('COUNT(*)')
-                        ->whereColumn('comments.post_id', 'posts.id')
-                        ->whereNull('comments.deleted_at');
-                }, 'comments_count')
-
-                /**
-                 * Trending Score Formula:
-                 *
-                 * - Reactions weight: x3
-                 * - Comments weight: x5 (higher engagement value)
-                 * - Views: sqrt scaling to reduce impact of viral spikes
-                 * - Time decay: exponential decay over 72 hours
-                 *
-                 * Final score prioritizes recent and highly engaging content
-                 */
-                ->selectRaw("
-                    (
-                        (COALESCE((SELECT COUNT(*) FROM reactions
-                            WHERE reactions.reactable_id = posts.id
-                            AND reactions.reactable_type = '" . Post::class . "'), 0) * 3)
-                        +
-                        (COALESCE((SELECT COUNT(*) FROM comments
-                            WHERE comments.post_id = posts.id
-                            AND comments.deleted_at IS NULL), 0) * 5)
-                        +
-                        (SQRT(COALESCE(posts.views, 0)) * 1.5)
-                    )
-                    * EXP(-TIMESTAMPDIFF(HOUR, posts.created_at, NOW()) / 72)
-                    AS trending_score
-                ")
-
-                // Only published and non-deleted posts are eligible for trending
-                ->where('posts.status', 'published')
-                ->whereNull('posts.deleted_at')
-
-                // Order by computed trending score descending
-                ->orderByDesc('trending_score')
-
-                // Eager load relationships to prevent N+1 queries
-                ->with([
-                    'user:id,name,avatar_url',
-                    'tags:id,name',
-                ]);
-
-            // Optional filtering by tag
-            if ($tagId) {
-                $query->whereHas('tags', fn($q) => $q->where('tags.id', $tagId));
-            }
-
-            $results = $query->paginate($perPage);
-
-            /**
-             * Fallback strategy:
-             * If no trending results exist, return latest published posts
-             * without scoring (safe degradation)
-             */
-            if ($results->isEmpty()) {
-                return Post::query()
-                    ->select([
-                        'posts.id',
-                        'posts.user_id',
-                        'posts.title',
-                        'posts.content',
-                        'posts.status',
-                        'posts.views',
-                        'posts.created_at',
-                        'posts.updated_at',
-                    ])
-                    ->selectRaw('0 as reactions_count, 0 as comments_count, 0 as trending_score')
-                    ->where('status', 'published')
-                    ->whereNull('deleted_at')
-                    ->orderByDesc('created_at')
-                    ->with(['user:id,name,avatar_url', 'tags:id,name'])
-                    ->paginate($perPage);
-            }
-
-            return $results;
-        });
+        return new LengthAwarePaginator(
+            $slice,
+            count($allItems),
+            $perPage,
+            $page,
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
     }
 
-    /**
-     * Get trending tags based on recent usage (last 7 days).
-     *
-     * Counts tag usage across published posts only.
-     * Cached to reduce heavy aggregation queries.
-     */
-    public function getTrendingTags(int $limit = 10): Collection
+    private function buildPipeline(?int $tagId): array
     {
-        return Cache::remember('trending:tags', now()->addMinutes(20), function () use ($limit) {
+        $posts = Post::query()
+            ->where('status', 'published')
+            ->with(['user', 'tags'])
+            ->when($tagId, fn($q) =>
+            $q->whereHas('tags', fn($q) => $q->where('tags.id', $tagId))
+            )
+            ->limit(15)
+            ->get();
 
-            return Tag::select('tags.id', 'tags.name')
-                ->selectRaw('COUNT(post_tags.post_id) as usage_count')
-                ->join('post_tags', 'post_tags.tag_id', '=', 'tags.id')
-                ->join('posts', 'posts.id', '=', 'post_tags.post_id')
-                ->where('posts.status', 'published')
-                ->whereNull('posts.deleted_at')
+        if ($posts->isEmpty()) return [];
 
-                // Only consider recent tag usage (last 7 days)
-                ->where('post_tags.created_at', '>=', now()->subDays(7))
+        /*
+        |----------------------------------------------------------------------
+        | 1. Prepare embeddings
+        |----------------------------------------------------------------------
+        */
+        $prepared = $posts->map(function (Post $post) {
 
-                ->groupBy('tags.id', 'tags.name')
-                ->orderByDesc('usage_count')
-                ->limit($limit)
-                ->get();
-        });
+            $embedding = $this->embedding->embedPost($post);
+
+            return [
+                '_model'    => $post,
+                'embedding' => $embedding ?: [],
+            ];
+        })->values()->toArray();
+
+        /*
+        |----------------------------------------------------------------------
+        | 2. Build items + scoring (WITH similarity boost)
+        |----------------------------------------------------------------------
+        */
+        $items = array_map(function ($item) use ($prepared) {
+
+            /** @var Post $post */
+            $post = $item['_model'];
+            $embedding = $item['embedding'];
+
+            $boost = $this->globalSimilarityBoost($embedding, $prepared, $post->id);
+
+            // optional debug
+            Log::info('similarity', [
+                'post'  => $post->id,
+                'boost' => $boost,
+            ]);
+
+            return [
+                '_model' => $post,
+
+                'id'      => $post->id,
+                'title'   => $post->title,
+                'content' => Str::limit($post->content, 600),
+
+                'tags'    => $post->tags->pluck('name')->toArray(),
+                'views'   => $post->views,
+
+                'embedding' => $embedding,
+
+                'score' =>
+                    $this->calculateTrendingScore($post)
+                    + $boost,
+            ];
+        }, $prepared);
+
+        /*
+        |----------------------------------------------------------------------
+        | 3. Deduplication
+        |----------------------------------------------------------------------
+        */
+        $items = $this->deduplicateById($items);
+
+        $withEmb = array_values(array_filter($items, fn($i) => !empty($i['embedding'])));
+        $without = array_values(array_filter($items, fn($i) => empty($i['embedding'])));
+
+        $withEmb = $this->embedding->deduplicate($withEmb, 0.88);
+
+        $items = array_merge($withEmb, $without);
+
+        /*
+        |----------------------------------------------------------------------
+        | 4. Topic detection
+        |----------------------------------------------------------------------
+        */
+        $items = $this->topicDetector->detectBatch($items);
+
+        /*
+        |----------------------------------------------------------------------
+        | 5. Feed mixing
+        |----------------------------------------------------------------------
+        */
+        $items = $this->feedMixer->mix($items);
+
+        /*
+        |----------------------------------------------------------------------
+        | 6. Final output
+        |----------------------------------------------------------------------
+        */
+        return array_values(array_map(function ($item) {
+
+            $post = $item['_model'] ?? null;
+            if (!$post) return null;
+
+            return [
+                'id'      => $post->id,
+                'title'   => $post->title,
+                'content' => $post->content,
+
+                'views'   => $post->views,
+                'tags'    => $post->tags->pluck('name')->toArray(),
+
+                'trending_score' => $item['score'] ?? 0,
+                'has_embedding'  => !empty($item['embedding']),
+            ];
+
+        }, array_filter($items)));
+    }
+
+    private function calculateTrendingScore(Post $post): float
+    {
+        $views = log($post->views + 1) * 10;
+        $days  = max(1, now()->diffInDays($post->created_at));
+
+        $recency = 100 / $days;
+
+        return ($views * 0.6) + ($recency * 0.4);
+    }
+
+    private function deduplicateById(array $items): array
+    {
+        $seen = [];
+
+        return array_values(array_filter($items, function ($item) use (&$seen) {
+            if (isset($seen[$item['id']])) return false;
+
+            $seen[$item['id']] = true;
+            return true;
+        }));
+    }
+
+    private function globalSimilarityBoost(array $postVector, array $items, int $postId): float
+    {
+        $boost = 0;
+
+        foreach ($items as $item) {
+
+
+            if ($item['_model']->id === $postId) continue;
+
+            if (($item['_model']->views ?? 0) < 2000) continue;
+
+            $vec = $item['embedding'] ?? [];
+
+            if (empty($vec)) continue;
+
+            $boost = max(
+                $boost,
+                $this->embedding->cosine($postVector, $vec)
+            );
+        }
+
+        return $boost * 5;
     }
 }

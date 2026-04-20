@@ -2,9 +2,6 @@
 
 namespace App\Http\Controllers\V1\Auth;
 
-use App\Http\Requests\V1\AuthenticateWithGithubRequest;
-use App\Http\Requests\V1\AuthenticateWithGoogleRequest;
-use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -15,6 +12,9 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class SocialiteMediaFrontController
 {
+    /**
+     * Generate Google OAuth redirect URL
+     */
     public function loginGoogle(): JsonResponse
     {
         $redirectUrl = Socialite::driver('google')
@@ -23,12 +23,16 @@ class SocialiteMediaFrontController
             ->getTargetUrl();
 
         Log::info('Generated Google OAuth redirect URL: ' . $redirectUrl);
+
         return response()->json([
             'url' => $redirectUrl
         ]);
     }
 
-    public function loginGithub()
+    /**
+     * Generate GitHub OAuth redirect URL
+     */
+    public function loginGithub(): JsonResponse
     {
         $redirectUrl = Socialite::driver('github')
             ->stateless()
@@ -36,40 +40,64 @@ class SocialiteMediaFrontController
             ->getTargetUrl();
 
         Log::info('Generated GitHub OAuth redirect URL: ' . $redirectUrl);
+
         return response()->json([
             'url' => $redirectUrl
         ]);
     }
 
+    /**
+     * Handle Google OAuth callback
+     */
     public function callbackGoogle()
     {
-        $googleUser = Socialite::driver('google')->stateless()->user();
-
-        return $this->extracted($googleUser);
+        try {
+            $googleUser = Socialite::driver('google')->stateless()->user();
+            return $this->handleSocialUser($googleUser);
+        } catch (\Exception $e) {
+            Log::error('Google callback error: ' . $e->getMessage());
+            return $this->redirectWithError('google_auth_failed');
+        }
     }
 
+    /**
+     * Handle GitHub OAuth callback
+     */
     public function callbackGithub()
     {
-        $githubUser = Socialite::driver('github')->stateless()->user();
-        return $this->extracted($githubUser);
+        try {
+            $githubUser = Socialite::driver('github')->stateless()->user();
+            return $this->handleSocialUser($githubUser);
+        } catch (\Exception $e) {
+            Log::error('GitHub callback error: ' . $e->getMessage());
+            return $this->redirectWithError('github_auth_failed');
+        }
     }
 
-    public function extracted($mediaUser)
+    /**
+     * Create or update user and issue JWT token
+     */
+    private function handleSocialUser($mediaUser)
     {
-        $username = str()->before($mediaUser->getEmail(), '@')
-            . '_' . strval(rand(9999, 99999));
+        if (!$mediaUser->getEmail()) {
+            throw ValidationException::withMessages([
+                'email' => 'Email not provided by provider'
+            ]);
+        }
 
-        $user = User::UpdateOrCreate(
+        $username = str()->before($mediaUser->getEmail(), '@') . '_' . uniqid();
+
+        $user = User::updateOrCreate(
             [
                 'email' => $mediaUser->getEmail(),
             ],
             [
-                'name' => $mediaUser->getName(),
+                'name' => $mediaUser->getName() ?? '',
                 'username' => $username,
                 'website_url' => null,
                 'role' => 'user',
-                'bio' => $mediaUser->getNickname(),
-                'github_username' => $mediaUser->getNickname(),
+                'bio' => $mediaUser->getNickname() ?? '',
+                'github_username' => $mediaUser->getNickname() ?? '',
                 'provider_id' => $mediaUser->getId(),
                 'password' => bcrypt(str()->random(16)),
                 'avatar_url' => $mediaUser->getAvatar(),
@@ -77,17 +105,23 @@ class SocialiteMediaFrontController
             ]
         );
 
-        JWTAuth::factory()->setTTL(60 * 24 * 30 * 12); // 1 year
+        JWTAuth::factory()->setTTL(60 * 24 * 30 * 12);
         $token = JWTAuth::fromUser($user);
 
-//        return response()->json([
-//            'message' => 'Login successful using social media',
-//            'user' => new UserResource($user),
-//            'token' => $token
-//        ]);
+        $frontendUrl = rtrim(config('app.frontend_url'), '/')
+            . '/auth/social-callback?token=' . urlencode($token);
 
-        $frontendUrl = config('app.frontend_url') . '/auth/social-callback?token=' . $token;
         return Redirect::to($frontendUrl);
-        // https://devhub-platform.github.io/frontend-development/auth/social-callback?token={token}
+    }
+
+    /**
+     * Redirect to frontend with error flag
+     */
+    private function redirectWithError(string $error)
+    {
+        $frontendUrl = rtrim(config('app.frontend_url'), '/')
+            . '/auth/social-callback?error=' . $error;
+
+        return Redirect::to($frontendUrl);
     }
 }

@@ -71,21 +71,28 @@ class PostAIController extends Controller
     }
 
     /**
-     * Generate post content using the Llama model.
+     * Generate post content using HackClub AI (Gemini 2.5 Flash).
+     * Detects intent from prompt — content only, title only, or both.
      * Content is returned only — never auto-saved to the database.
      *
      * POST /v1/posts/ai/generate-content
+     *
+     * Request body:
+     *   prompt  (required) string — topic, idea, or instruction
+     *   length  (optional) string — short | medium | long (default: medium)
      */
     public function generateContent(GenerateContentRequest $request): JsonResponse
     {
         try {
-            $content = $this->contentService->generate(
+            $result = $this->contentService->generate(
                 prompt: $request->input('prompt'),
+                length: $request->input('length', 'medium'),
             );
 
             return response()->json([
                 'success' => true,
-                'content' => $content,
+                'content' => $result['content'],
+                'title'   => $result['title'] ?? null,
                 'message' => 'Content generated. Review and save it manually.',
             ]);
 

@@ -2,85 +2,189 @@
 
 namespace App\Services\AI;
 
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\ConnectException;
-use GuzzleHttp\Exception\GuzzleException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 
 class PostContentGeneratorService
 {
-    private Client $client;
+    private const CACHE_TTL = 3600 * 6;
 
-    public function __construct()
+    private const ENDPOINT = 'https://ai.hackclub.com/proxy/v1/chat/completions';
+
+    private const MODEL = 'google/gemini-2.5-flash';
+
+    private const LENGTH_CONFIG = [
+        'short'  => [
+            'tokens'      => 600,
+            'instruction' => 'Write a short post (~300 words).',
+        ],
+        'medium' => [
+            'tokens'      => 900,
+            'instruction' => 'Write a medium-length post (~600 words).',
+        ],
+        'long'   => [
+            'tokens'      => 1300,
+            'instruction' => 'Write a detailed blog post of at least 1000 words. Include introduction, at least 5 sections, and a conclusion. Do not stop early.',
+        ],
+    ];
+
+    // Keywords that indicate the user wants a title
+    private const TITLE_KEYWORDS = [
+        'title', 'تايتل', 'عنوان', 'with title', 'add title',
+        'generate title', 'create title', 'make title',
+    ];
+
+    // Keywords that indicate the user wants title ONLY (no content)
+    private const TITLE_ONLY_KEYWORDS = [
+        'write a title', 'write title', 'generate a title', 'create a title',
+        'titel',
+        'title only', 'just title', 'only title', 'title for',
+        'تايتل بس', 'عنوان بس', 'بس تايتل', 'بس عنوان',
+    ];
+
+    public function generate(string $prompt, string $length = 'medium'): array
     {
-        $this->client = new Client([
-            'base_uri'        => rtrim(config('services.llama.base_url'), '/') . '/',
-            'headers'         => [
-                'Authorization'   => 'Bearer ' . config('services.llama.api_key'),
-                'x-rapidapi-key'  => config('services.llama.api_key'),
-                'x-rapidapi-host' => config('services.llama.host'),
-                'Content-Type'    => 'application/json',
-            ],
-            'connect_timeout' => 10,
-            'timeout'         => 60,
-        ]);
+        $length    = in_array($length, ['short', 'medium', 'long']) ? $length : 'medium';
+        $cacheKey  = 'post:gen:' . md5($prompt . $length);
+
+        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($prompt, $length) {
+
+            $wantsTitle     = $this->promptWantsTitle($prompt);
+            $wantsTitleOnly = $this->promptWantsTitleOnly($prompt);
+
+            $result = ['content' => null, 'title' => null];
+
+            // Generate title only — skip content entirely
+            if ($wantsTitleOnly) {
+                $result['title'] = $this->callTitleAI($prompt);
+                return $result;
+            }
+
+            // Generate content
+            $config  = self::LENGTH_CONFIG[$length];
+            $content = null;
+
+            try {
+                $content = $this->callAI($prompt, $config['tokens'], $config['instruction']);
+
+                if (!$this->isLongEnough($content)) {
+                    throw new \Exception('Generated content is too short');
+                }
+
+            } catch (\Exception $e) {
+                Log::warning('PostContentGeneratorService: primary generation failed, retrying', [
+                    'error' => $e->getMessage(),
+                ]);
+
+                $content = $this->callAI(
+                    $prompt,
+                    700,
+                    'Write a complete and well-structured post with clear headings.'
+                );
+            }
+
+            if ($length === 'long' && $this->needsExpansion($content)) {
+                Log::info('PostContentGeneratorService: expanding long-form content');
+
+                $extra   = $this->callAI(
+                    "Continue the following post in detail:\n\n" . $content,
+                    600,
+                    'Continue writing the remaining sections in detail.'
+                );
+                $content .= "\n\n" . $extra;
+            }
+
+            $result['content'] = $content;
+
+            // Generate title alongside content if requested
+            if ($wantsTitle && !empty($content)) {
+                try {
+                    $result['title'] = $this->callTitleAI($prompt);
+                } catch (\Exception $e) {
+                    Log::warning('PostContentGeneratorService: title generation failed', [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            return $result;
+        });
     }
 
-    /**
-     * Generate post content from a prompt.
-     * Returns the generated text string only — never auto-saved.
-     *
-     * @throws \Exception on API failure.
-     */
-    public function generate(string $prompt): string
+    private function callAI(string $prompt, int $maxTokens, string $instruction): string
     {
-        Log::info('Llama content generation request', ['prompt' => substr($prompt, 0, 100)]);
-
-        try {
-            $response = $this->client->post('chat_completions', [
-                'json' => [
-                    'messages' => [
-                        [
-                            'role'    => 'system',
-                            'content' => 'You are a professional technical writer for a developer platform called DevHub. Generate well-structured, engaging post content in Markdown format.',
-                        ],
-                        [
-                            'role'    => 'user',
-                            'content' => $prompt,
-                        ],
-                    ],
+        $response = Http::timeout(120)
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . config('services.hackai.token'),
+            ])
+            ->post(self::ENDPOINT, [
+                'model'      => self::MODEL,
+                'messages'   => [
+                    ['role' => 'system', 'content' => $instruction],
+                    ['role' => 'user',   'content' => $prompt],
                 ],
+                'max_tokens' => $maxTokens,
             ]);
 
-            $data = json_decode($response->getBody()->getContents(), true);
-
-            $content = $data['choices'][0]['message']['content']
-                ?? $data['choices'][0]['text']
-                ?? null;
-
-            if (!$content) {
-                throw new \Exception('Llama response missing content field');
-            }
-
-            return (string) $content;
-
-        } catch (ConnectException $e) {
-            Log::error('Llama: connection failed', ['message' => $e->getMessage()]);
-            throw new \Exception('Could not connect to content generation service.');
-
-        } catch (GuzzleException $e) {
-            $body = null;
-            if (method_exists($e, 'getResponse') && $e->getResponse()) {
-                $body = $e->getResponse()->getBody()->getContents();
-            }
-
-            Log::error('Llama: API error', [
-                'code'    => $e->getCode(),
-                'message' => $e->getMessage(),
-                'body'    => $body,
-            ]);
-
-            throw new \Exception('Content generation failed: ' . ($body ?? $e->getMessage()));
+        if (!$response->successful()) {
+            throw new \Exception('HackClub AI request failed: ' . $response->status());
         }
+
+        return $response->json('choices.0.message.content') ?? '';
+    }
+
+    private function callTitleAI(string $prompt): string
+    {
+        $response = Http::timeout(60)
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . config('services.hackai.token'),
+            ])
+            ->post(self::ENDPOINT, [
+                'model'      => self::MODEL,
+                'messages'   => [
+                    ['role' => 'system', 'content' => 'Generate ONE short SEO-friendly title based on the user prompt. Return the title text only, no lists, no options, no extra text.'],
+                    ['role' => 'user',   'content' => $prompt],
+                ],
+                'max_tokens' => 50,
+            ]);
+
+        return $response->json('choices.0.message.content') ?? '';
+    }
+
+    private function promptWantsTitle(string $prompt): bool
+    {
+        $prompt = strtolower($prompt);
+
+        foreach (self::TITLE_KEYWORDS as $keyword) {
+            if (str_contains($prompt, $keyword)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function promptWantsTitleOnly(string $prompt): bool
+    {
+        $prompt = strtolower($prompt);
+
+        foreach (self::TITLE_ONLY_KEYWORDS as $keyword) {
+            if (str_contains($prompt, $keyword)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isLongEnough(?string $content): bool
+    {
+        return $content && str_word_count($content) >= 500;
+    }
+
+    private function needsExpansion(string $content): bool
+    {
+        return str_word_count($content) < 900;
     }
 }
