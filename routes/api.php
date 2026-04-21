@@ -341,7 +341,7 @@ Route::prefix('v1')->group(function () {
                 Route::get('reading-lists/{readingList}/show-notes/{post}', 'showNotesInReadingList');
             });
 
-            // ─── Code Editor ──────────────────────────────────────────────────────
+            // ─── Code Editor ──────────────────────────────────────────────────
             Route::controller(CodeEditorController::class)->group(function () {
                 Route::get('code/runtimes', 'runtimes');
                 Route::post('code/execute', 'execute');

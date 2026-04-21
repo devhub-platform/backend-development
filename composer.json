@@ -37,6 +37,7 @@
         "predis/predis": "^3.4",
         "pusher/pusher-php-server": "*",
         "sendgrid/sendgrid": "^8.1",
+        "sentry/sentry-laravel": "^4.25",
         "smalot/pdfparser": "^2.12",
         "socialiteproviders/medium": "^4.1",
         "socialiteproviders/microsoft": "^4.7",
