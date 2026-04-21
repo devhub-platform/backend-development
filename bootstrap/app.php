@@ -6,6 +6,8 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use App\Http\Middleware\BlockedUserMiddleware;
 use App\Http\Middleware\LogViewerMiddleware;
+use Sentry\Laravel\Integration;
+use Spatie\LaravelFlare\Facades\Flare;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -17,12 +19,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(
-        at: '*',
-        headers: Request::HEADER_X_FORWARDED_FOR
+            at: '*',
+            headers: Request::HEADER_X_FORWARDED_FOR
             | Request::HEADER_X_FORWARDED_HOST
             | Request::HEADER_X_FORWARDED_PORT
             | Request::HEADER_X_FORWARDED_PROTO
-    );
+        );
 
         $middleware->alias([
             'blocked.user' => BlockedUserMiddleware::class,
@@ -30,5 +32,6 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        \Spatie\LaravelFlare\Facades\Flare::handles($exceptions);
+        Flare::handles($exceptions);
+        Integration::handles($exceptions);
     })->create();
