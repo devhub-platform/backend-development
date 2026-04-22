@@ -184,7 +184,8 @@ Route::prefix('v1')->group(function () {
                 Route::get('users/{user}/followers/count', 'usersFollowersCount');
                 Route::get('users/{user}/following', 'usersFollowing');
                 Route::get('users/{user}/mutual-followers', 'getMutualFollowers');
-                Route::get('users/{user}/mutual-following', 'checkMutualFollowing');
+                Route::get('users/{user}/mutual-following', 'getMutualFollowing');
+                Route::get('users/{user}/mutual-check', 'checkMutualFollowing');
             });
 
             Route::controller(SearchController::class)->group(function () {
