@@ -43,7 +43,6 @@ class EmbeddingService
     {
         $existing = $this->getCachedEmbedding($post);
 
-
         if (!empty($existing) && is_array($existing)) {
             return $existing;
         }
@@ -51,9 +50,9 @@ class EmbeddingService
         $vector = $this->embed($post->title . ' ' . ($post->content ?? ''));
 
         if (!empty($vector)) {
-            $post->updateQuietly([
-                'embedding' => json_encode($vector),
-            ]);
+            $post->embedding = $vector;
+            $post->embedded_at = now();
+            $post->save();
         }
 
         return $vector;
@@ -62,21 +61,20 @@ class EmbeddingService
     private function callApi(string $text): array
     {
         try {
-            $res = Http::timeout(10)
-                ->retry(1, 200)
-                ->withHeaders([
-                    'Authorization' => 'Bearer ' . config('services.embedding.key'),
-                ])
+            $res = Http::timeout(25)    // increased from 10 → 25 seconds
+            ->retry(2, 500)         // increased from retry(1, 200) → retry(2, 500)
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . config('services.embedding.key'),
+            ])
                 ->post(config('services.embedding.base_url') . '/embeddings', [
                     'model' => config('services.embedding.model'),
                     'input' => $text,
                 ]);
 
             if (!$res->successful()) {
-                //  logging
-                Log::error('Embedding failed', [
+                Log::error('[Embedding] API error', [
                     'status' => $res->status(),
-                    'body'   => $res->body()
+                    'body'   => $res->body(),
                 ]);
                 return [];
             }
@@ -84,8 +82,8 @@ class EmbeddingService
             return $res->json('data.0.embedding') ?? [];
 
         } catch (\Throwable $e) {
-            Log::error('Embedding exception', [
-                'msg' => $e->getMessage()
+            Log::error('[Embedding] Exception', [
+                'msg' => $e->getMessage(),
             ]);
             return [];
         }
@@ -95,14 +93,12 @@ class EmbeddingService
     {
         if (empty($a) || empty($b)) return 0;
 
-        //  (prevent mismatch)
         if (count($a) !== count($b)) return 0;
 
         $dot = $normA = $normB = 0;
 
         foreach ($a as $i => $v) {
-            $bVal = $b[$i] ?? 0;
-
+            $bVal   = $b[$i] ?? 0;
             $dot   += $v * $bVal;
             $normA += $v * $v;
             $normB += $bVal * $bVal;

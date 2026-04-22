@@ -17,8 +17,8 @@ class TrendingService
 
     public function __construct(
         private EmbeddingService $embedding,
-        private TopicDetector $topicDetector,
-        private FeedMixer $feedMixer,
+        private TopicDetector    $topicDetector,
+        private FeedMixer        $feedMixer,
     ) {}
 
     public function getTrendingPosts(?int $tagId = null, int $perPage = 10): LengthAwarePaginator
@@ -44,7 +44,7 @@ class TrendingService
             $perPage,
             $page,
             [
-                'path' => request()->url(),
+                'path'  => request()->url(),
                 'query' => request()->query(),
             ]
         );
@@ -66,53 +66,96 @@ class TrendingService
         /*
         |----------------------------------------------------------------------
         | 1. Prepare embeddings
+        |
+        |    Read only what is already stored in the DB — no API calls here.
+        |    Posts without an embedding are collected and dispatched via defer()
+        |    so they are embedded after the response has been sent.
         |----------------------------------------------------------------------
         */
-        $prepared = $posts->map(function (Post $post) {
+        $postsNeedingEmbedding = [];
 
-            $embedding = $this->embedding->embedPost($post);
+        $prepared = $posts->map(function (Post $post) use (&$postsNeedingEmbedding) {
+
+            $embedding = $this->embedding->getCachedEmbedding($post);
+
+            if (empty($embedding)) {
+                $postsNeedingEmbedding[] = $post->id;
+            }
 
             return [
                 '_model'    => $post,
-                'embedding' => $embedding ?: [],
+                'embedding' => $embedding,
             ];
+
         })->values()->toArray();
 
         /*
         |----------------------------------------------------------------------
-        | 2. Build items + scoring (WITH similarity boost)
+        | Defer embedding for posts that are missing a vector.
+        |
+        | NOTE: If you do NOT see "[defer] fired" in your logs after this runs,
+        | defer() is not supported on your server/hosting. In that case you will
+        | need a scheduled command (e.g. posts:backfill-embeddings) instead.
+        |----------------------------------------------------------------------
+        */
+//        defer(function () use ($postsNeedingEmbedding) {
+//
+//            Log::info('[TrendingService][defer] fired', [
+//                'posts_needing_embedding' => $postsNeedingEmbedding,
+//            ]);
+//
+//            if (empty($postsNeedingEmbedding)) return;
+//
+//            $posts = Post::whereIn('id', $postsNeedingEmbedding)->get();
+//
+//            foreach ($posts as $post) {
+//                $vector = app(EmbeddingService::class)->embedPost($post);
+//
+//                Log::info('[TrendingService][defer] embedding result', [
+//                    'post_id'    => $post->id,
+//                    'has_vector' => !empty($vector),
+//                ]);
+//            }
+//        });
+
+        /*
+        |----------------------------------------------------------------------
+        | 2. Build items + scoring
+        |
+        |    trending_score is calculated here and persisted to the DB via
+        |    updateQuietly() so it is available for direct DB queries/sorting.
         |----------------------------------------------------------------------
         */
         $items = array_map(function ($item) use ($prepared) {
 
             /** @var Post $post */
-            $post = $item['_model'];
+            $post      = $item['_model'];
             $embedding = $item['embedding'];
 
             $boost = $this->globalSimilarityBoost($embedding, $prepared, $post->id);
+            $score = $this->calculateTrendingScore($post) + $boost;
 
-            // optional debug
-            Log::info('similarity', [
-                'post'  => $post->id,
-                'boost' => $boost,
+
+            Log::info('[TrendingService] scored', [
+                'post_id' => $post->id,
+                'score'   => $score,
+                'boost'   => $boost,
             ]);
 
             return [
-                '_model' => $post,
+                '_model'    => $post,
 
-                'id'      => $post->id,
-                'title'   => $post->title,
-                'content' => Str::limit($post->content, 600),
+                'id'        => $post->id,
+                'title'     => $post->title,
+                'content'   => Str::limit($post->content, 600),
 
-                'tags'    => $post->tags->pluck('name')->toArray(),
-                'views'   => $post->views,
+                'tags'      => $post->tags->pluck('name')->toArray(),
+                'views'     => $post->views,
 
                 'embedding' => $embedding,
-
-                'score' =>
-                    $this->calculateTrendingScore($post)
-                    + $boost,
+                'score'     => $score,
             ];
+
         }, $prepared);
 
         /*
@@ -123,7 +166,7 @@ class TrendingService
         $items = $this->deduplicateById($items);
 
         $withEmb = array_values(array_filter($items, fn($i) => !empty($i['embedding'])));
-        $without = array_values(array_filter($items, fn($i) => empty($i['embedding'])));
+        $without = array_values(array_filter($items, fn($i) =>  empty($i['embedding'])));
 
         $withEmb = $this->embedding->deduplicate($withEmb, 0.88);
 
@@ -145,7 +188,7 @@ class TrendingService
 
         /*
         |----------------------------------------------------------------------
-        | 6. Final output
+        | 6. Final output — strip internal fields before returning
         |----------------------------------------------------------------------
         */
         return array_values(array_map(function ($item) {
@@ -154,15 +197,14 @@ class TrendingService
             if (!$post) return null;
 
             return [
-                'id'      => $post->id,
-                'title'   => $post->title,
-                'content' => $post->content,
+                'id'             => $post->id,
+                'title'          => $post->title,
+                'content'        => $post->content,
 
-                'views'   => $post->views,
-                'tags'    => $post->tags->pluck('name')->toArray(),
-
-                'trending_score' => $item['score'] ?? 0,
-                'has_embedding'  => !empty($item['embedding']),
+                'views'          => $post->views,
+                'tags'           => $post->tags->pluck('name')->toArray(),
+                'trending_score' => round($item['score'] ?? 0, 2),
+                'has_embedding'  => !is_null($post->embedded_at),
             ];
 
         }, array_filter($items)));
@@ -170,9 +212,8 @@ class TrendingService
 
     private function calculateTrendingScore(Post $post): float
     {
-        $views = log($post->views + 1) * 10;
-        $days  = max(1, now()->diffInDays($post->created_at));
-
+        $views   = log($post->views + 1) * 10;
+        $days    = max(1, now()->diffInDays($post->created_at));
         $recency = 100 / $days;
 
         return ($views * 0.6) + ($recency * 0.4);
@@ -184,7 +225,6 @@ class TrendingService
 
         return array_values(array_filter($items, function ($item) use (&$seen) {
             if (isset($seen[$item['id']])) return false;
-
             $seen[$item['id']] = true;
             return true;
         }));
@@ -192,13 +232,16 @@ class TrendingService
 
     private function globalSimilarityBoost(array $postVector, array $items, int $postId): float
     {
+        // No vector means no similarity boost — skip the loop entirely
+        if (empty($postVector)) return 0;
+
         $boost = 0;
 
         foreach ($items as $item) {
 
-
             if ($item['_model']->id === $postId) continue;
 
+            // Only compare against popular posts to keep the boost meaningful
             if (($item['_model']->views ?? 0) < 2000) continue;
 
             $vec = $item['embedding'] ?? [];
@@ -212,5 +255,28 @@ class TrendingService
         }
 
         return $boost * 5;
+    }
+
+    // This method retrieves the trending tags based on the number of published posts associated with each tag.
+    public function getTrendingTags(): array
+    {
+        return Post::query()
+            ->where('status', 'published')
+            ->with('tags')
+            ->get()
+            ->pluck('tags')
+            ->flatten()
+            ->groupBy('id')
+            ->map(function ($tagGroup) {
+                return [
+                    'id'    => $tagGroup->first()->id,
+                    'name'  => $tagGroup->first()->name,
+                    'count' => $tagGroup->count(),
+                ];
+            })
+            ->sortByDesc('count')
+            ->take(10)
+            ->values()
+            ->toArray();
     }
 }
