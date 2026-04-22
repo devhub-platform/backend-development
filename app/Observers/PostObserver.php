@@ -19,9 +19,12 @@ class PostObserver
     }
 
     /**
-     * Embed the post whenever it is created or updated, but only when:
-     *   - the post is published, AND
-     *   - on updates, the embeddable fields actually changed.
+     * After a post is saved, generate its embedding in the background
+     * using defer() so the HTTP response is never blocked.
+     *
+     * Conditions that must ALL be true before we attempt embedding:
+     *   - post must be published
+     *   - on updates, at least title or content must have changed
      */
     public function saved(Post $post): void
     {
@@ -35,30 +38,48 @@ class PostObserver
             return;
         }
 
-        // Wipe the stale vector so embedPost() always regenerates a fresh one.
+        // Clear the stale vector so embedPost() always regenerates a fresh one
         if ($isUpdate) {
-            $post->updateQuietly(['embedding' => null]);
+            $post->updateQuietly(['embedding' => null, 'embedded_at' => null]);
             $post->embedding = null;
         }
 
-        $success = $this->embedding->embedPost($post);
+        // Capture the ID only — avoid passing the full model into the closure
+        // since the model state may be stale by the time defer() runs
+        $postId = $post->id;
 
-        if (!$success) {
-            Log::warning('Post saved but embedding failed', [
-                'post_id' => $post->id,
-                'user_id' => auth()->id(),
-            ]);
-        }
+        // defer() runs after the HTTP response has been sent to the client,
+        // so the user never waits for the embedding API call
+        defer(function () use ($postId) {
+
+            Log::info('[PostObserver][defer] fired', ['post_id' => $postId]);
+
+            $fresh = \App\Models\Post::find($postId);
+
+            if (!$fresh) {
+                Log::warning('[PostObserver][defer] post not found', ['post_id' => $postId]);
+                return;
+            }
+
+            $vector = app(EmbeddingService::class)->embedPost($fresh);
+
+            if (empty($vector)) {
+                Log::warning('[PostObserver][defer] embedding failed', ['post_id' => $postId]);
+            } else {
+                Log::info('[PostObserver][defer] embedding saved', ['post_id' => $postId]);
+            }
+        });
     }
 
     /**
-     * Clean up the embedding cache when a post is removed.
+     * Clean up embedding cache entries when a post is deleted.
      */
     public function deleted(Post $post): void
     {
         cache()->forget('emb:post:' . $post->id);
+        cache()->forget('emb:' . md5($post->title . ' ' . ($post->content ?? '')));
 
-        Log::notice('Post deleted', [
+        Log::notice('[PostObserver] Post deleted', [
             'post_id' => $post->id,
             'title'   => $post->title,
         ]);

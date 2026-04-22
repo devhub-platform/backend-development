@@ -33,11 +33,15 @@ class Post extends Model implements HasReaction
         'read_time',
         'cover_image',
         'views',
-        'is_edit'
+        'is_edit',
+        'embedding',
+        'embedded_at',
     ];
 
     protected $casts = [
         'views' => 'integer',
+        'embedding'    => 'array',
+        'embedded_at'  => 'datetime',
     ];
 
 
