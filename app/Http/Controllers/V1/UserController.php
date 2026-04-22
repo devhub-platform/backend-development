@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\V1;
 
 use App\Http\Resources\CommentResource;
+use App\Http\Resources\MutualRusersResource;
+use App\Http\Resources\MutualUsersResource;
 use App\Http\Resources\PostResource;
 use App\Http\Resources\TrendingPostResource;
 use App\Http\Resources\UserResource;
@@ -155,6 +157,39 @@ class UserController extends Controller
         return response()->json([
             'count' => $mutualFollowers->count(),
             'data' => UserResource::collection($mutualFollowers),
+        ]);
+    }
+
+    public function getMutualFollowing(int $userId): JsonResponse
+    {
+        $authUser = auth()->user();
+
+        if (!$authUser) {
+            return response()->json([
+                'error' => 'Unauthorized',
+            ], 401);
+        }
+
+        $targetUser = User::findOrFail($userId);
+
+        // Get users that auth user is following
+        $authFollowingIds = $authUser->following()->pluck('users.id')->toArray();
+
+        // Get users that target user is following
+        $targetFollowingIds = $targetUser->following()->pluck('users.id')->toArray();
+
+        // Find intersection (users both are following)
+        $mutualFollowingIds = array_intersect($authFollowingIds, $targetFollowingIds);
+
+        $mutualFollowing = User::whereIn('id', $mutualFollowingIds)
+            ->with(['followers', 'following'])
+            ->get();
+
+        return response()->json([
+//            'auth_user_id' => $authUser->id,
+//            'target_user_id' => $userId,
+            'count' => $mutualFollowing->count(),
+            'data' => MutualUsersResource::collection($mutualFollowing),
         ]);
     }
 
