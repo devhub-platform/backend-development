@@ -138,7 +138,7 @@ Route::prefix('v1')->group(function () {
                 ->group(function () {
                     Route::post('generate-image', 'generateImage');
                     Route::post('generate-content', 'generateContent');
-                    Route::post('generate-title', 'generateTitle');   // ← new
+//                    Route::post('generate-title', 'generateTitle');   // ← new
                     Route::delete('generated-images/{id}', 'discardImage');
                 });
 

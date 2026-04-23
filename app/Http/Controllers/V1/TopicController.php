@@ -154,7 +154,7 @@ class TopicController
 
         return response()->json([
             'message' => 'Topics added successfully',
-            'data' => $user->topics()->get(),
+            'data' => $user->topics()->get()->makeHidden('pivot'),
         ], 200);
     }
 
@@ -181,7 +181,7 @@ class TopicController
 
         return response()->json([
             'message' => 'Topics removed successfully',
-            'data' => $user->topics()->get(),
+            'data' => $user->topics()->get()->makeHidden('pivot'),
         ], 200);
     }
 

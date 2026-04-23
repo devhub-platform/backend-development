@@ -81,14 +81,14 @@ class MessageController extends Controller
             ->to($conversation)
             ->send();
 
-        OneSignal::sendNotificationToAll(
-            $validated['message'],
-            'deeplink://chats?id=' . $conversation->id,
-            null,
-            null,
-            null,
-            'New attachment from ' . (auth()->user()->name)
-        );
+        // OneSignal::sendNotificationToAll(
+        //     $validated['message'],
+        //     'deeplink://chats?id=' . $conversation->id,
+        //     null,
+        //     null,
+        //     null,
+        //     'New attachment from ' . (auth()->user()->name)
+        // );
 
         $messages = [
             'attachment' => new MessageResource($attachmentMessage)
