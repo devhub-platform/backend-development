@@ -1,0 +1,60 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  PHP_VERSION: "8.3"
+  NODE_VERSION: "18"
+  APP_NAME: "devhub"
+
+build:
+  stage: build
+  image: php:8.3
+  before_script:
+    - apt-get update && apt-get install -y unzip zip curl git nodejs npm
+    - curl -sS https://getcomposer.org/installer | php
+    - mv composer.phar /usr/local/bin/composer
+    - npm install
+  script:
+    # تنظيف الملفات (زي GitHub Action)
+    - rm -f public/hot || true
+    - rm -rf storage/framework/cache/* || true
+    - rm -rf storage/framework/views/* || true
+    - rm -rf bootstrap/cache/* || true
+
+    # Build frontend
+    - npm run build
+
+    # Composer install
+    - composer validate --no-check-publish
+    - composer install --no-interaction --prefer-dist --no-progress --optimize-autoloader
+
+    # تجهيز zip
+    - zip -r release.zip . \
+        -x ".git/*" ".gitlab/*" "node_modules/*" "tests/*" \
+        "storage/framework/*" "bootstrap/cache/*" \
+        "*.env*"
+
+    # إضافة build folder
+    - if [ -d "public/build" ]; then cd public/build && zip -r ../../release.zip .; cd ../..; fi
+
+  artifacts:
+    paths:
+      - release.zip
+    expire_in: 1 hour
+
+deploy:
+  stage: deploy
+  image: mcr.microsoft.com/azure-cli
+  dependencies:
+    - build
+  script:
+    - az login --service-principal \
+        -u "$AZURE_CLIENT_ID" \
+        -p "$AZURE_CLIENT_SECRET" \
+        --tenant "$AZURE_TENANT_ID"
+
+    - az webapp deployment source config-zip \
+        --resource-group "$AZURE_RESOURCE_GROUP" \
+        --name "$APP_NAME" \
+        --src release.zip
