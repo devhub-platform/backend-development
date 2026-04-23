@@ -17,9 +17,7 @@ class ChatController extends Controller
 {
     public function __construct(
         private OneSignalService $oneSignalService
-    )
-    {
-    }
+    ) {}
     public function index(Request $request): JsonResponse
     {
         $conversations = Chat::conversations()
@@ -82,7 +80,10 @@ class ChatController extends Controller
 
         $messages = Chat::conversation($conversation)
             ->setParticipant($request->user())
-            ->setPaginationParams(['perPage' => $request->integer('per_page', 20)])
+            ->setPaginationParams([
+                'page' => $request->integer('page', 1),
+                'perPage' => $request->integer('per_page', 20)
+            ])
             ->getMessages();
 
         Chat::conversation($conversation)
@@ -226,5 +227,4 @@ class ChatController extends Controller
             ]);
         }
     }
-
 }
