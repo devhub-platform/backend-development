@@ -43,23 +43,23 @@ class PostContentGeneratorService
         'تايتل بس', 'عنوان بس', 'بس تايتل', 'بس عنوان',
     ];
 
-    public function generate(string $prompt, string $length = 'medium'): array
+    public function generate(string $prompt, string $length = 'medium', bool $forceTitle = false): array
     {
         $length    = in_array($length, ['short', 'medium', 'long']) ? $length : 'medium';
-        $cacheKey  = 'post:gen:' . md5($prompt . $length);
+        $cacheKey  = 'post:gen:' . md5($prompt . $length . ($forceTitle ? '1' : '0'));
 
-        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($prompt, $length) {
+        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($prompt, $length, $forceTitle) {
 
-            $wantsTitle     = $this->promptWantsTitle($prompt);
-            $wantsTitleOnly = $this->promptWantsTitleOnly($prompt);
+            $result = ['content' => null, 'titles' => null];
 
-            $result = ['content' => null, 'title' => null];
-
-            // Generate title only — skip content entirely
-            if ($wantsTitleOnly) {
-                $result['title'] = $this->callTitleAI($prompt);
+            // Prompt explicitly asks for title — always title only
+            // regardless of generate_title flag
+            if ($this->promptWantsTitleOnly($prompt)) {
+                $result['titles'] = $this->callTitleAI($prompt);
                 return $result;
             }
+
+            $wantsTitle = $forceTitle || $this->promptWantsTitle($prompt);
 
             // Generate content
             $config  = self::LENGTH_CONFIG[$length];
@@ -100,7 +100,7 @@ class PostContentGeneratorService
             // Generate title alongside content if requested
             if ($wantsTitle && !empty($content)) {
                 try {
-                    $result['title'] = $this->callTitleAI($prompt);
+                    $result['titles'] = $this->callTitleAI($prompt);
                 } catch (\Exception $e) {
                     Log::warning('PostContentGeneratorService: title generation failed', [
                         'error' => $e->getMessage(),
@@ -134,7 +134,7 @@ class PostContentGeneratorService
         return $response->json('choices.0.message.content') ?? '';
     }
 
-    private function callTitleAI(string $prompt): string
+    private function callTitleAI(string $prompt): array
     {
         $response = Http::timeout(60)
             ->withHeaders([
@@ -143,13 +143,19 @@ class PostContentGeneratorService
             ->post(self::ENDPOINT, [
                 'model'      => self::MODEL,
                 'messages'   => [
-                    ['role' => 'system', 'content' => 'Generate ONE short SEO-friendly title based on the user prompt. Return the title text only, no lists, no options, no extra text.'],
+                    ['role' => 'system', 'content' => 'Generate exactly 5 short SEO-friendly title options based on the user prompt. Return ONLY a JSON array of 5 strings, no numbering, no extra text. Example: ["Title One", "Title Two", "Title Three", "Title Four", "Title Five"]'],
                     ['role' => 'user',   'content' => $prompt],
                 ],
-                'max_tokens' => 50,
+                'max_tokens' => 200,
             ]);
 
-        return $response->json('choices.0.message.content') ?? '';
+        $raw   = $response->json('choices.0.message.content') ?? '[]';
+        $clean = preg_replace('/^```(?:json)?\s*/i', '', trim($raw));
+        $clean = preg_replace('/\s*```$/', '', $clean);
+
+        $decoded = json_decode($clean, true);
+
+        return is_array($decoded) ? array_slice($decoded, 0, 5) : [$raw];
     }
 
     private function promptWantsTitle(string $prompt): bool
