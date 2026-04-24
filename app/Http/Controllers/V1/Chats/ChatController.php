@@ -82,7 +82,8 @@ class ChatController extends Controller
             ->setParticipant($request->user())
             ->setPaginationParams([
                 'page' => $request->integer('page', 1),
-                'perPage' => $request->integer('per_page', 20)
+                'perPage' => $request->integer('per_page', 20),
+                'sorting' => 'desc'
             ])
             ->getMessages();
 
