@@ -11,6 +11,7 @@ use App\Http\Requests\MessagesRequests\SendMessageAttchmentRequest;
 use App\Http\Requests\MessagesRequests\SendMessageRequest;
 use App\Http\Requests\MessagesRequests\SendVoiceMessageRequest;
 use App\Services\AWSS3Service;
+use App\Services\HackClubCdnService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -21,7 +22,8 @@ use OneSignal;
 class MessageController extends Controller
 {
     public function __construct(
-        private AWSS3Service $awsS3Service
+        private AWSS3Service $awsS3Service,
+        private HackClubCdnService $hackClubCdnService
     )
     {
     }
@@ -69,7 +71,7 @@ class MessageController extends Controller
         $file = $request->file('file');
         $fileName = $validated['file_name'] ?? $file->getClientOriginalName();
 
-        $fileUrl = $this->awsS3Service->uploadFile($file, 'chat_attachments');
+        $fileUrl = $this->hackClubCdnService->uploadFileUrl($file);
 
         $attachmentMessage = Chat::message('Attachment')
             ->type('attachment')
@@ -81,14 +83,14 @@ class MessageController extends Controller
             ->to($conversation)
             ->send();
 
-        OneSignal::sendNotificationToAll(
-            $validated['message'],
-            'deeplink://chats?id=' . $conversation->id,
-            null,
-            null,
-            null,
-            'New attachment from ' . (auth()->user()->name)
-        );
+        // OneSignal::sendNotificationToAll(
+        //     $validated['message'],
+        //     'deeplink://chats?id=' . $conversation->id,
+        //     null,
+        //     null,
+        //     null,
+        //     'New attachment from ' . (auth()->user()->name)
+        // );
 
         $messages = [
             'attachment' => new MessageResource($attachmentMessage)
@@ -120,7 +122,7 @@ class MessageController extends Controller
         $fileName = $validated['file_name'] ?? $file->getClientOriginalName();
         $durationMs = $validated['duration_ms'] ?? null;
 
-        $fileUrl = $this->awsS3Service->uploadFile($file, 'chat_voice_messages');
+        $fileUrl = $this->hackClubCdnService->uploadFileUrl($file);
 
         $voiceMessage = Chat::message($validated['message'] ?? 'Voice message')
             ->type('voice')
