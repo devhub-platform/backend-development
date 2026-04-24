@@ -386,7 +386,8 @@ Route::prefix('v1')->group(function () {
                 Route::get('conversations', 'index');
                 Route::post('conversations', 'createOrGetConversation');
                 Route::get('conversations/{conversation}', 'show');
-                Route::delete('conversations/{conversation}', 'destroy');
+                Route::delete('conversations/clear/{conversation}', 'destroy');
+                Route::delete('conversations/{conversationId}', 'deleteConversation');
                 Route::get('conversations/{conversation}/messages', 'getMessages');
                 Route::post('conversations/{conversation}/messages', 'sendMessage');
                 Route::delete('conversations/{conversation}/messages/{messageId}', 'deleteMessage');

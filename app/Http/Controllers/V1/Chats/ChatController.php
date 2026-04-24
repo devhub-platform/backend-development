@@ -10,6 +10,8 @@ use App\Models\User;
 use App\Services\OneSignalService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Musonza\Chat\ConfigurationManager;
 use Musonza\Chat\Facades\ChatFacade as Chat;
 use Musonza\Chat\Models\Conversation;
 
@@ -171,15 +173,26 @@ class ChatController extends Controller
         return response()->json(['message' => 'Conversation cleared successfully.']);
     }
 
-    /**
-     * Send OneSignal push notification to conversation recipients
-     *
-     * @param Conversation $conversation
-     * @param User $sender
-     * @param string $messagePreview
-     * @param string|null $title
-     * @return void
-     */
+    public function deleteConversation(int $conversationId, Request $request): JsonResponse
+    {
+        $conversation = Conversation::findOrFail($conversationId);
+        $this->authorize('view', $conversation);
+
+        DB::table(ConfigurationManager::PARTICIPATION_TABLE)
+            ->where('conversation_id', $conversationId)
+            ->delete();
+
+        $conversation->delete();
+
+        return response()->json([
+            'message' => 'Conversation deleted successfully.',
+            'data' => [
+                'id' => $conversationId,
+                'deleted_at' => now()->diffForHumans(),
+            ]
+        ], 200);
+    }
+
     private function sendMessageNotification(Conversation $conversation, User $sender, string $messagePreview, ?string $title = null): void
     {
         try {
