@@ -6,15 +6,15 @@ use App\Http\Resources\ReportResource;
 use App\Models\Report;
 use App\Models\User;
 use App\Services\ReportService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use App\Policies\ReportPolicy;
 
 class ReportController
 {
     use AuthorizesRequests;
+
     private ReportService $reportService;
 
     public function __construct(ReportService $reportService)
@@ -98,14 +98,14 @@ class ReportController
             return response()->json(['message' => 'User not found'], 404);
         }
 
-        $this->authorize('view-block-list', Report::class);
+//        $this->authorize('view-block-list', Report::class);
 
         $result = $this->reportService->getBlockedUsers($user);
 
         return response()->json([
             'message' => $result['message'],
-            'data' => $result['data'],
             'count' => $result['count'],
+            'data' => $result['data'],
         ], $result['status']);
     }
 
