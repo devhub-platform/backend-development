@@ -10,6 +10,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class ReportController
 {
@@ -22,9 +23,6 @@ class ReportController
         $this->reportService = $reportService;
     }
 
-    /**
-     * Block a user
-     */
     public function block(User $target): JsonResponse
     {
         $blocker = Auth::user();
@@ -51,14 +49,14 @@ class ReportController
         }
 
         $validated = $request->validate([
-            'message' => 'required|string|max:1000',
+            'message' => 'nullable|string|max:1000',
             'reason' => 'nullable|string|in:spam,harassment,hate_speech,violence,adult_content,copyright,misinformation,other',
         ]);
 
         $result = $this->reportService->reportUser(
             $reporter,
             $target,
-            $validated['message'],
+            $validated['message'] ?? null,
             $validated['reason'] ?? null
         );
 
@@ -98,15 +96,56 @@ class ReportController
             return response()->json(['message' => 'User not found'], 404);
         }
 
-//        $this->authorize('view-block-list', Report::class);
+//        $cacheKey = "blocked_users_user_{$user->id}";
+//        $cachedResult = Cache::get($cacheKey);
+
+//        if ($cachedResult) {
+//            return response()->json([
+//                'message' => $cachedResult['message'],
+//                'count' => $cachedResult['count'],
+//                'data' => $cachedResult['data'],
+//            ], $cachedResult['status']);
+//        }
 
         $result = $this->reportService->getBlockedUsers($user);
+
+//        if ($result['success']) {
+//            Cache::put($cacheKey, $result, 60 * 60); // 1 hour
+//        }
 
         return response()->json([
             'message' => $result['message'],
             'count' => $result['count'],
             'data' => $result['data'],
-        ], $result['status']);
+        ], 200);
+    }
+
+    public function reportList(): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+//        $cacheKey = "user_reports_user_{$user->id}";
+//        $cachedResult = Cache::get($cacheKey);
+
+//        if ($cachedResult) {
+//            return response()->json(array_merge($cachedResult, ['cached' => true]), $cachedResult['status']);
+//        }
+
+        $result = $this->reportService->getUserReports($user);
+
+//        if ($result['success']) {
+//            Cache::put($cacheKey, $result, 60 * 60); // 1 hour
+//        }
+
+        return response()->json([
+            'message' => $result['message'],
+            'data' => $result['data'],
+            'pagination' => $result['pagination'],
+        ], 200);
     }
 
     public function reason(): JsonResponse
