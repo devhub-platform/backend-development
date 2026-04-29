@@ -31,6 +31,8 @@
         "laravel/telescope": "*",
         "laravel/tinker": "^2.10.1",
         "league/flysystem-aws-s3-v3": "^3.31",
+        "matthewbdaly/laravel-azure-storage": "^2.0",
+        "megoxv/laravel-magika": "^1.0",
         "musonza/chat": "*",
         "opcodesio/log-viewer": "^3.21",
         "phpoffice/phpword": "^1.4",

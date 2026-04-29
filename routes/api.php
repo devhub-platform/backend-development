@@ -362,6 +362,7 @@ Route::prefix('v1')->group(function () {
                 Route::post('reports/report/{target}', 'report');
                 Route::post('reports/unblock/{target}', 'unblock');
                 Route::get('reports/blocked-users', 'blockList');
+                Route::get('reports/reported-users', 'reportList');
                 Route::get('reports/reasons', 'reason');
             });
 
@@ -393,7 +394,8 @@ Route::prefix('v1')->group(function () {
                 Route::get('conversations', 'index');
                 Route::post('conversations', 'createOrGetConversation');
                 Route::get('conversations/{conversation}', 'show');
-                Route::delete('conversations/{conversation}', 'destroy');
+                Route::delete('conversations/clear/{conversation}', 'destroy');
+                Route::delete('conversations/{conversationId}', 'deleteConversation');
                 Route::get('conversations/{conversation}/messages', 'getMessages');
                 Route::post('conversations/{conversation}/messages', 'sendMessage');
                 Route::delete('conversations/{conversation}/messages/{messageId}', 'deleteMessage');
@@ -467,5 +469,24 @@ Route::get('/test-redis', function () {
     return response()->json([
         'message' => 'Redis connection successful!',
         'test_key_value' => $key,
+    ]);
+});
+
+Route::post('uplod-on-azure', function (\App\Services\AzureBlobStorageService $azureService) {
+    $file = request()->file('file');
+
+    if (!$file) {
+        return response()->json(['error' => 'No file provided'], 400);
+    }
+
+    $filePath = $azureService->uploadImage($file, 'devhub');
+
+    if (!$filePath) {
+        return response()->json(['error' => 'Failed to upload file to Azure Blobs'], 500);
+    }
+
+    return response()->json([
+        'file_path' => $filePath,
+        'message' => 'File uploaded successfully to Azure Blobs',
     ]);
 });

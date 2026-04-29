@@ -55,7 +55,7 @@ return [
     'pagination' => [
         'page' => 1,
         'perPage' => 10,
-        'sorting' => 'asc',
+        'sorting' => 'desc',
         'columns' => ['*'],
         'pageName' => 'page',
     ],

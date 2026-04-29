@@ -7,6 +7,7 @@ use App\Models\Comment;
 use App\Models\Post;
 use App\Models\Question;
 use App\Models\ReadingList;
+use App\Models\Report;
 use App\Models\Topic;
 use App\Models\User;
 use App\Policies\AnswerPolicy;
@@ -15,6 +16,7 @@ use App\Policies\CommentPolicy;
 use App\Policies\PostPolicy;
 use App\Policies\QuestionPolicy;
 use App\Policies\ReadingListPolicy;
+use App\Policies\ReportPolicy;
 use App\Policies\TopicPolicy;
 use App\Policies\UserPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
@@ -32,6 +34,7 @@ class AuthServiceProvider extends ServiceProvider
         Answer::class => AnswerPolicy::class,
         Topic::class => TopicPolicy::class,
         User::class => UserPolicy::class,
+        Report::class => ReportPolicy::class,
     ];
 
     public function boot(): void

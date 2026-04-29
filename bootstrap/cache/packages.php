@@ -270,6 +270,24 @@
       0 => 'Livewire\\LivewireServiceProvider',
     ),
   ),
+  'matthewbdaly/laravel-azure-storage' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'Matthewbdaly\\LaravelAzureStorage\\AzureStorageServiceProvider',
+    ),
+  ),
+  'megoxv/laravel-magika' => 
+  array (
+    'aliases' => 
+    array (
+      'Magika' => 'Megoxv\\LaravelMagika\\Facades\\Magika',
+    ),
+    'providers' => 
+    array (
+      0 => 'Megoxv\\LaravelMagika\\MagikaServiceProvider',
+    ),
+  ),
   'musonza/chat' => 
   array (
     'aliases' => 
