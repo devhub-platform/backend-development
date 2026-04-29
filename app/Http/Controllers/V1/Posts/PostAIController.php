@@ -85,14 +85,15 @@ class PostAIController extends Controller
     {
         try {
             $result = $this->contentService->generate(
-                prompt: $request->input('prompt'),
-                length: $request->input('length', 'medium'),
+                prompt:      $request->input('prompt'),
+                length:      $request->input('length', 'medium'),
+                forceTitle:  $request->boolean('generate_title', false),
             );
 
             return response()->json([
                 'success' => true,
                 'content' => $result['content'],
-                'title'   => $result['title'] ?? null,
+                'titles'  => $result['titles'] ?? null,
                 'message' => 'Content generated. Review and save it manually.',
             ]);
 

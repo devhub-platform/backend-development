@@ -43,6 +43,7 @@ use App\Http\Controllers\V1\Chats\UserPresenceShowController;
 use App\Http\Controllers\V1\FeedbackController;
 use App\Http\Controllers\V1\TrendingController;
 use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\V1\ProfileQuestionController;
 
 Route::prefix('v1')->group(function () {
     Route::get('/', function () {
@@ -138,7 +139,6 @@ Route::prefix('v1')->group(function () {
                 ->group(function () {
                     Route::post('generate-image', 'generateImage');
                     Route::post('generate-content', 'generateContent');
-//                    Route::post('generate-title', 'generateTitle');   // ← new
                     Route::delete('generated-images/{id}', 'discardImage');
                 });
 
@@ -245,6 +245,13 @@ Route::prefix('v1')->group(function () {
                 Route::get('profile/activity', 'activity');
                 Route::get('profile/details', 'details');
                 Route::get('profile/share-link', 'shareLink');
+            });
+            Route::prefix('profile')->middleware('auth:api')->group(function () {
+                // My own questions
+                Route::get('questions', [ProfileQuestionController::class, 'myQuestions']);
+
+                // Any user's questions
+                Route::get('{userId}/questions', [ProfileQuestionController::class, 'userQuestions']);
             });
 
             // ─── Followers ────────────────────────────────────────────────────────
