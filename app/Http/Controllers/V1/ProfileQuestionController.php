@@ -15,9 +15,7 @@ class ProfileQuestionController extends Controller
 
     /**
      * GET /v1/profile/questions
-     *
      * Returns the authenticated user's own questions.
-     * Requires auth.
      */
     public function myQuestions(Request $request): JsonResponse
     {
@@ -33,31 +31,19 @@ class ProfileQuestionController extends Controller
 
     /**
      * GET /v1/profile/{userId}/questions
-     *
-     * Returns any user's public questions.
-     * Authenticated users see all questions.
-     * Guests see questions from public profiles only.
+     * Returns any user's questions.
+     * Private profiles are blocked except for the owner and admins.
      */
     public function userQuestions(Request $request, int $userId): JsonResponse
     {
         $targetUser = User::withoutTrashed()->findOrFail($userId);
+        $authUser   = $request->user();
 
-        // Security: block access to private profiles for guests
-        if (!$request->user() && ($targetUser->is_private ?? false)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This profile is private.',
-            ], 403);
-        }
+        $isOwner   = $authUser->id === $targetUser->id;
+        $isAdmin   = method_exists($authUser, 'isAdmin') && $authUser->isAdmin();
+        $isPrivate = (bool) ($targetUser->is_private ?? false);
 
-        // Security: authenticated users respect privacy settings too
-        // unless they are the owner or an admin
-        if (
-            $request->user()
-            && ($targetUser->is_private ?? false)
-            && $request->user()->id !== $targetUser->id
-            && !$request->user()->isAdmin()
-        ) {
+        if ($isPrivate && !$isOwner && !$isAdmin) {
             return response()->json([
                 'success' => false,
                 'message' => 'This profile is private.',
