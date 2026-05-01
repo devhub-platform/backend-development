@@ -24,7 +24,10 @@ class ReportService
     ];
 
 
-    private const ADMIN_EMAIL = 'youssef.ahmed.fci@gmail.com';
+    private const ADMIN_EMAILS = [
+        'devhub-community@outlook.com',
+        "mennasayedf@gmail.com"
+    ];
 
     public function blockUser(User $blocker, User $target): array
     {
@@ -148,7 +151,7 @@ class ReportService
                 'success' => true,
                 'message' => "User {$target->name} reported and blocked successfully",
                 'report' => $report->load(['reporter', 'reportedUser']),
-                'admin_notification_sent_to' => self::ADMIN_EMAIL,
+                'admin_notification_sent_to' => self::ADMIN_EMAILS,
                 'status' => 201,
             ];
         } catch (\Exception $e) {
@@ -411,8 +414,10 @@ class ReportService
     private function notifyAdmin(Report $report): void
     {
         try {
-            Notification::route('mail', self::ADMIN_EMAIL)
-                ->notify(new UserReportedNotification($report));
+            foreach (self::ADMIN_EMAILS as $adminEmail) {
+                Notification::route('mail', $adminEmail)
+                    ->notify(new UserReportedNotification($report));
+            }
 
             Log::info("Admin notification sent for report {$report->id}");
         } catch (\Exception $e) {

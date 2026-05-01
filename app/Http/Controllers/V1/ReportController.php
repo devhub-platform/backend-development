@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\V1;
 
+use App\Http\Requests\ReportRequest;
 use App\Http\Resources\ReportResource;
 use App\Models\Report;
 use App\Models\User;
@@ -22,9 +23,6 @@ class ReportController
         $this->reportService = $reportService;
     }
 
-    /**
-     * Block a user
-     */
     public function block(User $target): JsonResponse
     {
         $blocker = Auth::user();
@@ -42,7 +40,7 @@ class ReportController
         return response()->json(['message' => $result['message']], $result['status']);
     }
 
-    public function report(Request $request, User $target): JsonResponse
+    public function report(ReportRequest $request, User $target): JsonResponse
     {
         $reporter = Auth::user();
 
@@ -50,10 +48,7 @@ class ReportController
             return response()->json(['message' => 'User not found'], 404);
         }
 
-        $validated = $request->validate([
-            'message' => 'nullable|string|max:1000',
-            'reason' => 'nullable|string|in:spam,harassment,hate_speech,violence,adult_content,copyright,misinformation,other',
-        ]);
+        $validated = $request->validated();
 
         $result = $this->reportService->reportUser(
             $reporter,
