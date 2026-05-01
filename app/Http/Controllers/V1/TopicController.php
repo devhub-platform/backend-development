@@ -115,7 +115,7 @@ class TopicController
         return response()->json([
             'message' => 'User topics retrieved successfully',
             'count' => $topics->count(),
-            'data' => $topics,
+            'data' => $topics->makeHidden('pivot'),
         ], 200);
     }
 
