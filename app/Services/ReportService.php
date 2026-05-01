@@ -241,8 +241,10 @@ class ReportService
                     'username' => $reportedUser->username,
                     'avatar' => $reportedUser->avatar_url,
                     'email' => $reportedUser->email,
-                    'reports_count' => $reports->count(),
                     'reported_at' => $latestReport->created_at?->format('Y-m-d H:i:s'),
+                    'reason' => $latestReport->reason,
+                    'status' => $latestReport->status,
+                    'message' => $latestReport->message,
                 ];
             })->filter()->values()->toArray();
 

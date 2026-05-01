@@ -84,10 +84,12 @@ class ReportController
         $result = $this->reportService->getReportedUsers($user);
 
         return response()->json([
+//            'success' => $result['success'],
             'message' => $result['message'],
             'count' => $result['count'],
             'data' => $result['data'],
-        ], $result['status']);
+//            'status' => $result['status'],
+        ], 200);
     }
 
     public function unblock(User $target): JsonResponse
