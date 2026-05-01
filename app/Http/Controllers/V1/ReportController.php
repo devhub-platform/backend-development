@@ -51,14 +51,14 @@ class ReportController
         }
 
         $validated = $request->validate([
-            'message' => 'required|string|max:1000',
+            'message' => 'nullable|string|max:1000',
             'reason' => 'nullable|string|in:spam,harassment,hate_speech,violence,adult_content,copyright,misinformation,other',
         ]);
 
         $result = $this->reportService->reportUser(
             $reporter,
             $target,
-            $validated['message'],
+            $validated['message'] ?? null,
             $validated['reason'] ?? null
         );
 
@@ -70,6 +70,23 @@ class ReportController
             'message' => $result['message'],
             'data' => new ReportResource($result['report']),
             'admin_notification_sent_to' => $result['admin_notification_sent_to'],
+        ], $result['status']);
+    }
+
+    public function reportedUsers(): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $result = $this->reportService->getReportedUsers($user);
+
+        return response()->json([
+            'message' => $result['message'],
+            'count' => $result['count'],
+            'data' => $result['data'],
         ], $result['status']);
     }
 

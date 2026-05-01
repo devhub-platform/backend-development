@@ -354,7 +354,10 @@ Route::prefix('v1')->group(function () {
                 Route::post('reports/block/{target}', 'block');
                 Route::post('reports/report/{target}', 'report');
                 Route::post('reports/unblock/{target}', 'unblock');
+
+                Route::get('reports/reported-users', 'reportedUsers');
                 Route::get('reports/blocked-users', 'blockList');
+
                 Route::get('reports/reasons', 'reason');
             });
 

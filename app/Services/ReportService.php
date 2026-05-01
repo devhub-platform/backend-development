@@ -36,7 +36,7 @@ class ReportService
             ];
         }
 
-        if ($blocker->blockedUsers()->where('reported_user_id', $target->id)->exists()) {
+        if ($blocker->blockedUsers()->wherePivot('report', false)->where('reported_user_id', $target->id)->exists()) {
             return [
                 'success' => false,
                 'message' => "User {$target->name} is already blocked",
@@ -45,7 +45,7 @@ class ReportService
         }
 
         try {
-            $blocker->blockedUsers()->attach($target->id);
+            $blocker->blockedUsers()->attach($target->id, ['report' => false]);
 
             Log::info("User {$blocker->email} blocked user {$target->email}");
 
@@ -68,7 +68,7 @@ class ReportService
     public function unblockUser(User $blocker, User $target): array
     {
         // Check if user is blocked
-        if (!$blocker->blockedUsers()->where('reported_user_id', $target->id)->exists()) {
+        if (!$blocker->blockedUsers()->wherePivot('report', false)->where('reported_user_id', $target->id)->exists()) {
             return [
                 'success' => false,
                 'message' => 'User is not blocked',
@@ -97,7 +97,7 @@ class ReportService
         }
     }
 
-    public function reportUser(User $reporter, User $target, string $message, ?string $reason = null): array
+    public function reportUser(User $reporter, User $target, ?string $message = null, ?string $reason = null): array
     {
         if ($reporter->id === $target->id) {
             return [
@@ -115,16 +115,28 @@ class ReportService
             ];
         }
 
+        if (Report::where('reporter_id', $reporter->id)
+            ->where('reported_user_id', $target->id)
+            ->where('report', true)
+            ->exists()) {
+            return [
+                'success' => false,
+                'message' => 'User already reported',
+                'status' => 400,
+            ];
+        }
+
         try {
             $report = Report::create([
                 'reporter_id' => $reporter->id,
                 'reported_user_id' => $target->id,
                 'message' => $message,
                 'reason' => $reason,
+                'report' => true,
             ]);
 
-            if (!$reporter->blockedUsers()->where('reported_user_id', $target->id)->exists()) {
-                $reporter->blockedUsers()->attach($target->id);
+            if (!$reporter->blockedUsers()->wherePivot('report', false)->where('reported_user_id', $target->id)->exists()) {
+                $reporter->blockedUsers()->attach($target->id, ['report' => false]);
             }
 
             $this->notifyAdmin($report);
@@ -153,7 +165,11 @@ class ReportService
     public function getBlockedUsers(User $user): array
     {
         try {
-            $blockedUsers = $user->blockedUsers()->get();
+            $blockedUsers = $user->blockedUsers()
+                ->wherePivot('report', false)
+                ->get()
+                ->unique('id')
+                ->values();
 
             if ($blockedUsers->isEmpty()) {
                 return [
@@ -185,6 +201,63 @@ class ReportService
             return [
                 'success' => false,
                 'message' => 'Failed to retrieve blocked users',
+                'error' => $e->getMessage(),
+                'status' => 500,
+            ];
+        }
+    }
+
+    public function getReportedUsers(User $user): array
+    {
+        try {
+            $reportedUsers = Report::where('reporter_id', $user->id)
+                ->where('report', true)
+                ->with('reportedUser')
+                ->latest()
+                ->get()
+                ->groupBy('reported_user_id');
+
+            if ($reportedUsers->isEmpty()) {
+                return [
+                    'success' => true,
+                    'message' => 'No reported users found',
+                    'data' => [],
+                    'count' => 0,
+                    'status' => 200,
+                ];
+            }
+
+            $formattedUsers = $reportedUsers->map(function ($reports) {
+                $latestReport = $reports->first();
+                $reportedUser = $latestReport?->reportedUser;
+
+                if (!$reportedUser) {
+                    return null;
+                }
+
+                return [
+                    'id' => $reportedUser->id,
+                    'name' => $reportedUser->name,
+                    'username' => $reportedUser->username,
+                    'avatar' => $reportedUser->avatar_url,
+                    'email' => $reportedUser->email,
+                    'reports_count' => $reports->count(),
+                    'reported_at' => $latestReport->created_at?->format('Y-m-d H:i:s'),
+                ];
+            })->filter()->values()->toArray();
+
+            return [
+                'success' => true,
+                'message' => 'Reported users retrieved successfully',
+                'data' => $formattedUsers,
+                'count' => count($formattedUsers),
+                'status' => 200,
+            ];
+        } catch (\Exception $e) {
+            Log::error("Failed to get reported users for user: {$user->email} - {$e->getMessage()}");
+            return [
+                'success' => false,
+                'message' => 'Failed to retrieve reported users',
                 'error' => $e->getMessage(),
                 'status' => 500,
             ];
