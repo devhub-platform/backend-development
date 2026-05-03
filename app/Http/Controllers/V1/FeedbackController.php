@@ -6,17 +6,24 @@ use App\Http\Requests\FeedbackRequest;
 use App\Http\Resources\FeedbackResource;
 use App\Models\Feedback;
 use App\Services\FeedbackService;
+use App\Services\HackClubCdnService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class FeedbackController
 {
     private FeedbackService $feedbackService;
+    private HackClubCdnService $hackClubCdnService;
 
-    public function __construct(FeedbackService $feedbackService)
+    public function __construct(
+        FeedbackService $feedbackService,
+        HackClubCdnService $hackClubCdnService
+    )
     {
         $this->feedbackService = $feedbackService;
+        $this->hackClubCdnService = $hackClubCdnService;
     }
 
     /**
@@ -31,6 +38,22 @@ class FeedbackController
         }
 
         $validated = $request->validated();
+
+        $attachmentUrl = null;
+        if ($request->hasFile('attachment')) {
+            try {
+                $attachmentUrl = $this->hackClubCdnService->uploadFileUrl($request->file('attachment'));
+                $validated['attachment'] = $attachmentUrl;
+            } catch (\Exception $e) {
+                Log::warning("Failed to upload feedback attachment for user {$user->id}: {$e->getMessage()}");
+                return response()->json([
+                    'message' => 'Failed to upload attachment. Please try again.',
+                    'error' => $e->getMessage()
+                ], 422);
+            }
+        } else {
+            unset($validated['attachment']);
+        }
 
         $result = $this->feedbackService->createFeedback($user, $validated);
 

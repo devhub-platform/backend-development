@@ -14,13 +14,22 @@ class FeedbackService
     public function createFeedback(User $user, array $data): array
     {
         try {
+            $attachments = [];
+
+            if (!empty($data['attachment'])) {
+                $attachments[] = [
+                    'url' => $data['attachment'],
+                    'uploaded_at' => now()->toIso8601String(),
+                ];
+            }
+
             $feedback = Feedback::create([
                 'user_id' => $user->id,
                 'title' => $data['title'],
                 'message' => $data['message'],
                 'type' => $data['type'] ?? 'other',
                 'rating' => $data['rating'] ?? null,
-                'attachments' => $data['attachments'] ?? null,
+                'attachments' => !empty($attachments) ? $attachments : null,
             ]);
 
             return [
