@@ -9,7 +9,6 @@ use App\Notifications\UserReportedNotification;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\Cache;
 
 class ReportService
 {
@@ -25,7 +24,10 @@ class ReportService
     ];
 
 
-    private const ADMIN_EMAIL = 'youssef.ahmed.fci@gmail.com';
+    private const ADMIN_EMAILS = [
+        'devhub-community@outlook.com',
+        "mennasayedf@gmail.com"
+    ];
 
     public function blockUser(User $blocker, User $target): array
     {
@@ -37,7 +39,7 @@ class ReportService
             ];
         }
 
-        if ($blocker->blockedUsers()->where('reported_user_id', $target->id)->exists()) {
+        if ($blocker->blockedUsers()->wherePivot('report', false)->where('reported_user_id', $target->id)->exists()) {
             return [
                 'success' => false,
                 'message' => "User {$target->name} is already blocked",
@@ -46,14 +48,7 @@ class ReportService
         }
 
         try {
-            $blocker->blockedUsers()->attach($target->id);
-
-            // Invalidate cache for the blocker
-            try {
-                Cache::forget("blocked_users_user_{$blocker->id}");
-            } catch (\Exception $e) {
-                Log::warning("Failed to forget cache for blocked users of {$blocker->email} - {$e->getMessage()}");
-            }
+            $blocker->blockedUsers()->attach($target->id, ['report' => false]);
 
             Log::info("User {$blocker->email} blocked user {$target->email}");
 
@@ -76,7 +71,7 @@ class ReportService
     public function unblockUser(User $blocker, User $target): array
     {
         // Check if user is blocked
-        if (!$blocker->blockedUsers()->where('reported_user_id', $target->id)->exists()) {
+        if (!$blocker->blockedUsers()->wherePivot('report', false)->where('reported_user_id', $target->id)->exists()) {
             return [
                 'success' => false,
                 'message' => 'User is not blocked',
@@ -86,13 +81,6 @@ class ReportService
 
         try {
             $blocker->blockedUsers()->detach($target->id);
-
-            // Invalidate cache for the blocker
-            try {
-                Cache::forget("blocked_users_user_{$blocker->id}");
-            } catch (\Exception $e) {
-                Log::warning("Failed to forget cache for blocked users of {$blocker->email} - {$e->getMessage()}");
-            }
 
             Log::info("User {$blocker->email} unblocked user {$target->email}");
 
@@ -112,7 +100,7 @@ class ReportService
         }
     }
 
-    public function reportUser(User $reporter, User $target, string $message, ?string $reason = null): array
+    public function reportUser(User $reporter, User $target, ?string $message = null, ?string $reason = null): array
     {
         if ($reporter->id === $target->id) {
             return [
@@ -130,30 +118,28 @@ class ReportService
             ];
         }
 
+        if (Report::where('reporter_id', $reporter->id)
+            ->where('reported_user_id', $target->id)
+            ->where('report', true)
+            ->exists()) {
+            return [
+                'success' => false,
+                'message' => 'User already reported',
+                'status' => 400,
+            ];
+        }
+
         try {
             $report = Report::create([
                 'reporter_id' => $reporter->id,
                 'reported_user_id' => $target->id,
                 'message' => $message,
                 'reason' => $reason,
-                'status' => 'filed', // mark newly created reports as filed by default
+                'report' => true,
             ]);
 
-            if (!$reporter->blockedUsers()->where('reported_user_id', $target->id)->exists()) {
-                $reporter->blockedUsers()->attach($target->id);
-                // Invalidate blocked users cache since we attached a new blocked user
-                try {
-                    Cache::forget("blocked_users_user_{$reporter->id}");
-                } catch (\Exception $e) {
-                    Log::warning("Failed to forget cache for blocked users of {$reporter->email} - {$e->getMessage()}");
-                }
-            }
-
-            // Invalidate reporter's reports cache
-            try {
-                Cache::forget("user_reports_user_{$reporter->id}");
-            } catch (\Exception $e) {
-                Log::warning("Failed to forget cache for user reports of {$reporter->email} - {$e->getMessage()}");
+            if (!$reporter->blockedUsers()->wherePivot('report', false)->where('reported_user_id', $target->id)->exists()) {
+                $reporter->blockedUsers()->attach($target->id, ['report' => false]);
             }
 
             $this->notifyAdmin($report);
@@ -165,7 +151,7 @@ class ReportService
                 'success' => true,
                 'message' => "User {$target->name} reported and blocked successfully",
                 'report' => $report->load(['reporter', 'reportedUser']),
-                'admin_notification_sent_to' => self::ADMIN_EMAIL,
+                'admin_notification_sent_to' => self::ADMIN_EMAILS,
                 'status' => 201,
             ];
         } catch (\Exception $e) {
@@ -182,7 +168,11 @@ class ReportService
     public function getBlockedUsers(User $user): array
     {
         try {
-            $blockedUsers = $user->blockedUsers()->get();
+            $blockedUsers = $user->blockedUsers()
+                ->wherePivot('report', false)
+                ->get()
+                ->unique('id')
+                ->values();
 
             if ($blockedUsers->isEmpty()) {
                 return [
@@ -214,6 +204,65 @@ class ReportService
             return [
                 'success' => false,
                 'message' => 'Failed to retrieve blocked users',
+                'error' => $e->getMessage(),
+                'status' => 500,
+            ];
+        }
+    }
+
+    public function getReportedUsers(User $user): array
+    {
+        try {
+            $reportedUsers = Report::where('reporter_id', $user->id)
+                ->where('report', true)
+                ->with('reportedUser')
+                ->latest()
+                ->get()
+                ->groupBy('reported_user_id');
+
+            if ($reportedUsers->isEmpty()) {
+                return [
+                    'success' => true,
+                    'message' => 'No reported users found',
+                    'data' => [],
+                    'count' => 0,
+                    'status' => 200,
+                ];
+            }
+
+            $formattedUsers = $reportedUsers->map(function ($reports) {
+                $latestReport = $reports->first();
+                $reportedUser = $latestReport?->reportedUser;
+
+                if (!$reportedUser) {
+                    return null;
+                }
+
+                return [
+                    'id' => $reportedUser->id,
+                    'name' => $reportedUser->name,
+                    'username' => $reportedUser->username,
+                    'avatar' => $reportedUser->avatar_url,
+                    'email' => $reportedUser->email,
+                    'reported_at' => $latestReport->created_at?->format('Y-m-d H:i:s'),
+                    'reason' => $latestReport->reason,
+                    'status' => $latestReport->status,
+                    'message' => $latestReport->message,
+                ];
+            })->filter()->values()->toArray();
+
+            return [
+                'success' => true,
+                'message' => 'Reported users retrieved successfully',
+                'data' => $formattedUsers,
+                'count' => count($formattedUsers),
+                'status' => 200,
+            ];
+        } catch (\Exception $e) {
+            Log::error("Failed to get reported users for user: {$user->email} - {$e->getMessage()}");
+            return [
+                'success' => false,
+                'message' => 'Failed to retrieve reported users',
                 'error' => $e->getMessage(),
                 'status' => 500,
             ];
@@ -283,32 +332,10 @@ class ReportService
                 ];
             }
 
-            $data = [
-                'id' => $report->id,
-                'reporter_id' => $report->reporter_id,
-                'reported_user_id' => $report->reported_user_id,
-                'message' => $report->message,
-                'reason' => $report->reason,
-                'status' => $report->status,
-                'created_at' => $report->created_at?->toIso8601String(),
-                'reported_user' => $report->reportedUser ? [
-                    'id' => $report->reportedUser->id,
-                    'name' => $report->reportedUser->name,
-                    'username' => $report->reportedUser->username,
-                    'avatar_url' => $report->reportedUser->avatar_url,
-                ] : null,
-                'reporter' => $report->reporter ? [
-                    'id' => $report->reporter->id,
-                    'name' => $report->reporter->name,
-                    'username' => $report->reporter->username ?? null,
-                    'avatar_url' => $report->reporter->avatar_url ?? null,
-                ] : null,
-            ];
-
             return [
                 'success' => true,
                 'message' => 'Report retrieved successfully',
-                'data' => $data,
+                'data' => $report,
                 'status' => 200,
             ];
         } catch (\Exception $e) {
@@ -329,29 +356,11 @@ class ReportService
                 ->with(['reportedUser', 'reportedPost'])
                 ->latest()
                 ->paginate($limit);
-            $items = array_map(function ($report) {
-                return [
-                    'id' => $report->id,
-                    'reporter_id' => $report->reporter_id,
-                    'reported_user_id' => $report->reported_user_id,
-                    'message' => $report->message,
-                    'reason' => $report->reason,
-                    'status' => $report->status,
-                    'created_at' => $report->created_at?->diffForHumans(),
-                    'reported_user' => $report->reportedUser ? [
-                        'id' => $report->reportedUser->id,
-                        'name' => $report->reportedUser->name,
-                        'username' => $report->reportedUser->username,
-                        'avatar_url' => $report->reportedUser->avatar_url,
-                    ] : null,
-                    'reported_post' => null,
-                ];
-            }, $reports->items());
 
             return [
                 'success' => true,
                 'message' => 'User reports retrieved successfully',
-                'data' => $items,
+                'data' => $reports->items(),
                 'pagination' => [
                     'total' => $reports->total(),
                     'per_page' => $reports->perPage(),
@@ -379,30 +388,10 @@ class ReportService
                 ->latest()
                 ->paginate($limit);
 
-            $items = array_map(function ($report) {
-                return [
-                    'id' => $report->id,
-                    'reporter_id' => $report->reporter_id,
-                    'reported_user_id' => $report->reported_user_id,
-                    'type' => $report->type,
-                    'message' => $report->message,
-                    'reason' => $report->reason,
-                    'status' => $report->status,
-                    'created_at' => $report->created_at?->toIso8601String(),
-                    'reporter' => $report->reporter ? [
-                        'id' => $report->reporter->id,
-                        'name' => $report->reporter->name,
-                        'username' => $report->reporter->username,
-                        'avatar_url' => $report->reporter->avatar_url,
-                    ] : null,
-                    'reported_post' => null,
-                ];
-            }, $reports->items());
-
             return [
                 'success' => true,
                 'message' => 'Reports against user retrieved successfully',
-                'data' => $items,
+                'data' => $reports->items(),
                 'pagination' => [
                     'total' => $reports->total(),
                     'per_page' => $reports->perPage(),
@@ -425,8 +414,10 @@ class ReportService
     private function notifyAdmin(Report $report): void
     {
         try {
-            Notification::route('mail', self::ADMIN_EMAIL)
-                ->notify(new UserReportedNotification($report));
+            foreach (self::ADMIN_EMAILS as $adminEmail) {
+                Notification::route('mail', $adminEmail)
+                    ->notify(new UserReportedNotification($report));
+            }
 
             Log::info("Admin notification sent for report {$report->id}");
         } catch (\Exception $e) {

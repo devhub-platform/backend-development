@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\V1;
 
+use App\Http\Requests\ReportRequest;
 use App\Http\Resources\ReportResource;
 use App\Models\Report;
 use App\Models\User;
@@ -10,7 +11,6 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 
 class ReportController
 {
@@ -40,7 +40,7 @@ class ReportController
         return response()->json(['message' => $result['message']], $result['status']);
     }
 
-    public function report(Request $request, User $target): JsonResponse
+    public function report(ReportRequest $request, User $target): JsonResponse
     {
         $reporter = Auth::user();
 
@@ -48,10 +48,7 @@ class ReportController
             return response()->json(['message' => 'User not found'], 404);
         }
 
-        $validated = $request->validate([
-            'message' => 'nullable|string|max:1000',
-            'reason' => 'nullable|string|in:spam,harassment,hate_speech,violence,adult_content,copyright,misinformation,other',
-        ]);
+        $validated = $request->validated();
 
         $result = $this->reportService->reportUser(
             $reporter,
@@ -69,6 +66,25 @@ class ReportController
             'data' => new ReportResource($result['report']),
             'admin_notification_sent_to' => $result['admin_notification_sent_to'],
         ], $result['status']);
+    }
+
+    public function reportedUsers(): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $result = $this->reportService->getReportedUsers($user);
+
+        return response()->json([
+//            'success' => $result['success'],
+            'message' => $result['message'],
+            'count' => $result['count'],
+            'data' => $result['data'],
+//            'status' => $result['status'],
+        ], 200);
     }
 
     public function unblock(User $target): JsonResponse
@@ -96,56 +112,15 @@ class ReportController
             return response()->json(['message' => 'User not found'], 404);
         }
 
-//        $cacheKey = "blocked_users_user_{$user->id}";
-//        $cachedResult = Cache::get($cacheKey);
-
-//        if ($cachedResult) {
-//            return response()->json([
-//                'message' => $cachedResult['message'],
-//                'count' => $cachedResult['count'],
-//                'data' => $cachedResult['data'],
-//            ], $cachedResult['status']);
-//        }
+//        $this->authorize('view-block-list', Report::class);
 
         $result = $this->reportService->getBlockedUsers($user);
-
-//        if ($result['success']) {
-//            Cache::put($cacheKey, $result, 60 * 60); // 1 hour
-//        }
 
         return response()->json([
             'message' => $result['message'],
             'count' => $result['count'],
             'data' => $result['data'],
-        ], 200);
-    }
-
-    public function reportList(): JsonResponse
-    {
-        $user = Auth::user();
-
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
-
-//        $cacheKey = "user_reports_user_{$user->id}";
-//        $cachedResult = Cache::get($cacheKey);
-
-//        if ($cachedResult) {
-//            return response()->json(array_merge($cachedResult, ['cached' => true]), $cachedResult['status']);
-//        }
-
-        $result = $this->reportService->getUserReports($user);
-
-//        if ($result['success']) {
-//            Cache::put($cacheKey, $result, 60 * 60); // 1 hour
-//        }
-
-        return response()->json([
-            'message' => $result['message'],
-            'data' => $result['data'],
-            'pagination' => $result['pagination'],
-        ], 200);
+        ], $result['status']);
     }
 
     public function reason(): JsonResponse

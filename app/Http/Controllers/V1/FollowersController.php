@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use OneSignal;
 
 class FollowersController
@@ -32,6 +33,11 @@ class FollowersController
         }
 
         $authUser->following()->attach($user->id);
+
+        Cache::forget("user_suggestions_{$authUser->id}_5");
+        Cache::forget("user_suggestions_{$authUser->id}_10");
+        Cache::forget("user_suggestions_{$authUser->id}_15");
+        Cache::forget("user_suggestions_{$authUser->id}_20");
 
         if ($user->isNotificationEnabled('new_follower')) {
             Notification::send($user, new FollowNotification($authUser));
@@ -62,6 +68,12 @@ class FollowersController
         }
 
         $authUser->following()->detach($user->id);
+
+        // Clear user's suggestions cache
+        Cache::forget("user_suggestions_{$authUser->id}_5");
+        Cache::forget("user_suggestions_{$authUser->id}_10");
+        Cache::forget("user_suggestions_{$authUser->id}_15");
+        Cache::forget("user_suggestions_{$authUser->id}_20");
 
         Log::notice("User {$authUser->id} unfollowed user {$user->id}");
         return response()->json([
@@ -117,8 +129,12 @@ class FollowersController
     public function suggestions(Request $request)
     {
         $user = Auth::user();
-        $limit = (int)$request->query('limit', 5);
-        $suggestedUsers = app(PeopleSuggestionService::class)->suggestForUser($user, $limit);
+        $limit = (int)$request->query('limit', 10);
+
+        $cacheKey = "user_suggestions_{$user->id}_{$limit}";
+        $suggestedUsers = Cache::remember($cacheKey, 1800, function () use ($user, $limit) {
+            return app(PeopleSuggestionService::class)->suggestForUser($user, $limit);
+        });
 
         if ($suggestedUsers->isEmpty()) {
             return response()->json([
@@ -127,7 +143,8 @@ class FollowersController
         }
 
         return response()->json([
-            'Suggested_users' => SuggestedUsersResource::collection($suggestedUsers),
+//            'suggested_users_count' => $suggestedUsers->count(),
+            'suggested_users' => SuggestedUsersResource::collection($suggestedUsers),
         ]);
     }
 }

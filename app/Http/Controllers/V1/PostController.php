@@ -286,10 +286,17 @@ class PostController
         $this->authorize('delete', $post);
 
         $title = $post->title;
-        $post->delete();
+
+        if ($post->status === 'draft') {
+            $post->forceDelete();
+            $message = "Post '{$title}' permanently deleted successfully";
+        } else {
+            $post->delete();
+            $message = "Post '{$title}' archived successfully";
+        }
 
         return response()->json([
-            'message' => "Post '{$title}' archived successfully"
+            'message' => $message
         ]);
     }
 

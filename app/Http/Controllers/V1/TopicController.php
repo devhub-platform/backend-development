@@ -10,6 +10,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class TopicController
 {
@@ -19,10 +20,12 @@ class TopicController
     {
         $this->authorize('viewAny', Topic::class);
 
-        $topics = Topic::where('is_active', true)
-            ->orderBy('display_order', 'asc')
-            ->orderBy('name', 'asc')
-            ->get();
+        $topics = Cache::remember('topics_active', 3600 * 24, function () { // for 24 hours
+            return Topic::where('is_active', true)
+                ->orderBy('display_order', 'asc')
+                ->orderBy('name', 'asc')
+                ->get(['id', 'name', 'display_order', 'is_active']);
+        });
 
         return response()->json([
             'message' => 'Topics retrieved successfully',
@@ -43,6 +46,9 @@ class TopicController
             'is_active' => true,
         ], $validated));
 
+        // Clear cache
+        Cache::forget('topics_active');
+
         return response()->json([
             'message' => 'Topic created successfully',
             'data' => new TopicResource($topic),
@@ -58,6 +64,10 @@ class TopicController
 
         $topic->update($validated);
 
+        // Clear cache
+        Cache::forget('topics_active');
+        Cache::forget("topic_{$topic->id}");
+
         return response()->json([
             'message' => 'Topic updated successfully',
             'data' => new TopicResource($topic),
@@ -72,6 +82,10 @@ class TopicController
 
         $topic->delete();
 
+        // Clear cache
+        Cache::forget('topics_active');
+        Cache::forget("topic_{$topic->id}");
+
         return response()->json([
             'message' => 'Topic deleted successfully',
         ], 200);
@@ -80,7 +94,9 @@ class TopicController
 
     public function show($topicId): JsonResponse
     {
-        $topic = Topic::where('is_active', true)->find($topicId);
+        $topic = Cache::remember("topic_{$topicId}", 3600, function () use ($topicId) {
+            return Topic::where('is_active', true)->find($topicId);
+        });
 
         if (!$topic) {
             return response()->json([
@@ -108,14 +124,16 @@ class TopicController
             ], 401);
         }
 
-        $topics = $user->topics()->where('is_active', true)
-            ->orderBy('display_order', 'asc')
-            ->get();
+        $topics = Cache::remember("user_topics_{$user->id}", 3600, function () use ($user) {
+            return $user->topics()->where('is_active', true)
+                ->orderBy('display_order', 'asc')
+                ->get();
+        });
 
         return response()->json([
             'message' => 'User topics retrieved successfully',
             'count' => $topics->count(),
-            'data' => $topics,
+            'data' => $topics->makeHidden('pivot'),
         ], 200);
     }
 
@@ -152,6 +170,9 @@ class TopicController
         // Attach topics (add to existing)
         $user->topics()->syncWithoutDetaching($topics);
 
+        // Clear user's topic cache
+        Cache::forget("user_topics_{$user->id}");
+
         return response()->json([
             'message' => 'Topics added successfully',
             'data' => $user->topics()->get()->makeHidden('pivot'),
@@ -179,6 +200,9 @@ class TopicController
         // Detach topics
         $user->topics()->detach($validated['topic_ids']);
 
+        // Clear user's topic cache
+        Cache::forget("user_topics_{$user->id}");
+
         return response()->json([
             'message' => 'Topics removed successfully',
             'data' => $user->topics()->get()->makeHidden('pivot'),
@@ -199,6 +223,9 @@ class TopicController
         }
 
         $user->topics()->detach();
+
+        // Clear user's topic cache
+        Cache::forget("user_topics_{$user->id}");
 
         return response()->json([
             'message' => 'All topics cleared successfully',

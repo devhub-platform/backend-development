@@ -9,7 +9,7 @@ use Laravel\Ai\Embeddings;
 
 class PeopleSuggestionService
 {
-    public function suggestForUser(User $user, int $limit = 5): Collection
+    public function suggestForUser(User $user, int $limit = 10): Collection
     {
         $limit = max(1, min($limit, 20));
 
@@ -38,6 +38,7 @@ class PeopleSuggestionService
             ->whereHas('posts', function ($query) {
                 $query->where('status', '!=', 'draft');
             })
+            ->where('created_at', '>=', now()->subDays(90)) // Active users from last 90 days
             ->with('topics:id,name')
             ->withCount([
                 'topics as shared_topics_count' => function ($query) use ($topicIds) {
@@ -51,11 +52,15 @@ class PeopleSuggestionService
                 'posts as published_posts_count' => function ($query) {
                     $query->where('status', '!=', 'draft');
                 },
+                'followers as followers_count',
+                'following as following_count',
             ])
             ->orderByDesc('shared_topics_count')
             ->orderByDesc('published_posts_count')
+            ->orderByDesc('followers_count') // Prioritize users with more followers
+            ->orderBy('created_at', 'desc') // Prioritize newer users
             ->limit($poolSize)
-            ->get(['id', 'name', 'username', 'avatar_url', 'bio', 'skills', 'currently_learning']);
+            ->get(['id', 'name', 'username', 'avatar_url', 'bio', 'skills', 'currently_learning', 'created_at']);
     }
 
     private function rerankWithEmbeddings(User $user, Collection $candidates): Collection
@@ -113,7 +118,17 @@ class PeopleSuggestionService
                 return $topicComparison;
             }
 
-            return ((int)($right->published_posts_count ?? 0)) <=> ((int)($left->published_posts_count ?? 0));
+            $postComparison = ((int)($right->published_posts_count ?? 0)) <=> ((int)($left->published_posts_count ?? 0));
+            if ($postComparison !== 0) {
+                return $postComparison;
+            }
+
+            $followerComparison = ((int)($right->followers_count ?? 0)) <=> ((int)($left->followers_count ?? 0));
+            if ($followerComparison !== 0) {
+                return $followerComparison;
+            }
+
+            return $right->created_at <=> $left->created_at;
         })->values();
     }
 
