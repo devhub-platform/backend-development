@@ -16,7 +16,7 @@ class FeedbackResource extends JsonResource
             'type' => $this->type,
             'status' => $this->status ?? 'new',
             'rating' => $this->rating,
-            'attachment' => $this->attachment,
+            'attachment' => $this->attachments,
             'created_at' => $this->created_at->diffForHumans(),
         ];
     }

@@ -42,16 +42,33 @@ class FeedbackController
         $attachmentUrl = null;
         if ($request->hasFile('attachment')) {
             try {
+                \Log::info("Feedback attachment upload started for user {$user->id}", [
+                    'file_name' => $request->file('attachment')->getClientOriginalName(),
+                    'file_size' => $request->file('attachment')->getSize(),
+                    'mime_type' => $request->file('attachment')->getMimeType(),
+                ]);
+
                 $attachmentUrl = $this->hackClubCdnService->uploadFileUrl($request->file('attachment'));
+
+                \Log::info("Feedback attachment uploaded successfully", [
+                    'user_id' => $user->id,
+                    'attachment_url' => $attachmentUrl,
+                ]);
+
                 $validated['attachment'] = $attachmentUrl;
             } catch (\Exception $e) {
-                Log::warning("Failed to upload feedback attachment for user {$user->id}: {$e->getMessage()}");
+                \Log::error("Failed to upload feedback attachment for user {$user->id}", [
+                    'error' => $e->getMessage(),
+                    'file_name' => $request->hasFile('attachment') ? $request->file('attachment')->getClientOriginalName() : 'no file',
+                ]);
+
                 return response()->json([
                     'message' => 'Failed to upload attachment. Please try again.',
                     'error' => $e->getMessage()
                 ], 422);
             }
         } else {
+            \Log::info("No attachment file found in feedback request for user {$user->id}");
             unset($validated['attachment']);
         }
 
@@ -226,6 +243,4 @@ class FeedbackController
         ], $result['status']);
     }
 }
-
-
 
