@@ -68,7 +68,7 @@ class FeedbackController
                 ], 422);
             }
         } else {
-            \Log::info("No attachment file found in feedback request for user {$user->id}");
+            Log::emergency("No attachment file found in feedback request for user {$user->id}");
             unset($validated['attachment']);
         }
 
