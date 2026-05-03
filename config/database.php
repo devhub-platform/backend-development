@@ -194,30 +194,28 @@ return [
 
     // ],
     'redis' => [
+        'client' => env('REDIS_CLIENT', 'predis'),
 
-    'client' => env('REDIS_CLIENT', 'predis'),
+        'default' => [
+            'scheme' => 'tls',
+            'host' => env('REDIS_HOST'),
+            'port' => env('REDIS_PORT', 6380),
+            'username' => env('REDIS_USERNAME'),
+            'password' => env('REDIS_PASSWORD'),
+        ],
 
-    'options' => [
-        'cluster' => env('REDIS_CLUSTER', 'redis'),
-        'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '-').'-database-'),
+        'cache' => [
+            'scheme' => 'tls',
+            'host' => env('REDIS_HOST'),
+            'port' => env('REDIS_PORT', 6380),
+            'username' => env('REDIS_USERNAME'),
+            'password' => env('REDIS_PASSWORD'),
+        ],
+        'options' => [
+            'parameters' => [
+                'scheme' => 'tls',
+            ],
+        ],
     ],
-
-    'default' => [
-        'host' => env('REDIS_HOST'),
-        'username' => env('REDIS_USERNAME'),
-        'password' => env('REDIS_PASSWORD'),
-        'port' => env('REDIS_PORT', 6380),
-        'database' => env('REDIS_DB', 0),
-    ],
-
-    'cache' => [
-        'host' => env('REDIS_HOST'),
-        'username' => env('REDIS_USERNAME'),
-        'password' => env('REDIS_PASSWORD'),
-        'port' => env('REDIS_PORT', 6380),
-        'database' => env('REDIS_CACHE_DB', 1),
-    ],
-
-],
 
 ];
