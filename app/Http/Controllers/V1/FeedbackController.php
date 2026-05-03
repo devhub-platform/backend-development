@@ -40,26 +40,26 @@ class FeedbackController
         $validated = $request->validated();
 
         $attachmentUrl = null;
-        if ($request->hasFile('attachment')) {
+        if ($request->hasFile('file')) {
             try {
-                \Log::info("Feedback attachment upload started for user {$user->id}", [
-                    'file_name' => $request->file('attachment')->getClientOriginalName(),
-                    'file_size' => $request->file('attachment')->getSize(),
-                    'mime_type' => $request->file('attachment')->getMimeType(),
+                Log::info("Feedback attachment upload started for user {$user->id}", [
+                    'file_name' => $request->file('file')->getClientOriginalName(),
+                    'file_size' => $request->file('file')->getSize(),
+                    'mime_type' => $request->file('file')->getMimeType(),
                 ]);
 
-                $attachmentUrl = $this->hackClubCdnService->uploadFileUrl($request->file('attachment'));
+                $attachmentUrl = $this->hackClubCdnService->uploadFileUrl($request->file('file'));
 
-                \Log::info("Feedback attachment uploaded successfully", [
+                Log::info("Feedback attachment uploaded successfully", [
                     'user_id' => $user->id,
                     'attachment_url' => $attachmentUrl,
                 ]);
 
                 $validated['attachment'] = $attachmentUrl;
             } catch (\Exception $e) {
-                \Log::error("Failed to upload feedback attachment for user {$user->id}", [
+                Log::error("Failed to upload feedback attachment for user {$user->id}", [
                     'error' => $e->getMessage(),
-                    'file_name' => $request->hasFile('attachment') ? $request->file('attachment')->getClientOriginalName() : 'no file',
+                    'file_name' => $request->hasFile('file') ? $request->file('file')->getClientOriginalName() : 'no file',
                 ]);
 
                 return response()->json([

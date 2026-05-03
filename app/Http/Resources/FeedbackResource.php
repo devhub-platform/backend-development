@@ -14,11 +14,10 @@ class FeedbackResource extends JsonResource
             'title' => $this->title,
             'message' => $this->message,
             'type' => $this->type,
-            'status' => $this->status ?? 'new',
+            'status' => $this->status ?? 'filed',
             'rating' => $this->rating,
-            'attachment' => $this->attachments,
+            'attachment' => $this->file,
             'created_at' => $this->created_at->diffForHumans(),
         ];
     }
 }
-
