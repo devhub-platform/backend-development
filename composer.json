@@ -36,7 +36,7 @@
         "musonza/chat": "*",
         "opcodesio/log-viewer": "^3.21",
         "phpoffice/phpword": "^1.4",
-        "predis/predis": "^3.4",
+        "predis/predis": "*",
         "pusher/pusher-php-server": "*",
         "sendgrid/sendgrid": "^8.1",
         "sentry/sentry-laravel": "^4.25",
