@@ -175,8 +175,6 @@ return [
             'backoff_algorithm' => env('REDIS_BACKOFF_ALGORITHM', 'decorrelated_jitter'),
             'backoff_base' => env('REDIS_BACKOFF_BASE', 100),
             'backoff_cap' => env('REDIS_BACKOFF_CAP', 1000),
-            'scheme' => env('REDIS_SCHEME', 'tls'),
-
             'options' => [
                 'ssl' => [
                     'verify_peer' => false,

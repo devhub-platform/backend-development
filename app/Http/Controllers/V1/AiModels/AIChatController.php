@@ -8,6 +8,7 @@ use App\Models\Attachment;
 use App\Services\Chat\ChatHistoryService;
 use App\Services\Chat\ChatRateLimiter;
 use App\Services\Chat\ChatService;
+use App\Services\Chat\PromptLimiter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -15,13 +16,20 @@ class AIChatController extends Controller
 {
     public function __construct(
         protected ChatService        $chat,
-        protected ChatRateLimiter    $limiter,
+        protected ChatRateLimiter    $rateLimiter,
         protected ChatHistoryService $history,
+        protected PromptLimiter      $promptLimiter,
     ) {}
 
     public function chat(Request $request): JsonResponse
     {
-        $this->limiter->check($request->user()->id);
+        $userId = $request->user()->id;
+
+        // 1. Hard rate-limit (requests / minute) — prevents burst abuse
+        $this->rateLimiter->check($userId);
+
+        // 2. Soft quota check (daily / monthly prompts)
+        $this->promptLimiter->check($userId);
 
         $validated = $request->validate([
             'session_id'    => 'nullable|exists:ai_chat_sessions,id',
@@ -30,8 +38,6 @@ class AIChatController extends Controller
             'attachments'   => 'nullable|array|max:5',
             'attachments.*' => 'integer|exists:attachments,id',
         ]);
-
-        $userId = $request->user()->id;
 
         // Security: session must belong to this user
         if (!empty($validated['session_id'])) {
@@ -73,6 +79,11 @@ class AIChatController extends Controller
             return response()->json($response, 409);
         }
 
+        // Only charge a prompt against the quota when the AI actually responded
+        if ($response['success'] ?? false) {
+            $this->promptLimiter->consume($userId);
+        }
+
         return response()->json([
             'session_id'         => $response['session_id'] ?? null,
             'ai_message'         => $response['content'] ?? 'No response',
@@ -88,5 +99,18 @@ class AIChatController extends Controller
             'default' => config('ai_models.default'),
             'models'  => config('ai_models.chat'),
         ]);
+    }
+
+    /**
+     * Return the current user's prompt usage stats.
+     * Useful for a "X of Y prompts used today" indicator in the frontend.
+     *
+     * GET /api/v1/ai/prompts/usage
+     */
+    public function promptUsage(Request $request): JsonResponse
+    {
+        return response()->json(
+            $this->promptLimiter->stats($request->user()->id)
+        );
     }
 }

@@ -425,6 +425,7 @@ Route::prefix('v1')->group(function () {
             // ─── AI Chat ──────────────────────────────────────────────────────────
             Route::prefix('ai-chat')->group(function () {
                 Route::post('send', [AIChatController::class, 'chat']);
+                Route::get('/ai/prompts/usage', [AIChatController::class, 'promptUsage']);
 
                 Route::controller(AttachmentController::class)->prefix('attachments')->middleware('throttle:10,1')->group(function () {
                     Route::post('upload', 'upload');

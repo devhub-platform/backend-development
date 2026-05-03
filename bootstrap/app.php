@@ -35,3 +35,5 @@ return Application::configure(basePath: dirname(__DIR__))
         Flare::handles($exceptions);
 //        Integration::handles($exceptions);
     })->create();
+
+

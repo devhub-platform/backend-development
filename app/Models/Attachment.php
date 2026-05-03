@@ -17,7 +17,7 @@ class Attachment extends Model
         'filename',
         'user_id',
         'session_id',
-        's3_path',
+        'blob_path',   // renamed from s3_path — run the migration below
         'extension',
     ];
 

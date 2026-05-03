@@ -2,7 +2,7 @@
 
 return [
 
-    'default' => env('FILESYSTEM_DISK', 's3'),
+    'default' => env('FILESYSTEM_DISK', 'azure'),
 
     'disks' => [
 
@@ -58,7 +58,7 @@ return [
             'secret' => env('CLOUDINARY_SECRET'),
             'cloud' => env('CLOUDINARY_CLOUD_NAME'),
             'url' => env('CLOUDINARY_URL'),
-            'secure' => (bool)env('CLOUDINARY_SECURE', true),
+            'secure' => (bool) env('CLOUDINARY_SECURE', true),
             'prefix' => env('CLOUDINARY_PREFIX'),
         ],
 
@@ -74,17 +74,12 @@ return [
         ],
 
         'azure' => [
-            'driver' => 'azure',
-            'name' => env('AZURE_STORAGE_NAME'),
-            'key' => env('AZURE_STORAGE_KEY'),
-            'container' => env('AZURE_STORAGE_CONTAINER_NAME'),
-            'url' => env('AZURE_STORAGE_URL'),
-            'prefix' => null,
-            'connection_string' => env('AZURE_STORAGE_CONNECTION_STRING')
+            'driver'            => 'azure-storage-blob',
+            'connection_string' => env('AZURE_STORAGE_CONNECTION_STRING'),
+            'container'         => env('AZURE_STORAGE_CONTAINER'),
         ],
 
     ],
-
 
     'links' => [
         public_path('storage') => storage_path('app/public'),

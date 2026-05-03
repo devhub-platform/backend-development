@@ -40,6 +40,13 @@
       0 => 'Awssat\\Visits\\VisitsServiceProvider',
     ),
   ),
+  'azure-oss/storage-blob-laravel' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'AzureOss\\Storage\\BlobLaravel\\AzureStorageBlobServiceProvider',
+    ),
+  ),
   'barryvdh/laravel-ide-helper' => 
   array (
     'providers' => 
@@ -268,13 +275,6 @@
     'providers' => 
     array (
       0 => 'Livewire\\LivewireServiceProvider',
-    ),
-  ),
-  'matthewbdaly/laravel-azure-storage' => 
-  array (
-    'providers' => 
-    array (
-      0 => 'Matthewbdaly\\LaravelAzureStorage\\AzureStorageServiceProvider',
     ),
   ),
   'megoxv/laravel-magika' => 
