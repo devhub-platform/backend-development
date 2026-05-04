@@ -46,10 +46,10 @@ class MessageController extends Controller
             ->to($conversation)
             ->send();
 
-        OneSignal::sendNotificationToAll(
+        OneSignal::sendNotificationToUser(
             $validated['message'],
+            $conversation->participants()->where('user_id', '!=', auth()->id())->first()->user->onesignal_player_id,
             'deeplink://chats?id=' . $conversation->id,
-            null,
             null,
             null,
             'New message from ' . (auth()->user()->name)
@@ -83,14 +83,14 @@ class MessageController extends Controller
             ->to($conversation)
             ->send();
 
-        // OneSignal::sendNotificationToAll(
-        //     $validated['message'],
-        //     'deeplink://chats?id=' . $conversation->id,
-        //     null,
-        //     null,
-        //     null,
-        //     'New attachment from ' . (auth()->user()->name)
-        // );
+         OneSignal::sendNotificationToUser(
+             $validated['message'],
+             $conversation->participants()->where('user_id', '!=', auth()->id())->first()->user->onesignal_player_id,
+             'deeplink://chats?id=' . $conversation->id,
+             null,
+             null,
+             'New attachment from ' . (auth()->user()->name)
+         );
 
         $messages = [
             'attachment' => new MessageResource($attachmentMessage)
@@ -137,10 +137,10 @@ class MessageController extends Controller
             ->to($conversation)
             ->send();
 
-        OneSignal::sendNotificationToAll(
+        OneSignal::sendNotificationToUser(
             $validated['message'],
+            $conversation->participants()->where('user_id', '!=', auth()->id())->first()->user->onesignal_player_id,
             'deeplink://chats?id=' . $conversation->id,
-            null,
             null,
             null,
             'New voice message from ' . (auth()->user()->name)

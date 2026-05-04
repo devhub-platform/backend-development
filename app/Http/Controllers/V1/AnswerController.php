@@ -56,15 +56,15 @@ class AnswerController extends \Illuminate\Routing\Controller
 
         if ($question->user_id !== $request->user()->id) {
             $question->user->notify(new NewAnswerNotification($answer));
-//            OneSignal::sendNotificationToUser(
-//                'A user you follow posted a new question',
-//                $question->user->onesignal_player_id,
-//                'deeplink://questions/' . $question->id,
-//                null,
-//                null,
-//                null,
-//                'Your question received a new answer'
-//            );
+            OneSignal::sendNotificationToUser(
+                'A user you follow posted a new question',
+                $question->user->onesignal_player_id,
+                'deeplink://questions/' . $question->id,
+                null,
+                null,
+                null,
+                'Your question received a new answer'
+            );
         }
 
         return response()->json([

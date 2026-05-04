@@ -74,15 +74,15 @@ class QuestionController extends \Illuminate\Routing\Controller
                 $followers,
                 new QuestionCreatedNotification($question->load('user'))
             );
-//            OneSignal::sendNotificationToUser(
-//                'A user you follow posted a new question',
-//                $followers->pluck('onesignal_player_id')->filter()->all(),
-//                'deeplink://questions/' . $question->id,
-//                null,
-//                null,
-//                null,
-//                'A user you follow posted a new question'
-//            );
+            OneSignal::sendNotificationToUser(
+                'A user you follow posted a new question',
+                $followers->pluck('onesignal_player_id')->filter()->all(),
+                'deeplink://questions/' . $question->id,
+                null,
+                null,
+                null,
+                'A user you follow posted a new question'
+            );
         }
 
         return response()->json([

@@ -143,9 +143,9 @@ class PostController
             $reasons = $moderationService->getModerationMessage($moderationResult);
             Log::warning("Post content flagged for user ID: " . auth()->id(), ['reasons' => $reasons]);
 
-            OneSignal::sendNotificationToAll(
+            OneSignal::sendNotificationToUser(
                 'A user attempted to create a post that violates content policies reason: ' . $reasons,
-                'deeplink://users/' . auth()->id(),
+                auth()->user()->onesignal_player_id,
                 null,
                 null,
                 null,
@@ -200,10 +200,10 @@ class PostController
 
             if ($followers->isNotEmpty()) {
                 Notification::send($followers, new NewPostNotification($post->load('user')));
-                OneSignal::sendNotificationToAll(
+                OneSignal::sendNotificationToUser(
                     Str::limit($validated['content'], 100, '...'),
+                    $followers->pluck('onesignal_player_id')->filter()->all(),
                     'deeplink://posts?id=' . $post->id,
-                    null,
                     null,
                     null,
                     null,
