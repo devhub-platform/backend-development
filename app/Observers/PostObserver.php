@@ -4,11 +4,14 @@ namespace App\Observers;
 
 use App\Models\Post;
 use App\Services\AI\EmbeddingService;
+use App\Services\AI\AddPostToAI;
 use Illuminate\Support\Facades\Log;
 
 class PostObserver
 {
-    public function __construct(private EmbeddingService $embedding) {}
+    public function __construct(private EmbeddingService $embedding)
+    {
+    }
 
     /**
      * Set sensible defaults before the record is inserted.
@@ -68,6 +71,20 @@ class PostObserver
             } else {
                 Log::info('[PostObserver][defer] embedding saved', ['post_id' => $postId]);
             }
+
+            if (!$fresh->added_to_ai_at) {
+                $aiService = app(AddPostToAI::class);
+                $aiResult = $aiService->addPostToModel($fresh);
+
+                if ($aiResult) {
+                    $fresh->updateQuietly(['added_to_ai_at' => now()]);
+                    Log::info('[PostObserver][defer] post added to AI model', ['post_id' => $postId]);
+                } else {
+                    Log::warning('[PostObserver][defer] failed to add post to AI model', ['post_id' => $postId]);
+                }
+            } else {
+                Log::info('[PostObserver][defer] post already added to AI model, skipping', ['post_id' => $postId]);
+            }
         });
     }
 
@@ -81,9 +98,11 @@ class PostObserver
 
         Log::notice('[PostObserver] Post deleted', [
             'post_id' => $post->id,
-            'title'   => $post->title,
+            'title' => $post->title,
         ]);
     }
 
-    public function restored(Post $post): void {}
+    public function restored(Post $post): void
+    {
+    }
 }

@@ -36,12 +36,14 @@ class Post extends Model implements HasReaction
         'is_edit',
         'embedding',
         'embedded_at',
+        'added_to_ai_at',
     ];
 
     protected $casts = [
         'views' => 'integer',
         'embedding'    => 'array',
         'embedded_at'  => 'datetime',
+        'added_to_ai_at' => 'datetime',
     ];
 
 

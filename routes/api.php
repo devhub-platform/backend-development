@@ -47,13 +47,14 @@ use Illuminate\Support\Facades\Log;
 Route::prefix('v1')->group(function () {
     Route::get('/', function () {
         return response()->json([
-            'message' => 'Devhub API v2',
+            'message' => 'Devhub Community API v2.0.0',
             'status' => 'OK - Server on azure-cloud is running',
             'base_url' => 'https://dev-hubs.tech/api/v1',
             'api_docs' => 'https://devhub.apidog.io/',
             'admin_panel' => 'https://dev-hubs.tech/admin',
             'mentoring ' => 'https://dev-hubs.tech/pulse',
             'created_by' => 'Created by Eng/Youssef Ahmed & Eng/Menna Ahmed',
+            'sponsors' => 'HCB(fiscal sponsorship)',
         ]);
     });
 
@@ -458,7 +459,7 @@ Route::post('/test/send-message', [MessageController::class, 'broadcastTest']);
 Route::post('/send-message_notification', TestNotificationController::class);
 
 Route::get('/test-redis', function () {
-    Redis::set('test_key', 'Hello Redis Cloud!');
+    Redis::set('test_key', 'I Love Devhub!');
     Log::info('Set test_key in Redis: Hello Redis Cloud!');
     $key = Redis::get('test_key');
     return response()->json([

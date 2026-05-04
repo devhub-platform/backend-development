@@ -35,7 +35,7 @@ class PostController
         private ImageUploadCloudinaryService $cloudinaryService,
         private HackClubCdnService           $hackClubCdnService,
         private PostAIImageService           $aiImageService,
-        private AddPostToAI                  $addPostToAIService
+//        private AddPostToAI                  $addPostToAIService
     )
     {
     }
@@ -200,15 +200,15 @@ class PostController
 
             if ($followers->isNotEmpty()) {
                 Notification::send($followers, new NewPostNotification($post->load('user')));
-//                OneSignal::sendNotificationToUser(
-//                    Str::limit($validated['content'], 100, '...'),
-//                    $post->user->onesignal_player_id,
-//                    'deeplink://posts?id=' . $post->id,
-//                    null,
-//                    null,
-//                    null,
-//                    'New post from ' . $post->user->name
-//                );
+                OneSignal::sendNotificationToAll(
+                    Str::limit($validated['content'], 100, '...'),
+                    'deeplink://posts?id=' . $post->id,
+                    null,
+                    null,
+                    null,
+                    null,
+                    'New post from ' . $post->user->name
+                );
             }
         }
 

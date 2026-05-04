@@ -28,7 +28,6 @@ class AddPostToAI
             }
 
             $payload = [
-                'article_id' => (string)$post->id,
                 'title' => (string)$post->title,
                 'url' => (string)($post->url ?? ''),
                 'author' => (string)($post->user->name ?? 'Unknown'),
