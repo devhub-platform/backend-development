@@ -54,7 +54,7 @@ Route::prefix('v1')->group(function () {
             'admin_panel' => 'https://dev-hubs.tech/admin',
             'mentoring ' => 'https://dev-hubs.tech/pulse',
             'created_by' => 'Created by Eng/Youssef Ahmed & Eng/Menna Ahmed',
-            'sponsors' => 'HCB(fiscal sponsorship)',
+            'sponsors' => 'HCB(fiscal sponsorship)'
         ]);
     });
 

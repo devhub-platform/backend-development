@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use OneSignal;
+use App\Services\OneSignalService;
 
 class QuestionController extends \Illuminate\Routing\Controller
 {
@@ -74,15 +75,23 @@ class QuestionController extends \Illuminate\Routing\Controller
                 $followers,
                 new QuestionCreatedNotification($question->load('user'))
             );
-            OneSignal::sendNotificationToUser(
-                'A user you follow posted a new question',
-                $followers->pluck('onesignal_player_id')->filter()->all(),
-                'deeplink://questions/' . $question->id,
-                null,
-                null,
-                null,
-                'A user you follow posted a new question'
-            );
+
+            // OneSignal push notifications to all followers
+            $playerIds = $followers->pluck('onesignal_player_id')->filter()->values()->all();
+
+            if (!empty($playerIds)) {
+                $service = app(OneSignalService::class);
+                $service->sendToUsers(
+                    message: Str::limit($question->content, 100),
+                    playerIds: $playerIds,
+                    heading: "{$user->name} posted a new question",
+                    url: 'deeplink://questions/' . $question->id,
+                    data: [
+                        'question_id' => $question->id,
+                        'author_id' => $user->id,
+                    ]
+                );
+            }
         }
 
         return response()->json([

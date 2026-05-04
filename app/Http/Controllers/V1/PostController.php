@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Number;
 use Illuminate\Support\Str;
 use OneSignal;
+use App\Services\OneSignalService;
 
 class PostController
 {
@@ -195,20 +196,20 @@ class PostController
         }
 
         if ($post->status !== 'draft') {
-            $followers = auth()->user()->followers
-                ->filter(fn($follower) => $follower->isNotificationEnabled('new_post_from_following'));
+            $followers = auth()->user()->followers;
 
             if ($followers->isNotEmpty()) {
                 Notification::send($followers, new NewPostNotification($post->load('user')));
-                OneSignal::sendNotificationToUser(
-                    Str::limit($validated['content'], 100, '...'),
-                    $followers->pluck('onesignal_player_id')->filter()->all(),
-                    'deeplink://posts?id=' . $post->id,
-                    null,
-                    null,
-                    null,
-                    'New post from ' . $post->user->name
-                );
+
+                $playerIds = $followers->pluck('onesignal_player_id')->filter()->all();
+
+                if (!empty($playerIds)) {
+                    app(OneSignalService::class)->sendToUsers(
+                        message: Str::limit($post->content, 100, '...'),
+                        playerIds: $playerIds,
+                        heading: 'New post from ' . $post->user->name
+                    );
+                }
             }
         }
 

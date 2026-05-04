@@ -84,7 +84,7 @@ class MessageController extends Controller
             ->send();
 
          OneSignal::sendNotificationToUser(
-             $validated['message'],
+             'Click to see the attachment',
              $conversation->participants()->where('user_id', '!=', auth()->id())->first()->user->onesignal_player_id,
              'deeplink://chats?id=' . $conversation->id,
              null,
