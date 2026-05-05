@@ -53,9 +53,9 @@ class PostObserver
 
         // defer() runs after the HTTP response has been sent to the client,
         // so the user never waits for the embedding API call
-        defer(function () use ($postId) {
+        defer(function () use ($postId, $isUpdate) {
 
-            Log::info('[PostObserver][defer] fired', ['post_id' => $postId]);
+            Log::info('[PostObserver][defer] fired', ['post_id' => $postId, 'is_update' => $isUpdate]);
 
             $fresh = \App\Models\Post::find($postId);
 
@@ -72,8 +72,10 @@ class PostObserver
                 Log::info('[PostObserver][defer] embedding saved', ['post_id' => $postId]);
             }
 
+            $aiService = app(AddPostToAI::class);
+
             if (!$fresh->added_to_ai_at) {
-                $aiService = app(AddPostToAI::class);
+                // New post: add to AI model
                 $aiResult = $aiService->addPostToModel($fresh);
 
                 if ($aiResult) {
@@ -82,6 +84,15 @@ class PostObserver
                 } else {
                     Log::warning('[PostObserver][defer] failed to add post to AI model', ['post_id' => $postId]);
                 }
+            } elseif ($isUpdate) {
+                // Existing post: update in AI model
+                $aiResult = $aiService->updatePostToModel($fresh);
+
+                if ($aiResult) {
+                    Log::info('[PostObserver][defer] post updated in AI model', ['post_id' => $postId]);
+                } else {
+                    Log::warning('[PostObserver][defer] failed to update post in AI model', ['post_id' => $postId]);
+                }
             } else {
                 Log::info('[PostObserver][defer] post already added to AI model, skipping', ['post_id' => $postId]);
             }
@@ -89,10 +100,21 @@ class PostObserver
     }
 
     /**
-     * Clean up embedding cache entries when a post is deleted.
+     * Remove post from AI model and clean up embedding cache entries when a post is deleted.
      */
     public function deleted(Post $post): void
     {
+        // Remove from AI model first
+        $aiService = app(AddPostToAI::class);
+        $deleteResult = $aiService->deletePostFromModel($post);
+
+        if ($deleteResult) {
+            Log::info('[PostObserver] post removed from AI model', ['post_id' => $post->id]);
+        } else {
+            Log::warning('[PostObserver] failed to remove post from AI model', ['post_id' => $post->id]);
+        }
+
+        // Clean up embedding cache
         cache()->forget('emb:post:' . $post->id);
         cache()->forget('emb:' . md5($post->title . ' ' . ($post->content ?? '')));
 
@@ -100,6 +122,11 @@ class PostObserver
             'post_id' => $post->id,
             'title' => $post->title,
         ]);
+    }
+
+    public function updating(Post $post): void
+    {
+
     }
 
     public function restored(Post $post): void

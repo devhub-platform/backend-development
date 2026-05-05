@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\V1\AiModels\AIChatController;
 use App\Http\Controllers\V1\Chats\ChatController;
+use App\Models\Post;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redis;
 use App\Http\Controllers\V1\AiModels\AttachmentController;
 use App\Http\Controllers\V1\AiModels\HistoryController;
@@ -52,7 +54,7 @@ Route::prefix('v1')->group(function () {
             'base_url' => 'https://dev-hubs.tech/api/v1',
             'api_docs' => 'https://devhub.apidog.io/',
             'admin_panel' => 'https://dev-hubs.tech/admin',
-            'mentoring ' => 'https://dev-hubs.tech/pulse',
+            'mentoring' => 'https://dev-hubs.tech/pulse',
             'created_by' => 'Created by Eng/Youssef Ahmed & Eng/Menna Ahmed',
             'sponsors' => 'HCB(fiscal sponsorship)'
         ]);

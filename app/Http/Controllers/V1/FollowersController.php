@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\V1;
 
 use App\Http\Resources\SuggestedUsersResource;
-use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Notifications\FollowNotification;
 use App\Services\Followers\PeopleSuggestionService;
@@ -34,10 +33,7 @@ class FollowersController
 
         $authUser->following()->attach($user->id);
 
-        Cache::forget("user_suggestions_{$authUser->id}_5");
-        Cache::forget("user_suggestions_{$authUser->id}_10");
-        Cache::forget("user_suggestions_{$authUser->id}_15");
-        Cache::forget("user_suggestions_{$authUser->id}_20");
+        $this->bumpSuggestionCacheVersion($authUser->id);
 
         if ($user->isNotificationEnabled('new_follower')) {
             Notification::send($user, new FollowNotification($authUser));
@@ -69,11 +65,7 @@ class FollowersController
 
         $authUser->following()->detach($user->id);
 
-        // Clear user's suggestions cache
-        Cache::forget("user_suggestions_{$authUser->id}_5");
-        Cache::forget("user_suggestions_{$authUser->id}_10");
-        Cache::forget("user_suggestions_{$authUser->id}_15");
-        Cache::forget("user_suggestions_{$authUser->id}_20");
+        $this->bumpSuggestionCacheVersion($authUser->id);
 
         Log::notice("User {$authUser->id} unfollowed user {$user->id}");
         return response()->json([
@@ -130,8 +122,10 @@ class FollowersController
     {
         $user = Auth::user();
         $limit = (int)$request->query('limit', 10);
+        $limit = max(1, min($limit, 20));
 
-        $cacheKey = "user_suggestions_{$user->id}_{$limit}";
+        $version = (int) Cache::get($this->suggestionVersionKey($user->id), 1);
+        $cacheKey = "user_suggestions_{$user->id}_v{$version}_{$limit}";
         $suggestedUsers = Cache::remember($cacheKey, 1800, function () use ($user, $limit) {
             return app(PeopleSuggestionService::class)->suggestForUser($user, $limit);
         });
@@ -146,5 +140,21 @@ class FollowersController
 //            'suggested_users_count' => $suggestedUsers->count(),
             'suggested_users' => SuggestedUsersResource::collection($suggestedUsers),
         ]);
+    }
+
+    private function suggestionVersionKey(int $userId): string
+    {
+        return "user_suggestions_version_{$userId}";
+    }
+
+    private function bumpSuggestionCacheVersion(int $userId): void
+    {
+        $versionKey = $this->suggestionVersionKey($userId);
+
+        if (!Cache::has($versionKey)) {
+            Cache::forever($versionKey, 1);
+        }
+
+        Cache::increment($versionKey);
     }
 }

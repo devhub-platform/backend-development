@@ -15,7 +15,7 @@ class SearchService
 {
     private const HISTORY_LIMIT = 10;
     private const SEARCH_LIMIT = 5;
-    private const CACHE_MINUTES = 5;
+    private const CACHE_MINUTES = 60;
     private const MAX_QUERY_LEN = 100;
 
     public function searchPosts(Request $request, Post $post): array

@@ -158,7 +158,7 @@ class MessageController extends Controller
             ->send();
 
         $otherParticipant = $conversation->participants()
-            ->where('messageable_type', \App\Models\User::class)
+            ->where('messageable_type', User::class)
             ->where('messageable_id', '!=', auth()->id())
             ->first();
 
@@ -166,7 +166,7 @@ class MessageController extends Controller
 
         if (!empty($playerId)) {
             OneSignal::sendNotificationToUser(
-                $validated['message'],
+                'Voice message',
                 $playerId,
                 'deeplink://chats?id=' . $conversation->id,
                 null,
