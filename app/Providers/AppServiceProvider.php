@@ -24,7 +24,21 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Bind concrete services to the container explicitly to avoid
+        // autowiring issues on some deployment environments where
+        // class files may be present but the automatic resolution fails.
+        // These bindings are safe -- they only register if the class exists.
+        if (class_exists(\App\Services\HackClubCdnService::class)) {
+            $this->app->singleton(\App\Services\HackClubCdnService::class, function ($app) {
+                return new \App\Services\HackClubCdnService();
+            });
+        }
+
+        if (class_exists(\App\Services\AWSS3Service::class)) {
+            $this->app->singleton(\App\Services\AWSS3Service::class, function ($app) {
+                return new \App\Services\AWSS3Service();
+            });
+        }
     }
 
     /**
