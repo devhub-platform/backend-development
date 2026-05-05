@@ -18,6 +18,7 @@ use Illuminate\Support\Collection;
 use Musonza\Chat\Facades\ChatFacade as Chat;
 use Musonza\Chat\Models\Conversation;
 use OneSignal;
+use App\Models\User;
 
 class MessageController extends Controller
 {
@@ -46,14 +47,24 @@ class MessageController extends Controller
             ->to($conversation)
             ->send();
 
-        OneSignal::sendNotificationToUser(
-            $validated['message'],
-            $conversation->participants()->where('user_id', '!=', auth()->id())->first()->user->onesignal_player_id,
-            'deeplink://chats?id=' . $conversation->id,
-            null,
-            null,
-            'New message from ' . (auth()->user()->name)
-        );
+        // Find the other participant (exclude current user) using the polymorphic
+        $otherParticipant = $conversation->participants()
+            ->where('messageable_type', User::class)
+            ->where('messageable_id', '!=', auth()->id())
+            ->first();
+
+        $playerId = $otherParticipant?->messageable?->onesignal_player_id ?? null;
+
+        if (!empty($playerId)) {
+            OneSignal::sendNotificationToUser(
+                $validated['message'],
+                $playerId,
+                'deeplink://chats?id=' . $conversation->id,
+                null,
+                null,
+                'New message from ' . (auth()->user()->name)
+            );
+        }
 
 
         return response()->json([
@@ -83,14 +94,23 @@ class MessageController extends Controller
             ->to($conversation)
             ->send();
 
-         OneSignal::sendNotificationToUser(
-             'Click to see the attachment',
-             $conversation->participants()->where('user_id', '!=', auth()->id())->first()->user->onesignal_player_id,
-             'deeplink://chats?id=' . $conversation->id,
-             null,
-             null,
-             'New attachment from ' . (auth()->user()->name)
-         );
+         $otherParticipant = $conversation->participants()
+             ->where('messageable_type', User::class)
+             ->where('messageable_id', '!=', auth()->id())
+             ->first();
+
+         $playerId = $otherParticipant?->messageable?->onesignal_player_id ?? null;
+
+         if (!empty($playerId)) {
+             OneSignal::sendNotificationToUser(
+                 'Click to see the attachment',
+                 $playerId,
+                 'deeplink://chats?id=' . $conversation->id,
+                 null,
+                 null,
+                 'New attachment from ' . (auth()->user()->name)
+             );
+         }
 
         $messages = [
             'attachment' => new MessageResource($attachmentMessage)
@@ -137,14 +157,23 @@ class MessageController extends Controller
             ->to($conversation)
             ->send();
 
-        OneSignal::sendNotificationToUser(
-            $validated['message'],
-            $conversation->participants()->where('user_id', '!=', auth()->id())->first()->user->onesignal_player_id,
-            'deeplink://chats?id=' . $conversation->id,
-            null,
-            null,
-            'New voice message from ' . (auth()->user()->name)
-        );
+        $otherParticipant = $conversation->participants()
+            ->where('messageable_type', \App\Models\User::class)
+            ->where('messageable_id', '!=', auth()->id())
+            ->first();
+
+        $playerId = $otherParticipant?->messageable?->onesignal_player_id ?? null;
+
+        if (!empty($playerId)) {
+            OneSignal::sendNotificationToUser(
+                $validated['message'],
+                $playerId,
+                'deeplink://chats?id=' . $conversation->id,
+                null,
+                null,
+                'New voice message from ' . (auth()->user()->name)
+            );
+        }
 
         return response()->json([
             'message' => 'Voice message sent successfully.',
