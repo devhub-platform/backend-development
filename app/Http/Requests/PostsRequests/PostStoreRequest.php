@@ -14,32 +14,10 @@ class PostStoreRequest extends FormRequest
             'title' => 'required|string|max:255',
             'content' => 'required|string|max:5000',
 
-            'image_url' => [
-                'nullable',
-                function ($attribute, $value, $fail) {
-                    if (is_string($value)) {
-                        if (filter_var($value, FILTER_VALIDATE_URL)) {
-                            return;
-                        }
+            'image_url' => 'nullable|array|max:10',
+            'image_url.*' => 'image|mimes:jpeg,png,jpg,jpeg,webp,gif|max:5120',
 
-                        $fail('The ' . $attribute . ' field must be a valid URL or an image file.');
-                        return;
-                    }
-
-                    if ($value instanceof \Illuminate\Http\UploadedFile) {
-                        if (str_starts_with((string)$value->getMimeType(), 'image/')) {
-                            return;
-                        }
-
-                        $fail('The ' . $attribute . ' file must be an image.');
-                        return;
-                    }
-
-                    $fail('The ' . $attribute . ' field must be a valid URL or an image file.');
-                },
-            ],
-
-            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'cover_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
 
             'tags' => 'nullable|array|max:10',
             'tags.*' => 'string|max:50',

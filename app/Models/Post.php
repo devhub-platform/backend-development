@@ -41,10 +41,53 @@ class Post extends Model implements HasReaction
 
     protected $casts = [
         'views' => 'integer',
-        'embedding'    => 'array',
-        'embedded_at'  => 'datetime',
+        'embedding' => 'array',
+        'embedded_at' => 'datetime',
         'added_to_ai_at' => 'datetime',
     ];
+
+    public function getImageUrlAttribute($value): array
+    {
+        if (empty($value)) {
+            return [];
+        }
+
+        if (is_array($value)) {
+            return array_values(array_filter($value));
+        }
+
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return array_values(array_filter($decoded));
+            }
+
+            return [$value];
+        }
+
+        return array_values(array_filter((array) $value));
+    }
+
+    public function setImageUrlAttribute($value): void
+    {
+        if (empty($value)) {
+            $this->attributes['image_url'] = null;
+            return;
+        }
+
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $value = $decoded;
+            } else {
+                $value = [$value];
+            }
+        }
+
+        $this->attributes['image_url'] = json_encode(array_values(array_filter((array) $value)));
+    }
 
 
     public function user()

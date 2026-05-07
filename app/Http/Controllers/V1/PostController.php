@@ -21,6 +21,7 @@ use App\Services\ImageUploadCloudinaryService;
 use App\Services\ModerationService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Number;
@@ -134,7 +135,7 @@ class PostController
         }
 
         if ($request->hasFile('image_url')) {
-            $validated['image_url'] = $this->hackClubCdnService->uploadFileUrl($request->file('image_url'));
+            $validated['image_url'] = $this->uploadPostImages($request->file('image_url'));
         }
 
         $contentToModerate = $validated['content'] . ' ' . $validated['title'];
@@ -453,6 +454,10 @@ class PostController
             'report' => true,
         ]);
 
+
+        if ($request->hasFile('image_url')) {
+            $validated['image_url'] = $this->uploadPostImages($request->file('image_url'));
+        }
         $adminEmail = config('services.mail.admin_email_2', 'youssef.ahmed.fci@gmail.com');
         Notification::route('mail', $adminEmail)
             ->notify(new PostReportedNotification($report));
@@ -487,5 +492,17 @@ class PostController
         $blockers = $user->blockers()->pluck('users.id');
 
         return $blocked->merge($blockers)->unique()->values()->all();
+    }
+
+    private function uploadPostImages(array|UploadedFile $files): array
+    {
+        $files = is_array($files) ? $files : [$files];
+
+        return collect($files)
+            ->filter(fn($file) => $file instanceof UploadedFile)
+            ->map(fn(UploadedFile $file) => $this->hackClubCdnService->uploadFileUrl($file))
+            ->filter()
+            ->values()
+            ->all();
     }
 }
