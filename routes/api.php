@@ -44,6 +44,7 @@ use App\Http\Controllers\V1\Chats\UserOfflineController;
 use App\Http\Controllers\V1\Chats\UserPresenceShowController;
 use App\Http\Controllers\V1\FeedbackController;
 use App\Http\Controllers\V1\TrendingController;
+use App\Http\Controllers\V1\AiModels\AITopicsUserController;
 use Illuminate\Support\Facades\Log;
 
 Route::prefix('v1')->group(function () {
@@ -97,6 +98,9 @@ Route::prefix('v1')->group(function () {
         });
 
         Route::get('ai-chat/models', [AIChatController::class, 'models']);
+
+        Route::get('ai-topics-user/{userId}', [AITopicsUserController::class, 'showByUserId']);
+//        Route::get('ai-topics-user', [AITopicsUserController::class, 'index']);
 
         Route::middleware(['auth:api', 'throttle:25,1'])->group(function () {
             Route::controller(AuthController::class)->group(function () {
