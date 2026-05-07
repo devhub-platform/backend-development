@@ -56,8 +56,7 @@ Route::prefix('v1')->group(function () {
             'api_docs' => 'https://devhub.apidog.io/',
             'admin_panel' => 'https://dev-hubs.tech/admin',
             'mentoring' => 'https://dev-hubs.tech/pulse',
-            'created_by' => 'Created by Eng/Youssef Ahmed & Eng/Menna Ahmed',
-            'sponsors' => 'HCB(fiscal sponsorship)'
+            'created_by' => 'Created by Eng/Youssef Ahmed & Eng/Menna Ahmed'
         ]);
     });
 
@@ -309,6 +308,15 @@ Route::prefix('v1')->group(function () {
 
                 Route::get('notifications/questions', 'getQuestionsNotifications');
                 Route::get('notifications/answers', 'getAnswersNotifications');
+            });
+
+            // ─── User Interaction Reporting & Analytics ──────────────────────────
+            Route::controller(\App\Http\Controllers\V1\UserInteractionReportController::class)->group(function () {
+                Route::get('user/interaction-report', 'getInteractionHistory');
+                Route::get('user/interaction-breakdown/{topicId}', 'getInteractionBreakdown');
+                Route::get('user/recommended-topics', 'getRecommendedTopics');
+                Route::get('user/topic-report/{topicId}', 'getTopicReport');
+                Route::get('user/interaction-analytics', 'getUserAnalytics');
             });
 
             // ─── Tags Follow ──────────────────────────────────────────────────────

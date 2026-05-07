@@ -18,10 +18,28 @@ class ViewedPostService
      */
     public function trackView(int $userId, int $postId): PostView
     {
-        return PostView::updateOrCreate(
+        $postView = PostView::updateOrCreate(
             ['user_id' => $userId, 'post_id' => $postId],
             ['viewed_at' => now()]
         );
+
+        try {
+            $user = User::find($userId);
+            $post = Post::with('tags')->find($postId);
+
+            if ($user && $post) {
+                $userInterestService = new UserInterestService();
+                $userInterestService->addTopicsFromPostView($user, $post);
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Failed to add topics on post view', [
+                'user_id' => $userId,
+                'post_id' => $postId,
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        return $postView;
     }
 
     /**

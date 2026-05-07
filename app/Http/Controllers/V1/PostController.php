@@ -16,6 +16,7 @@ use App\Notifications\PostReportedNotification;
 use App\Services\AI\AddPostToAI;
 use App\Services\AI\PostAIImageService;
 use App\Services\Posts\PostCreationService;
+use App\Services\UserInterestService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -29,6 +30,7 @@ class PostController
     public function __construct(
         private PostCreationService $postCreationService,
         private PostAIImageService $aiImageService,
+        private UserInterestService $userInterestService,
     )
     {
     }
@@ -116,7 +118,7 @@ class PostController
         $result = $this->postCreationService->create(
             userId: auth()->id(),
             authorName: auth()->user()->name,
-            authorPlayerId: auth()->user()->onesignal_player_id,
+            authorPlayerId: auth()->user()->onesignal_player_id ?? '',
             validated: $validated,
             coverImage: $request->file('cover_image'),
             images: $request->file('image_url'),
@@ -160,6 +162,10 @@ class PostController
             );
 
             $shouldIncrementView = $postView->wasRecentlyCreated;
+
+            if ($shouldIncrementView) {
+                $this->userInterestService->trackPostInteraction($user, $post, 'view');
+            }
         } else {
             $shouldIncrementView = true;
         }
