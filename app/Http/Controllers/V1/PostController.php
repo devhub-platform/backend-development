@@ -33,6 +33,7 @@ class PostController
         private PostAIImageService $aiImageService,
         private UserInterestService $userInterestService,
         private ModerationService $moderationService,
+        private AddPostToAI $addPostToAI,
     )
     {
     }
@@ -203,6 +204,8 @@ class PostController
 
         $post->update(array_merge($validated, ['is_edit' => true]));
 
+        $this->addPostToAI->updatePostToModel($post->fresh());
+
         return response()->json([
             'message' => "Post '{$post->title}' updated successfully",
             'data' => new PostResource($post)
@@ -279,6 +282,9 @@ class PostController
 
         $title = $post->title;
         $post->forceDelete();
+
+        $this->addPostToAI->deletePostFromModel($post);
+
 
         return response()->json([
             'message' => "Post '{$title}' permanently deleted successfully"

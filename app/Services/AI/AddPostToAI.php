@@ -30,6 +30,7 @@ class AddPostToAI
             $payload = [
                 'title' => (string)$post->title,
                 'url' => (string)($post->url ?? ''),
+                'uuid' => (string)($post->uuid ?? ''),
                 'author' => (string)($post->user->name ?? 'Unknown'),
                 'category' => 'General',
                 'tags' => $tagsString,
@@ -94,6 +95,7 @@ class AddPostToAI
             $payload = [
                 'title' => (string)$post->title,
                 'url' => (string)($post->url ?? ''),
+                'uuid' => (string)($post->uuid ?? ''),
                 'author' => (string)($post->user->name ?? 'Unknown'),
                 'category' => 'General',
                 'tags' => $tagsString,
@@ -105,7 +107,7 @@ class AddPostToAI
             $response = Http::timeout(30)
                 ->connectTimeout(10)
                 ->put(
-                    rtrim($baseUrl, '/') . '/update_article/' . $post->id,
+                    rtrim($baseUrl, '/') . '/update_article/' . $post->uuid,
                     $payload
                 );
 
@@ -152,7 +154,7 @@ class AddPostToAI
             $response = Http::timeout(30)
                 ->connectTimeout(10)
                 ->delete(
-                    rtrim($baseUrl, '/') . '/delete_article/' . $postId
+                    rtrim($baseUrl, '/') . '/delete_article/' . $post->uuid
                 );
 
             if (!$response->successful()) {
