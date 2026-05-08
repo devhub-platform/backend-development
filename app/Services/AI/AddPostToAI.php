@@ -142,35 +142,42 @@ class AddPostToAI
                 return false;
             }
 
-            $postId = is_object($post) ? $post->id : $post;
+            $identifier = '';
 
-            if (empty($postId)) {
-                Log::error('Post ID is required for delete', ['post' => $post]);
+            if (is_object($post)) {
+                $identifier = (string)($post->uuid ?? $post->id ?? '');
+            } else {
+                $identifier = (string)($post ?? '');
+            }
+
+            $identifier = trim($identifier);
+
+            if (empty($identifier)) {
+                Log::error('Post identifier (uuid or id) is required for delete', ['post' => $post]);
                 return false;
             }
 
-            Log::info('Deleting post from AI model', ['post_id' => $postId]);
+            Log::info('Deleting post from AI model', ['post_identifier' => $identifier]);
 
             $response = Http::timeout(30)
                 ->connectTimeout(10)
-                ->delete(
-                    rtrim($baseUrl, '/') . '/delete_article/' . $post->uuid
+                ->get(
+                    rtrim($baseUrl, '/') . '/delete_article/' . rawurlencode($identifier)
                 );
 
             if (!$response->successful()) {
                 Log::error('Failed to delete post from AI model', [
-                    'post_id' => $postId,
+                    'post_identifier' => $identifier,
                     'status_code' => $response->status(),
                     'response' => $response->body()
                 ]);
                 return false;
             }
 
-            Log::info('Successfully deleted post from AI model', ['post_id' => $postId]);
+            Log::info('Successfully deleted post from AI model', ['post_identifier' => $identifier]);
             return true;
         } catch (\Throwable $e) {
             Log::error('AI delete_article request failed', [
-                'post_id' => $postId ?? 'unknown',
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);

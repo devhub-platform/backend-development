@@ -20,6 +20,7 @@ use App\Services\Posts\PostCreationService;
 use App\Services\UserInterestService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Number;
@@ -30,10 +31,10 @@ class PostController
 
     public function __construct(
         private PostCreationService $postCreationService,
-        private PostAIImageService $aiImageService,
+        private PostAIImageService  $aiImageService,
         private UserInterestService $userInterestService,
-        private ModerationService $moderationService,
-        private AddPostToAI $addPostToAI,
+        private ModerationService   $moderationService,
+        private AddPostToAI         $addPostToAI,
     )
     {
     }
@@ -219,6 +220,7 @@ class PostController
         $title = $post->title;
 
         if ($post->status === 'draft') {
+            $this->addPostToAI->deletePostFromModel($post);
             $post->forceDelete();
             $message = "Post '{$title}' permanently deleted successfully";
         } else {
@@ -281,9 +283,9 @@ class PostController
         $this->authorize('forceDelete', $post);
 
         $title = $post->title;
-        $post->forceDelete();
 
         $this->addPostToAI->deletePostFromModel($post);
+        $post->forceDelete();
 
 
         return response()->json([
