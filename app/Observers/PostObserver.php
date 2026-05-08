@@ -6,6 +6,7 @@ use App\Models\Post;
 use App\Services\AI\EmbeddingService;
 use App\Services\AI\AddPostToAI;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class PostObserver
 {
@@ -19,6 +20,7 @@ class PostObserver
     public function creating(Post $post): void
     {
         $post->status ??= 'draft';
+        $post->uuid ??= (string) Str::uuid();
     }
 
     /**

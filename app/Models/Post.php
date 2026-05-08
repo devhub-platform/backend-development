@@ -26,6 +26,7 @@ class Post extends Model implements HasReaction
         'user_id',
         'title',
         'id',
+        'uuid',
         'slug',
         'image_url',
         'content',

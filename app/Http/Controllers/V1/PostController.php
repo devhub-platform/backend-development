@@ -15,6 +15,7 @@ use App\Models\Tag;
 use App\Notifications\PostReportedNotification;
 use App\Services\AI\AddPostToAI;
 use App\Services\AI\PostAIImageService;
+use App\Services\ModerationService;
 use App\Services\Posts\PostCreationService;
 use App\Services\UserInterestService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -31,6 +32,7 @@ class PostController
         private PostCreationService $postCreationService,
         private PostAIImageService $aiImageService,
         private UserInterestService $userInterestService,
+        private ModerationService $moderationService,
     )
     {
     }
