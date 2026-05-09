@@ -33,7 +33,6 @@ return [
             'title'    => 'ChatGPT OSS',
             'best_for' => 'General Chat',
             'fallback' => 'openai/gpt-5-mini',
-            'vision'   => true,
             'cost'     => 0.03,
         ],
         [
