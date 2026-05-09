@@ -36,6 +36,7 @@ class PostForm
                 TextInput::make('slug')
                     ->required(),
                 FileUpload::make('image_url')
+                    ->multiple()
                     ->image(),
                 TextInput::make('views')
                     ->numeric()

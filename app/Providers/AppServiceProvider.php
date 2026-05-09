@@ -25,7 +25,17 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        if (class_exists(\App\Services\HackClubCdnService::class)) {
+            $this->app->singleton(\App\Services\HackClubCdnService::class, function ($app) {
+                return new \App\Services\HackClubCdnService();
+            });
+        }
+
+        if (class_exists(\App\Services\AWSS3Service::class)) {
+            $this->app->singleton(\App\Services\AWSS3Service::class, function ($app) {
+                return new \App\Services\AWSS3Service();
+            });
+        }
     }
 
     public function boot(): void

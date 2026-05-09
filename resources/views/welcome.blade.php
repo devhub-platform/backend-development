@@ -273,5 +273,16 @@
         @if (\Illuminate\Support\Facades\Route::has('login'))
             <div class="h-14.5 hidden lg:block"></div>
         @endif
+
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function (OneSignal) {
+        await OneSignal.init({
+            appId: "88efb367-3555-484e-826d-cbc27f26b852",
+        });
+        console.log(OneSignal.User)
+    });
+</script>
     </body>
 </html>

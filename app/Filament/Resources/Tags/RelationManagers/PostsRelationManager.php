@@ -13,6 +13,7 @@ use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -54,8 +55,10 @@ class PostsRelationManager extends RelationManager
                     ->required()
                     ->unique(Post::class, 'slug', fn($record) => $record),
 
-                TextInput::make('image_url')
-                    ->url(),
+                FileUpload::make('image_url')
+                    ->multiple()
+                    ->image()
+                    ->helperText('Upload one or more images'),
 
                 TextEntry::make('created_at')
                     ->label('Created Date')
@@ -93,7 +96,8 @@ class PostsRelationManager extends RelationManager
 
                 TextEntry::make('slug'),
 
-                TextEntry::make('image_url'),
+                TextEntry::make('image_url')
+                    ->formatStateUsing(fn($state) => is_array($state) ? count($state) . ' image(s)' : (filled($state) ? '1 image' : '-')),
 
                 TextEntry::make('created_at')
                     ->label('Created Date')
@@ -132,7 +136,7 @@ class PostsRelationManager extends RelationManager
                     ->searchable()
                     ->sortable(),
 
-                ImageColumn::make('image_url'),
+                ImageColumn::make('image_url.0'),
 
                 TextColumn::make('status'),
 

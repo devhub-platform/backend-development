@@ -20,7 +20,7 @@ class FeedbackService
                 'message' => $data['message'],
                 'type' => $data['type'] ?? 'other',
                 'rating' => $data['rating'] ?? null,
-                'attachments' => $data['attachments'] ?? null,
+                'file' => $data['attachment'] ?? null,
             ]);
 
             return [

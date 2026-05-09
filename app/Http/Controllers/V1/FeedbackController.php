@@ -6,17 +6,24 @@ use App\Http\Requests\FeedbackRequest;
 use App\Http\Resources\FeedbackResource;
 use App\Models\Feedback;
 use App\Services\FeedbackService;
+use App\Services\HackClubCdnService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class FeedbackController
 {
     private FeedbackService $feedbackService;
+    private HackClubCdnService $hackClubCdnService;
 
-    public function __construct(FeedbackService $feedbackService)
+    public function __construct(
+        FeedbackService $feedbackService,
+        HackClubCdnService $hackClubCdnService
+    )
     {
         $this->feedbackService = $feedbackService;
+        $this->hackClubCdnService = $hackClubCdnService;
     }
 
     /**
@@ -31,6 +38,39 @@ class FeedbackController
         }
 
         $validated = $request->validated();
+
+        $attachmentUrl = null;
+        if ($request->hasFile('file')) {
+            try {
+                Log::info("Feedback attachment upload started for user {$user->id}", [
+                    'file_name' => $request->file('file')->getClientOriginalName(),
+                    'file_size' => $request->file('file')->getSize(),
+                    'mime_type' => $request->file('file')->getMimeType(),
+                ]);
+
+                $attachmentUrl = $this->hackClubCdnService->uploadFileUrl($request->file('file'));
+
+                Log::info("Feedback attachment uploaded successfully", [
+                    'user_id' => $user->id,
+                    'attachment_url' => $attachmentUrl,
+                ]);
+
+                $validated['attachment'] = $attachmentUrl;
+            } catch (\Exception $e) {
+                Log::error("Failed to upload feedback attachment for user {$user->id}", [
+                    'error' => $e->getMessage(),
+                    'file_name' => $request->hasFile('file') ? $request->file('file')->getClientOriginalName() : 'no file',
+                ]);
+
+                return response()->json([
+                    'message' => 'Failed to upload attachment. Please try again.',
+                    'error' => $e->getMessage()
+                ], 422);
+            }
+        } else {
+            Log::emergency("No attachment file found in feedback request for user {$user->id}");
+            unset($validated['attachment']);
+        }
 
         $result = $this->feedbackService->createFeedback($user, $validated);
 
@@ -203,6 +243,4 @@ class FeedbackController
         ], $result['status']);
     }
 }
-
-
 

@@ -13,6 +13,7 @@ class SearchPostResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
+            'id' => $this->id,
             'title' => $this->title,
             'content' => Str::limit($this->content, 100),
             'posted_by' => new SearchUsersResource($this->whenLoaded('user')),

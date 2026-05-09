@@ -110,7 +110,10 @@ return [
         'sql_origin_threshold_ms' => env('SENTRY_TRACE_SQL_ORIGIN_THRESHOLD_MS', 100),
 
         // Capture views rendered as spans
-        'views' => env('SENTRY_TRACE_VIEWS_ENABLED', true),
+        // Disabled by default because Laravel 12's Blade exception renderer can
+        // reflect into the underlying compiler engine and some Sentry tracing
+        // decorators are not compatible with that introspection.
+        'views' => env('SENTRY_TRACE_VIEWS_ENABLED', false),
 
         // Capture Livewire components as spans
         'livewire' => env('SENTRY_TRACE_LIVEWIRE_ENABLED', true),

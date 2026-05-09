@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\V1\AiModels\AIChatController;
 use App\Http\Controllers\V1\Chats\ChatController;
+use App\Models\Post;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redis;
 use App\Http\Controllers\V1\AiModels\AttachmentController;
 use App\Http\Controllers\V1\AiModels\HistoryController;
@@ -42,19 +44,20 @@ use App\Http\Controllers\V1\Chats\UserOfflineController;
 use App\Http\Controllers\V1\Chats\UserPresenceShowController;
 use App\Http\Controllers\V1\FeedbackController;
 use App\Http\Controllers\V1\TrendingController;
+use App\Http\Controllers\V1\AiModels\AITopicsUserController;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\V1\ProfileQuestionController;
 
 Route::prefix('v1')->group(function () {
     Route::get('/', function () {
         return response()->json([
-            'message' => 'Devhub API v2',
+            'message' => 'Devhub Community API v2.0.0',
             'status' => 'OK - Server on azure-cloud is running',
             'base_url' => 'https://dev-hubs.tech/api/v1',
             'api_docs' => 'https://devhub.apidog.io/',
             'admin_panel' => 'https://dev-hubs.tech/admin',
-            'mentoring ' => 'https://dev-hubs.tech/pulse',
-            'created_by' => 'Created by Eng/Youssef Ahmed & Eng/Menna Ahmed',
+            'mentoring' => 'https://dev-hubs.tech/pulse',
+            'created_by' => 'Created by Eng/Youssef Ahmed & Eng/Menna Ahmed'
         ]);
     });
 
@@ -95,6 +98,9 @@ Route::prefix('v1')->group(function () {
         });
 
         Route::get('ai-chat/models', [AIChatController::class, 'models']);
+
+        Route::get('ai-topics-user/{userId}', [AITopicsUserController::class, 'showByUserId']);
+//        Route::get('ai-topics-user', [AITopicsUserController::class, 'index']);
 
         Route::middleware(['auth:api', 'throttle:25,1'])->group(function () {
             Route::controller(AuthController::class)->group(function () {
@@ -310,6 +316,15 @@ Route::prefix('v1')->group(function () {
                 Route::get('notifications/answers', 'getAnswersNotifications');
             });
 
+            // ─── User Interaction Reporting & Analytics ──────────────────────────
+            Route::controller(\App\Http\Controllers\V1\UserInteractionReportController::class)->group(function () {
+                Route::get('user/interaction-report', 'getInteractionHistory');
+                Route::get('user/interaction-breakdown/{topicId}', 'getInteractionBreakdown');
+                Route::get('user/recommended-topics', 'getRecommendedTopics');
+                Route::get('user/topic-report/{topicId}', 'getTopicReport');
+                Route::get('user/interaction-analytics', 'getUserAnalytics');
+            });
+
             // ─── Tags Follow ──────────────────────────────────────────────────────
             Route::controller(TagFollowController::class)->group(function () {
                 Route::post('tags/{tag}/follow', 'follow');
@@ -466,7 +481,7 @@ Route::post('/test/send-message', [MessageController::class, 'broadcastTest']);
 Route::post('/send-message_notification', TestNotificationController::class);
 
 Route::get('/test-redis', function () {
-    Redis::set('test_key', 'Hello Redis Cloud!');
+    Redis::set('test_key', 'I Love Devhub!');
     Log::info('Set test_key in Redis: Hello Redis Cloud!');
     $key = Redis::get('test_key');
     return response()->json([

@@ -27,7 +27,7 @@ class PostInfolist
                 TextEntry::make('status')
                     ->badge(),
                 TextEntry::make('slug'),
-                ImageEntry::make('image_url')
+                ImageEntry::make('image_url.0')
                     ->placeholder('-'),
                 TextEntry::make('created_at')
                     ->dateTime()

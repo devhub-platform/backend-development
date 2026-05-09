@@ -14,12 +14,13 @@ class PostResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'uuid' => $this->uuid,
             'title' => $this->title,
             'slug' => $this->slug,
             'content' => Str::limit($this->content, 250, '...'),
             'created_at' => $this->created_at->diffForHumans(),
             'updated_at' => $this->updated_at->format('Y-m-d H:i:s'),
-            'image_url' => $this->image_url ?? null,
+            'image_url' => $this->image_url ?? [],
             'cover_image' => $this->cover_image ?? null,
             'status' => $this->status,
             'read_time' => $this->read_time ? $this->read_time . ' min read' : null,

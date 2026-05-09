@@ -16,14 +16,14 @@ class Feedback extends Model
         'type',
         'status',
         'rating',
-        'attachments',
+        'file',
         'admin_response',
         'responded_by',
         'responded_at',
     ];
 
     protected $casts = [
-        'attachments' => 'array',
+        'file' => 'string',
         'responded_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -45,4 +45,3 @@ class Feedback extends Model
         return $this->belongsTo(User::class, 'responded_by');
     }
 }
-

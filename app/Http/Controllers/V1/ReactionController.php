@@ -5,6 +5,7 @@ namespace App\Http\Controllers\V1;
 use App\Http\Requests\ReactionRequest;
 use App\Models\Post;
 use App\Notifications\ReactNotification;
+use App\Services\UserInterestService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
@@ -14,11 +15,18 @@ class ReactionController
 {
     public int $numberOfReactions = 0;
 
+    protected UserInterestService $userInterestService;
+
+    public function __construct(UserInterestService $userInterestService)
+    {
+        $this->userInterestService = $userInterestService;
+    }
+
     public function reactToPost(ReactionRequest $request, $postId)
     {
         $validated = $request->validated();
 
-        $post = Post::with('user')->findOrFail($postId);
+        $post = Post::with('user', 'tags')->findOrFail($postId);
         $user = auth()->user();
 
         if ($post->user && $user->isBlockedWith($post->user)) {
@@ -38,17 +46,25 @@ class ReactionController
             $user->updateReaction($validated['type'], $post);
             if ($post->user->isNotificationEnabled('new_reaction')) {
                 Notification::send($post->user, new ReactNotification($post, $validated['type'], $user));
-//                OneSignal::sendNotificationToUser(
-//                    'Your post received a new reaction',
-//                    $post->user->onesignal_player_id,
-//                    'deeplink://reactions?id=' . $post->id,
-//                    null,
-//                    null,
-//                    null
-//                    ,
-//                    'Your post received a new reaction'
-//                );
+                OneSignal::sendNotificationToUser(
+                    'Your post received a new reaction',
+                    $post->user->onesignal_player_id,
+                    'deeplink://reactions?id=' . $post->id,
+                    null,
+                    null,
+                    null
+                    ,
+                    'Your post received a new reaction'
+                );
             }
+
+            // Track the interaction with full reporting
+            $this->userInterestService->trackPostInteraction(
+                $user,
+                $post,
+                $validated['type'],
+                json_encode(['reaction_update' => true])
+            );
 
             return response()->json([
                 'message' => 'Reaction updated successfully.',
@@ -61,9 +77,18 @@ class ReactionController
             Notification::send($post->user, new ReactNotification($post, $validated['type'], $user));
         }
 
+        // Track the interaction with full reporting
+        $result = $this->userInterestService->trackPostInteraction(
+            $user,
+            $post,
+            $validated['type'],
+            json_encode(['new_reaction' => true])
+        );
+
         return response()->json([
             'message' => 'Reaction added successfully.',
             'reaction' => $validated['type'],
+            'topic_tracking' => $result, // Show what topics were tracked/added
         ], 201);
     }
 

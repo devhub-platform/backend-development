@@ -13,29 +13,28 @@ use App\Models\PostView;
 use App\Models\Report;
 use App\Models\Tag;
 use App\Notifications\PostReportedNotification;
-use App\Notifications\NewPostNotification;
 use App\Services\AI\AddPostToAI;
 use App\Services\AI\PostAIImageService;
-use App\Services\HackClubCdnService;
-use App\Services\ImageUploadCloudinaryService;
 use App\Services\ModerationService;
+use App\Services\Posts\PostCreationService;
+use App\Services\UserInterestService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Number;
-use Illuminate\Support\Str;
-use OneSignal;
 
 class PostController
 {
     use AuthorizesRequests;
 
     public function __construct(
-        private ImageUploadCloudinaryService $cloudinaryService,
-        private HackClubCdnService           $hackClubCdnService,
-        private PostAIImageService           $aiImageService,
-        private AddPostToAI                  $addPostToAIService
+        private PostCreationService $postCreationService,
+        private PostAIImageService  $aiImageService,
+        private UserInterestService $userInterestService,
+        private ModerationService   $moderationService,
+        private AddPostToAI         $addPostToAI,
     )
     {
     }
@@ -114,103 +113,30 @@ class PostController
         ]);
     }
 
-    public function store(PostStoreRequest $request, ModerationService $moderationService): JsonResponse
+    public function store(PostStoreRequest $request): JsonResponse
     {
         $this->authorize('create', Post::class);
 
         $validated = $request->validated();
-        $requestedTags = $validated['tags'] ?? [];
-        unset($validated['tags']);
 
-        $validated['user_id'] = auth()->id();
-        $validated['slug'] = Str::slug($validated['title']);
+        $result = $this->postCreationService->create(
+            userId: auth()->id(),
+            authorName: auth()->user()->name,
+            authorPlayerId: auth()->user()->onesignal_player_id ?? '',
+            validated: $validated,
+            coverImage: $request->file('cover_image'),
+            images: $request->file('image_url'),
+            requestedTags: $validated['tags'] ?? [],
+        );
 
-        if ($request->hasFile('cover_image')) {
-            $validated['cover_image'] = $this->cloudinaryService->uploadPostCoverImage(
-                $request->file('cover_image'),
-                $validated['slug']
-            );
-        }
-
-        if ($request->hasFile('image_url')) {
-            $validated['image_url'] = $this->hackClubCdnService->uploadFileUrl($request->file('image_url'));
-        }
-
-        $contentToModerate = $validated['content'] . ' ' . $validated['title'];
-        $moderationResult = $moderationService->moderateContent($contentToModerate);
-
-        if ($moderationResult['flagged'] ?? false) {
-            $reasons = $moderationService->getModerationMessage($moderationResult);
-            Log::warning("Post content flagged for user ID: " . auth()->id(), ['reasons' => $reasons]);
-
-            OneSignal::sendNotificationToAll(
-                'A user attempted to create a post that violates content policies reason: ' . $reasons,
-                'deeplink://users/' . auth()->id(),
-                null,
-                null,
-                null,
-                'Content Violation Attempt'
-            );
-
+        if (!($result['ok'] ?? false)) {
             return response()->json([
                 'message' => 'Post content violates our content policies and cannot be created. Your account may be reviewed.',
-                'reasons' => $reasons
+                'reasons' => $result['reasons'] ?? null,
             ], 422);
         }
 
-        // Remove generated_image_id before creating post — not a DB column
-        $generatedImageId = $validated['generated_image_id'] ?? null;
-        unset($validated['generated_image_id']);
-
-        $post = Post::create($validated);
-
-        if (!empty($requestedTags)) {
-            $tagIds = collect($requestedTags)
-                ->map(fn($tagName) => trim((string)$tagName))
-                ->filter()
-                ->unique()
-                ->map(fn($tagName) => Tag::firstOrCreate(['name' => $tagName])->id)
-                ->values();
-
-            if ($tagIds->isNotEmpty()) {
-                $post->tags()->syncWithoutDetaching($tagIds);
-            }
-        }
-
-        if ($generatedImageId) {
-            try {
-                $secureUrl = $this->aiImageService->confirm(
-                    generatedImageId: $generatedImageId,
-                    postId: $post->id,
-                    userId: auth()->id(),
-                );
-                $post->update(['cover_image' => $secureUrl]);
-            } catch (\Exception $e) {
-                Log::warning('Could not attach generated image to post', [
-                    'post_id' => $post->id,
-                    'generated_image_id' => $generatedImageId,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
-
-        if ($post->status !== 'draft') {
-            $followers = auth()->user()->followers
-                ->filter(fn($follower) => $follower->isNotificationEnabled('new_post_from_following'));
-
-            if ($followers->isNotEmpty()) {
-                Notification::send($followers, new NewPostNotification($post->load('user')));
-//                OneSignal::sendNotificationToUser(
-//                    Str::limit($validated['content'], 100, '...'),
-//                    $post->user->onesignal_player_id,
-//                    'deeplink://posts?id=' . $post->id,
-//                    null,
-//                    null,
-//                    null,
-//                    'New post from ' . $post->user->name
-//                );
-            }
-        }
+        $post = $result['post'];
 
         return response()->json([
             'message' => "Post '{$post->title}' created successfully",
@@ -240,6 +166,10 @@ class PostController
             );
 
             $shouldIncrementView = $postView->wasRecentlyCreated;
+
+            if ($shouldIncrementView) {
+                $this->userInterestService->trackPostInteraction($user, $post, 'view');
+            }
         } else {
             $shouldIncrementView = true;
         }
@@ -275,6 +205,8 @@ class PostController
 
         $post->update(array_merge($validated, ['is_edit' => true]));
 
+        $this->addPostToAI->updatePostToModel($post->fresh());
+
         return response()->json([
             'message' => "Post '{$post->title}' updated successfully",
             'data' => new PostResource($post)
@@ -288,6 +220,7 @@ class PostController
         $title = $post->title;
 
         if ($post->status === 'draft') {
+            $this->addPostToAI->deletePostFromModel($post);
             $post->forceDelete();
             $message = "Post '{$title}' permanently deleted successfully";
         } else {
@@ -350,7 +283,10 @@ class PostController
         $this->authorize('forceDelete', $post);
 
         $title = $post->title;
+
+        $this->addPostToAI->deletePostFromModel($post);
         $post->forceDelete();
+
 
         return response()->json([
             'message' => "Post '{$title}' permanently deleted successfully"
@@ -452,6 +388,10 @@ class PostController
             'report' => true,
         ]);
 
+
+        if ($request->hasFile('image_url')) {
+            $validated['image_url'] = $this->uploadPostImages($request->file('image_url'));
+        }
         $adminEmail = config('services.mail.admin_email_2', 'youssef.ahmed.fci@gmail.com');
         Notification::route('mail', $adminEmail)
             ->notify(new PostReportedNotification($report));
@@ -487,4 +427,5 @@ class PostController
 
         return $blocked->merge($blockers)->unique()->values()->all();
     }
+
 }
