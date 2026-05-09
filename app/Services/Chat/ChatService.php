@@ -215,7 +215,7 @@ class ChatService
         $attachments = Attachment::query()
             ->whereIn('id', $attachmentIds)
             ->where('user_id', $userId)
-            ->get(['id', 'text', 'filename', 'status', 'type', 's3_path', 'extension']);
+            ->get(['id', 'text', 'filename', 'status', 'type', 'blob_path', 'extension']);
 
         foreach ($attachments as $attachment) {
             if ($attachment->status === 'processed' && $attachment->text) {
@@ -248,7 +248,7 @@ class ChatService
         $attachments = Attachment::query()
             ->whereIn('id', $attachmentIds)
             ->where('user_id', $userId)
-            ->get(['id', 'url', 'mime_type', 'type', 'text', 'filename', 'status', 's3_path', 'extension', 'size']);
+            ->get(['id', 'url', 'mime_type', 'type', 'text', 'filename', 'status', 'blob_path', 'extension', 'size']);
 
         foreach ($attachments as $attachment) {
             if ($attachment->type === 'image') {
@@ -292,7 +292,7 @@ class ChatService
      * With Azure Blob Storage in public-container mode the `url` column already
      * holds a permanent public URL — no presigning is needed. We fall back to
      * reconstructing the URL via the Storage facade for legacy rows that predate
-     * the Azure migration (rows that only have an s3_path).
+     * the Azure migration (rows that only have an blob_path).
      */
     private function resolveImageUrl(Attachment $attachment): ?string
     {
@@ -301,8 +301,8 @@ class ChatService
             return $attachment->url;
         }
 
-        // Fallback: reconstruct from the stored blob/S3 path.
-        $blobPath = $attachment->s3_path ?? null;
+        // Fallback: reconstruct from the stored blob path.
+        $blobPath = $attachment->blob_path ?? null;
 
         if ($blobPath) {
             try {
