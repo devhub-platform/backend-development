@@ -14,9 +14,7 @@ use Illuminate\Support\Str;
 
 class QuestionService
 {
-    public function __construct(
-        private HackClubCdnService $cdn,
-    ) {}
+    public function __construct(private HackClubCdnService $cdn) {}
 
     public function createQuestion(User $user, array $data): Question
     {
@@ -26,34 +24,26 @@ class QuestionService
         $tags   = $data['tags']   ?? [];
         $images = $data['images'] ?? [];
 
-        // Remove non-fillable fields before create
         unset($data['tags'], $data['images']);
 
         $question = Question::create($data);
 
-        // ─── Attach Tags ──────────────────────────────────────────────────────
         if (!empty($tags)) {
-            $tagIds = collect($tags)->map(function ($name) {
-                return Tag::firstOrCreate(
-                    ['name' => strtolower(trim($name))],
-                    ['slug' => Str::slug($name)]
-                )->id;
-            });
-
+            $tagIds = collect($tags)->map(fn($name) =>
+            Tag::firstOrCreate(
+                ['name' => strtolower(trim($name))],
+                ['slug' => Str::slug($name)]
+            )->id
+            );
             $question->tags()->sync($tagIds);
         }
 
-        // ─── Upload Images ────────────────────────────────────────────────────
         if (!empty($images)) {
             foreach ($images as $image) {
                 try {
                     $url    = $this->cdn->uploadFileUrl($image);
                     $fileId = $this->extractFileId($url);
-
-                    $question->images()->create([
-                        'url'     => $url,
-                        'file_id' => $fileId,
-                    ]);
+                    $question->images()->create(['url' => $url, 'file_id' => $fileId]);
                 } catch (\Exception $e) {
                     Log::warning('Question image upload failed', [
                         'question_id' => $question->id,
@@ -63,17 +53,60 @@ class QuestionService
             }
         }
 
-        $question->load(['user', 'tags', 'images']);
-        return $question->fresh();
+        return $question->fresh(['user', 'tags', 'images']);
     }
 
+    /**
+     * Update title, content, and optionally tags.
+     * Tags are synced — sending an empty array removes all tags.
+     * Not sending 'tags' at all leaves existing tags untouched.
+     */
     public function updateQuestion(Question $question, array $data): Question
     {
         if (isset($data['title'])) {
             $data['slug'] = Str::slug($data['title']) . '-' . uniqid();
         }
+
+        // Sync tags only if explicitly included in the request
+        if (array_key_exists('tags', $data)) {
+            $tagIds = collect($data['tags'] ?? [])->map(fn($name) =>
+            Tag::firstOrCreate(
+                ['name' => strtolower(trim($name))],
+                ['slug' => Str::slug($name)]
+            )->id
+            );
+            $question->tags()->sync($tagIds);
+            unset($data['tags']);
+        }
+
+        // Remove specific images if requested
+        if (!empty($data['remove_images'])) {
+            $question->images()
+                ->whereIn('id', $data['remove_images'])
+                ->delete();
+            unset($data['remove_images']);
+        }
+
+        // Add new images if provided
+        if (!empty($data['images'])) {
+            foreach ($data['images'] as $imageUrl) {
+                try {
+                    $url    = $this->cdn->uploadFileUrl($imageUrl);
+                    $fileId = $this->extractFileId($url);
+                    $question->images()->create(['url' => $url, 'file_id' => $fileId]);
+                } catch (\Exception $e) {
+                    Log::warning('Question image update upload failed', [
+                        'question_id' => $question->id,
+                        'error'       => $e->getMessage(),
+                    ]);
+                }
+            }
+            unset($data['images']);
+        }
+
         $question->update($data);
-        return $question->fresh();
+
+        return $question->fresh(['user', 'tags', 'images', 'votes', 'answers']);
     }
 
     public function deleteQuestion(Question $question): bool
@@ -135,24 +168,19 @@ class QuestionService
     public function acceptAnswer(Question $question, int $answerId): Question
     {
         $question->answers()->where('id', $answerId)->update(['is_accepted' => true]);
-
         if (!$question->is_resolved) {
             $question->update(['is_resolved' => true]);
         }
-
         return $question->fresh();
     }
 
     public function unacceptAnswer(Question $question, int $answerId): Question
     {
         $question->answers()->where('id', $answerId)->update(['is_accepted' => false]);
-
         $hasAccepted = $question->answers()->where('is_accepted', true)->exists();
-
         if (!$hasAccepted) {
             $question->update(['is_resolved' => false]);
         }
-
         return $question->fresh();
     }
 
@@ -171,7 +199,7 @@ class QuestionService
     public function getUserQuestions(User $user, int $perPage = 14): LengthAwarePaginator
     {
         return $user->questions()
-            ->with(['user', 'post', 'votes', 'answers', 'tags', 'images'])
+            ->with(['user', 'votes', 'answers', 'tags', 'images'])
             ->recent()
             ->paginate($perPage);
     }

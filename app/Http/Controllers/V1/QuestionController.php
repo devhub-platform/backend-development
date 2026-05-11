@@ -164,20 +164,6 @@ class QuestionController extends \Illuminate\Routing\Controller
         ]);
     }
 
-    public function userQuestions(Request $request): JsonResponse
-    {
-        $questions = $this->questionService->getUserQuestions(
-            $request->user(),
-            $request->integer('per_page', 15)
-        );
-
-        return response()->json([
-            'success' => true,
-            'data' => QuestionResource::collection($questions),
-            'meta' => $this->paginationMeta($questions),
-        ]);
-    }
-
     public function search(Request $request): JsonResponse
     {
         $query = $request->query('q', '');

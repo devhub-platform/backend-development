@@ -13,25 +13,26 @@ class PostFactory extends Factory
 
     public function definition(): array
     {
-        $title     = $this->faker->sentence(rand(5, 10));
+        $title = $this->faker->sentence(rand(5, 10));
         $createdAt = $this->faker->dateTimeBetween('-30 days', 'now');
 
         return [
-            'user_id'     => User::inRandomOrder()->value('id') ?? User::factory(),
-            'title'       => $title,
-            'slug'        => Str::slug($title) . '-' . Str::random(5),
-            'content'     => $this->faker->paragraphs(rand(3, 6), true),
+            'user_id' => User::inRandomOrder()->value('id') ?? User::factory(),
+            'uuid' => Str::uuid(),
+            'title' => $title,
+            'slug' => Str::slug($title) . '-' . Str::random(5),
+            'content' => $this->faker->paragraphs(rand(3, 6), true),
             'cover_image' => null,
-            'image_url'   => [
+            'image_url' => [
                 $this->faker->imageUrl(640, 480, 'nature'),
                 $this->faker->imageUrl(640, 480, 'technology'),
             ],
-            'status'      => $this->faker->randomElement(['published', 'published', 'published', 'draft']), // 75% published
-            'read_time'   => rand(1, 15),
-            'views'       => $this->faker->numberBetween(0, 5000),
-            'is_edit'     => false,
-            'created_at'  => $createdAt,
-            'updated_at'  => $createdAt,
+            'status' => $this->faker->randomElement(['published', 'published', 'published', 'draft']), // 75% published
+            'read_time' => rand(1, 15),
+            'views' => $this->faker->numberBetween(0, 5000),
+            'is_edit' => false,
+            'created_at' => $createdAt,
+            'updated_at' => $createdAt,
         ];
     }
 
@@ -48,8 +49,8 @@ class PostFactory extends Factory
     public function trending(): static
     {
         return $this->state(fn() => [
-            'views'      => $this->faker->numberBetween(1000, 10000),
-            'status'     => 'published',
+            'views' => $this->faker->numberBetween(1000, 10000),
+            'status' => 'published',
             'created_at' => $this->faker->dateTimeBetween('-3 days', 'now'),
         ]);
     }
