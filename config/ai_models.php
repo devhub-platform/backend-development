@@ -18,7 +18,7 @@ return [
     | Set a value to 0 to disable that limit entirely.
     */
     'prompt_limits' => [
-        'daily'   => env('PROMPT_LIMIT_DAILY',   2),
+        'daily'   => env('PROMPT_LIMIT_DAILY',   50),
         'monthly' => env('PROMPT_LIMIT_MONTHLY', 500),
     ],
 
