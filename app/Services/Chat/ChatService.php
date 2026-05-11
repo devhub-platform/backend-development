@@ -21,17 +21,12 @@ class ChatService
      * 'base64' → inline base64 data URI only
      * 'url'    → public URL only (model fetches it directly)
      *
-     * Add or change entries here when a model's behaviour is confirmed.
+     * Only models with 'vision' => true in ai_models.php are ever reached here.
      * Models not listed default to 'both'.
      */
     private const IMAGE_STRATEGY = [
         'google/gemini-2.5-flash' => 'both',
         'x-ai/grok-4.1-fast'     => 'both',
-        'openai/gpt-oss-120b'     => 'both',
-        'qwen/qwen3-235b-a22b'    => 'url',    // qwen tends to prefer URLs
-        'moonshotai/kimi-k2-thinking'          => 'url',
-        'deepseek/deepseek-v3.2-speciale'      => 'url',
-        'deepseek/deepseek-v3.2'               => 'url',
     ];
 
     public function __construct(
@@ -54,12 +49,15 @@ class ChatService
      *
      * Flow:
      *  1. Acquire a per-session distributed lock to prevent duplicate submissions.
-     *  2. Resolve or create the chat session; reject on model mismatch.
-     *  3. Build the user message payload (plain text or multimodal vision array).
-     *  4. Persist the user turn and refresh the context window from cache.
-     *  5. Call the AI with automatic retry on transient failures.
-     *  6. Persist the assistant turn and push both turns into the context cache.
-     *  7. Return a structured response payload to the controller.
+     *  2. IMAGE GUARD — if the requested model does not support vision and the
+     *     user attached images, reject immediately before touching the DB.
+     *     No session is created, no prompt quota is consumed.
+     *  3. Resolve or create the chat session; reject on model mismatch.
+     *  4. Build the user message payload (plain text or multimodal vision array).
+     *  5. Persist the user turn and refresh the context window from cache.
+     *  6. Call the AI with automatic retry on transient failures.
+     *  7. Persist the assistant turn and push both turns into the context cache.
+     *  8. Return a structured response payload to the controller.
      */
     public function handle(array $data, $user): array
     {
@@ -81,16 +79,43 @@ class ChatService
         }
 
         try {
-            $requestedModel = $data['model'] ?? null;
-            $defaultModel   = config('ai_models.default');
+            $requestedModel = $data['model'] ?? config('ai_models.default');
+            $attachmentIds  = $data['attachments'] ?? [];
 
+            // ── Step 2: Image guard (runs BEFORE session creation) ────────────
+            //
+            // If the model does not support vision and the user attached at least
+            // one image, we reject here — before resolveSession() is called.
+            // This prevents an empty session row being written to the DB for a
+            // request that will never produce an AI response.
+            if (!empty($attachmentIds) && !$this->modelSupportsVision($requestedModel)) {
+                $hasImages = $this->attachmentsContainImages($attachmentIds, $user->id);
+
+                if ($hasImages) {
+                    $visionModels = $this->visionModelTitles();
+
+                    return [
+                        'session_id'         => $data['session_id'] ?? null,
+                        'content'            => null,
+                        'model_used'         => $requestedModel,
+                        'processing_time_ms' => round((microtime(true) - $startTime) * 1000, 2),
+                        'success'            => false,
+                        'error'              => 'images_not_supported',
+                        'message'            => 'The model "' . $this->modelTitle($requestedModel) . '" does not support image analysis. '
+                            . 'Please remove the image and send a document (PDF, DOCX, TXT) instead, '
+                            . 'or start a new chat with a vision-capable model: ' . $visionModels . '.',
+                    ];
+                }
+            }
+
+            // ── Step 3: Resolve or create session ─────────────────────────────
             $session = $this->history->resolveSession(
                 sessionId: $data['session_id'] ?? null,
-                model:     $requestedModel ?? $defaultModel,
+                model:     $requestedModel,
                 userId:    $user->id
             );
 
-            if ($requestedModel && $requestedModel !== $session->model) {
+            if ($requestedModel !== config('ai_models.default') && $requestedModel !== $session->model) {
                 return [
                     'session_id'         => null,
                     'content'            => null,
@@ -103,13 +128,14 @@ class ChatService
                 ];
             }
 
-            $attachmentIds       = $data['attachments'] ?? [];
+            // ── Step 4: Build message payload ─────────────────────────────────
             $modelSupportsVision = $this->modelSupportsVision($session->model);
 
             $userMessage = ($modelSupportsVision && !empty($attachmentIds))
                 ? $this->buildVisionContent($data['message'], $attachmentIds, $user->id, $session->model)
                 : $this->buildTextContent($data['message'], $attachmentIds, $user->id);
 
+            // ── Step 5: Persist user turn ─────────────────────────────────────
             $this->history->storeUserMessage($session->id, $data['message'], $attachmentIds);
 
             $context   = $this->cache->get($session->id);
@@ -118,9 +144,11 @@ class ChatService
             $model     = $this->resolver->resolve($session->model, $data['message']);
             $maxTokens = $this->calculateMaxTokens($data['message'], $model);
 
+            // ── Step 6: Call the AI ───────────────────────────────────────────
             $raw     = $this->callWithRetry($context, $model, $maxTokens);
             $content = $this->parser->parse($raw);
 
+            // ── Step 7: Persist assistant turn ────────────────────────────────
             $this->history->storeAIMessage($session->id, $content);
 
             // Store only plain text in cache — never base64 blobs.
@@ -178,7 +206,7 @@ class ChatService
             } catch (\Exception $e) {
                 $lastException = $e;
                 if ($attempt < $maxAttempts) {
-                    usleep(500000);
+                    usleep(500000); // 500 ms
                 }
             }
         }
@@ -196,8 +224,10 @@ class ChatService
 
     /**
      * Build a plain-text user message.
+     *
      * Documents are appended as labelled text blocks (truncated to 4 000 chars).
-     * Images are silently skipped — they cannot be conveyed as text.
+     * Images are skipped — the guard above ensures the user has already been
+     * informed that the current model cannot process images.
      */
     private function buildTextContent(string $message, array $attachmentIds, int $userId): string
     {
@@ -213,6 +243,12 @@ class ChatService
             ->get(['id', 'text', 'filename', 'status', 'type', 'blob_path', 'extension']);
 
         foreach ($attachments as $attachment) {
+            // Skip images — no extractable text, and the guard already blocked
+            // any request that pairs an image with a non-vision model.
+            if ($attachment->type === 'image') {
+                continue;
+            }
+
             if ($attachment->status === 'processed' && $attachment->text) {
                 $parts[] = "\n[File: " . $attachment->filename . "]:\n" . substr($attachment->text, 0, 4000);
             } elseif ($attachment->status === 'failed') {
@@ -273,14 +309,10 @@ class ChatService
      *   Pro: lightweight request.
      *   Con: requires the AI proxy to be able to fetch the URL.
      *
-     * Strategy 'both':
+     * Strategy 'both' (default):
      *   Try base64 first (most reliable).
      *   Fall back to URL if bytes cannot be fetched (e.g. stream error).
      *   Fall back to a text notice if the URL is also unavailable.
-     *
-     * @param  array      &$content
-     * @param  Attachment  $attachment
-     * @param  string      $strategy   'base64' | 'url' | 'both'
      */
     private function appendImageBlock(array &$content, Attachment $attachment, string $strategy): void
     {
@@ -303,8 +335,6 @@ class ChatService
                 $content[] = $this->buildUrlBlock($publicUrl);
                 return;
             }
-
-            // URL not available — fall through to text notice.
             $this->appendImageError($content, $attachment, 'No public URL available.');
             return;
         }
@@ -318,7 +348,6 @@ class ChatService
                 $content[] = $this->buildBase64Block($bytes, $mimeType);
                 return;
             }
-
             $this->appendImageError($content, $attachment, 'Could not fetch image bytes.');
             return;
         }
@@ -433,7 +462,6 @@ class ChatService
                 'url'    => $url,
                 'status' => $response->status(),
             ]);
-
             return null;
 
         } catch (\Throwable $e) {
@@ -447,7 +475,6 @@ class ChatService
 
     /**
      * Build an inline base64 image block (OpenAI image_url / data-URI format).
-     * Universally supported across OpenAI-compatible proxies.
      */
     private function buildBase64Block(string $bytes, string $mimeType): array
     {
@@ -477,7 +504,6 @@ class ChatService
 
     /**
      * Append a graceful text error message when an image cannot be delivered.
-     * Logs the reason for debugging.
      */
     private function appendImageError(array &$content, Attachment $attachment, string $reason): void
     {
@@ -495,6 +521,63 @@ class ChatService
     // =========================================================================
     // Misc Helpers
     // =========================================================================
+
+    /**
+     * Check whether any of the given attachment IDs belong to images.
+     */
+    private function attachmentsContainImages(array $attachmentIds, int $userId): bool
+    {
+        return Attachment::query()
+            ->whereIn('id', $attachmentIds)
+            ->where('user_id', $userId)
+            ->where('type', 'image')
+            ->exists();
+    }
+
+    /**
+     * Check whether the given model ID supports image (vision) input.
+     * Vision support is declared in config/ai_models.php via a `vision: true` flag.
+     */
+    private function modelSupportsVision(string $modelId): bool
+    {
+        foreach (config('ai_models.chat', []) as $model) {
+            if ($model['id'] === $modelId) {
+                return !empty($model['vision']);
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Return the display title for a model ID.
+     * Falls back to the raw ID if the model is not found in config.
+     */
+    private function modelTitle(string $modelId): string
+    {
+        foreach (config('ai_models.chat', []) as $model) {
+            if ($model['id'] === $modelId) {
+                return $model['title'] ?? $modelId;
+            }
+        }
+        return $modelId;
+    }
+
+    /**
+     * Return a comma-separated list of vision-capable model titles.
+     * Used in the images_not_supported error message.
+     */
+    private function visionModelTitles(): string
+    {
+        $titles = [];
+
+        foreach (config('ai_models.chat', []) as $model) {
+            if (!empty($model['vision'])) {
+                $titles[] = $model['title'] ?? $model['id'];
+            }
+        }
+
+        return implode(', ', $titles) ?: 'Gemini Flash, Grok 4.1';
+    }
 
     /**
      * Calculate the max output tokens based on message length and model tier.
@@ -515,20 +598,5 @@ class ChatService
         if ($length > 2000) return 2000;
         if ($length > 1000) return 3000;
         return 4000;
-    }
-
-    /**
-     * Check whether the given model ID supports image (vision) input.
-     * Vision support is declared in config/ai_models.php via a `vision: true` flag.
-     */
-    private function modelSupportsVision(string $modelId): bool
-    {
-        foreach (config('ai_models.chat', []) as $model) {
-            if ($model['id'] === $modelId) {
-                return !empty($model['vision']);
-            }
-        }
-
-        return false;
     }
 }

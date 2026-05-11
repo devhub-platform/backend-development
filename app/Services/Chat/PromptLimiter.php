@@ -74,33 +74,26 @@ class PromptLimiter
      */
     public function consume(int $userId): void
     {
+        $today     = now()->toDateString();
+        $thisMonth = now()->format('Y-m-01');
+
         $record = UserPromptUsage::firstOrCreate(
             ['user_id' => $userId],
             [
                 'daily_count'        => 0,
                 'monthly_count'      => 0,
-                'last_daily_reset'   => now()->toDateString(),
-                'last_monthly_reset' => now()->toDateString(),
+                'last_daily_reset'   => $today,
+                'last_monthly_reset' => $today,
             ]
         );
 
-        $today     = now()->toDateString();
-        $thisMonth = now()->format('Y-m-01');
-
-        $dailyCount   = $record->daily_count;
-        $monthlyCount = $record->monthly_count;
-
-        if ((string) $record->last_daily_reset !== $today) {
-            $dailyCount = 0;
-        }
-
-        if ((string) $record->last_monthly_reset < $thisMonth) {
-            $monthlyCount = 0;
-        }
-
         $record->update([
-            'daily_count'        => $dailyCount + 1,
-            'monthly_count'      => $monthlyCount + 1,
+            'daily_count'        => $record->last_daily_reset->format('Y-m-d') === $today
+                ? $record->daily_count + 1
+                : 1,
+            'monthly_count'      => $record->last_monthly_reset->format('Y-m-') === now()->format('Y-m-')
+                ? $record->monthly_count + 1
+                : 1,
             'last_daily_reset'   => $today,
             'last_monthly_reset' => $thisMonth,
         ]);
@@ -154,12 +147,12 @@ class PromptLimiter
             $monthlyCount = $record->monthly_count;
             $needsUpdate  = false;
 
-            if ((string) $record->last_daily_reset !== $today) {
+            if ($record->last_daily_reset->format('Y-m-d') !== $today) {
                 $dailyCount  = 0;
                 $needsUpdate = true;
             }
 
-            if ((string) $record->last_monthly_reset < $thisMonth) {
+            if ($record->last_monthly_reset->format('Y-m-d') < $thisMonth) {
                 $monthlyCount = 0;
                 $needsUpdate  = true;
             }

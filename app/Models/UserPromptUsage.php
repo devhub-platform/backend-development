@@ -18,8 +18,8 @@ class UserPromptUsage extends Model
     ];
 
     protected $casts = [
-        'last_daily_reset'   => 'date',
-        'last_monthly_reset' => 'date',
+        'last_daily_reset'   => 'date:Y-m-d',
+        'last_monthly_reset' => 'date:Y-m-d',
     ];
 
     public function user(): BelongsTo
