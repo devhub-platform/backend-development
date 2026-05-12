@@ -11,7 +11,7 @@ class UsersPerMonthChart extends ChartWidget
 {
     protected ?string $heading = 'Users Per Month';
 
-    protected ?int $sort = 2;
+    protected static ?int $sort = 2;
 
     protected function getData(): array
     {
