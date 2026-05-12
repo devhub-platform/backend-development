@@ -9,9 +9,9 @@ use Illuminate\Support\Facades\DB;
 
 class UsersPerMonthChart extends ChartWidget
 {
-    protected static ?string $heading = 'Users Per Month';
+    protected ?string $heading = 'Users Per Month';
 
-    protected static ?int $sort = 2;
+    protected ?int $sort = 2;
 
     protected function getData(): array
     {
