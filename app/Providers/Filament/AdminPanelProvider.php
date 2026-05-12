@@ -15,6 +15,7 @@ use Filament\Support\Colors\Color;
 use App\Filament\Widgets\AdminOverviewStats;
 use App\Filament\Widgets\ContentActivityChart;
 use App\Filament\Widgets\TopPostsTable;
+use App\Filament\Widgets\UsersPerMonthChart;
 use Filament\Navigation\NavigationItem;
 use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -62,6 +63,7 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 AdminOverviewStats::class,
                 ContentActivityChart::class,
+                UsersPerMonthChart::class,
                 TopPostsTable::class,
                 AccountWidget::class,
             ])->plugins([
