@@ -76,6 +76,7 @@ class UserResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->withCount(['posts', 'questions']);
+            ->withCount(['posts', 'questions'])
+            ->latest('id');
     }
 }

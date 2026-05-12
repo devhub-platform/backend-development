@@ -2,7 +2,6 @@
     use Agencetwogether\AlertBox\AlertBox;
     use Agencetwogether\AlertBox\Enums\AlertType;
     use Filament\Forms\Components\RichEditor\RichContentRenderer;
-    use Filament\Support\View\Components\CalloutComponent\IconComponent;
     use Illuminate\View\ComponentAttributeBag;
 
     if (! $preview && $config) {
@@ -48,7 +47,7 @@
     @if (filled($title) || $showIcon)
         <div class="flex items-center gap-2 pb-2">
             @if (filled($type->getIcon()) && $showIcon)
-                {{ \Filament\Support\generate_icon_html($type->getIcon(), null, (new ComponentAttributeBag)->color(IconComponent::class, $color)) }}
+                {{ \Filament\Support\generate_icon_html($type->getIcon()) }}
             @endif
 
             @if (filled($title))

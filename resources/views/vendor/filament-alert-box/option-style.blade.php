@@ -1,6 +1,5 @@
 @php
     use Agencetwogether\AlertBox\AlertBox;
-    use Filament\Support\View\Components\CalloutComponent\IconComponent;
     use Illuminate\View\ComponentAttributeBag;
 
     $color = AlertBox::getColor($type->value) ?? $type->getColor();
@@ -16,7 +15,7 @@
     style="{{ $styles }}"
 >
     @if (filled($type->getIcon()))
-        {{ \Filament\Support\generate_icon_html($type->getIcon(), null, (new ComponentAttributeBag)->color(IconComponent::class, $color)) }}
+        {{ \Filament\Support\generate_icon_html($type->getIcon()) }}
     @endif
 
     <span>{{ $type->getLabel() }}</span>

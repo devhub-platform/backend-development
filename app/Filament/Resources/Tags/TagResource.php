@@ -12,6 +12,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class TagResource extends Resource
 {
@@ -35,7 +36,11 @@ class TagResource extends Resource
     {
         return TagsTable::table($table);
     }
-
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->latest('id');
+    }
     public static function getRelations(): array
     {
         return [

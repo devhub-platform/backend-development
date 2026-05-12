@@ -118,6 +118,11 @@ return [
             'replace_placeholders' => true,
         ],
 
+          'nitik' => [
+        'driver' => 'nitik',
+        'level' => 'debug',
+    ],
+
         'null' => [
             'driver' => 'monolog',
             'handler' => NullHandler::class,

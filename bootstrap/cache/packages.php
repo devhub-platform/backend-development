@@ -177,6 +177,17 @@
       0 => 'Filament\\Widgets\\WidgetsServiceProvider',
     ),
   ),
+  'kholil/nitik' => 
+  array (
+    'aliases' => 
+    array (
+      'Nitik' => 'Kholil\\Nitik\\Facades\\Nitik',
+    ),
+    'providers' => 
+    array (
+      0 => 'Kholil\\Nitik\\NitikServiceProvider',
+    ),
+  ),
   'kirschbaum-development/eloquent-power-joins' => 
   array (
     'providers' => 
@@ -475,6 +486,20 @@
     'providers' => 
     array (
       0 => 'Tymon\\JWTAuth\\Providers\\LaravelServiceProvider',
+    ),
+  ),
+  'zpm-packages/server-access-filament' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'ZPMPackages\\FilamentSshManagement\\FilamentSshManagementServiceProvider',
+    ),
+  ),
+  'zpm-packages/server-access-laravel' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'ZPMPackages\\LaravelSshManagement\\LaravelSshManagementServiceProvider',
     ),
   ),
 );

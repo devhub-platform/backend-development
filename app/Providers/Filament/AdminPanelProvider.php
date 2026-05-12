@@ -26,7 +26,11 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use AlizHarb\ActivityLog\ActivityLogPlugin;
+use AlizHarb\ActivityLog\Widgets\ActivityHeatmapWidget;
+use AlizHarb\ActivityLog\Widgets\ActivityChartWidget;
 use Agencetwogether\AlertBox\AlertBoxPlugin;
+// use ZPMPackages\FilamentSshManagement\FilamentSshManagementPlugin;
+use Kholil\Nitik\NitikPlugin;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -64,8 +68,9 @@ class AdminPanelProvider extends PanelProvider
                 AdminOverviewStats::class,
                 ContentActivityChart::class,
                 UsersPerMonthChart::class,
+                ActivityHeatmapWidget::class,
+                ActivityChartWidget::class,
                 TopPostsTable::class,
-                AccountWidget::class,
             ])->plugins([
                     ActivityLogPlugin::make()
                         ->label('Log')
@@ -74,7 +79,9 @@ class AdminPanelProvider extends PanelProvider
                     //                    ->cluster('System'), // Optional: Group inside a cluster
                 ])->plugins([
                     AlertBoxPlugin::make(),
-                ])
+                ])->plugins([
+            NitikPlugin::make(),
+        ])
             ->navigationItems([
                 NavigationItem::make('AI Analytics')
                     ->icon('heroicon-o-sparkles')

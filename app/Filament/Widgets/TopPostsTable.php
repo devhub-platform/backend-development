@@ -13,12 +13,9 @@ class TopPostsTable extends BaseWidget
 {
     protected static ?string $heading = 'Top Posts by Views';
 
-    protected static ?int $sort = 3;
+    protected static ?int $sort = 6;
 
-    protected int | string | array $columnSpan = [
-        'md' => 2,
-        'xl' => 2,
-    ];
+    protected int | string | array $columnSpan = 'full';
 
     public function table(Table $table): Table
     {
