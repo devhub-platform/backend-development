@@ -6,6 +6,13 @@
       0 => 'Aerni\\Cloudflared\\CloudflaredServiceProvider',
     ),
   ),
+  'agencetwogether/filament-alert-box' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'Agencetwogether\\AlertBox\\AlertBoxServiceProvider',
+    ),
+  ),
   'alizharb/filament-activity-log' => 
   array (
     'providers' => 
@@ -38,6 +45,13 @@
     'providers' => 
     array (
       0 => 'Awssat\\Visits\\VisitsServiceProvider',
+    ),
+  ),
+  'azure-oss/storage-blob-laravel' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'AzureOss\\Storage\\BlobLaravel\\AzureStorageBlobServiceProvider',
     ),
   ),
   'barryvdh/laravel-ide-helper' => 
@@ -133,6 +147,13 @@
     'providers' => 
     array (
       0 => 'Filament\\Schemas\\SchemasServiceProvider',
+    ),
+  ),
+  'filament/spatie-laravel-settings-plugin' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'Filament\\SpatieLaravelSettingsPluginServiceProvider',
     ),
   ),
   'filament/support' => 
@@ -268,13 +289,6 @@
     'providers' => 
     array (
       0 => 'Livewire\\LivewireServiceProvider',
-    ),
-  ),
-  'matthewbdaly/laravel-azure-storage' => 
-  array (
-    'providers' => 
-    array (
-      0 => 'Matthewbdaly\\LaravelAzureStorage\\AzureStorageServiceProvider',
     ),
   ),
   'megoxv/laravel-magika' => 
@@ -431,6 +445,13 @@
     'providers' => 
     array (
       0 => 'Spatie\\Referer\\RefererServiceProvider',
+    ),
+  ),
+  'spatie/laravel-settings' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'Spatie\\LaravelSettings\\LaravelSettingsServiceProvider',
     ),
   ),
   'torann/geoip' => 

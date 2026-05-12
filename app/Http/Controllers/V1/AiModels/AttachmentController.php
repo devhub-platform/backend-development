@@ -4,23 +4,30 @@ namespace App\Http\Controllers\V1\AiModels;
 
 use App\Http\Controllers\Controller;
 use App\Models\Attachment;
+use App\Services\AzureBlobStorageService;
 use App\Services\Chat\IngestionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class AttachmentController extends Controller
 {
     public function __construct(
-        protected IngestionService $ingestion,
+        protected IngestionService        $ingestion,
+        protected AzureBlobStorageService $azure,
     ) {}
 
     /**
-     * Upload a file, store it on S3, and trigger text extraction immediately.
+     * Upload a file to Azure Blob Storage and trigger text extraction.
      *
-     * Extraction happens here at upload time — not during the chat request —
-     * so the first message with an attachment is never delayed by heavy I/O.
+     * Images are stored as-is (with compression) and their public URL is
+     * returned directly — no text extraction is needed.
+     *
+     * Documents (PDF, DOCX, TXT) are text-extracted immediately at upload
+     * time so the first chat message referencing them is never delayed.
+     *
+     * Max file size: 200 MB
+     * Allowed types: pdf, txt, doc, docx, png, jpeg, jpg, gif
      */
     public function upload(Request $request): JsonResponse
     {
@@ -30,16 +37,23 @@ class AttachmentController extends Controller
             'text/plain',
             'application/msword',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'image/png', 'image/jpeg', 'image/gif',
+            'image/png',
+            'image/jpeg',
+            'image/gif',
         ];
 
+        // ── Validate: file present ────────────────────────────────────────────
         if (!$request->hasFile('file')) {
-            return response()->json(['error' => 'No file provided', 'message' => 'Please select a file to upload'], 400);
+            return response()->json([
+                'error'   => 'No file provided',
+                'message' => 'Please select a file to upload',
+            ], 400);
         }
 
         $file = $request->file('file');
         $ext  = strtolower($file->getClientOriginalExtension());
 
+        // ── Validate: allowed extension ───────────────────────────────────────
         if (!in_array($ext, $allowedExtensions)) {
             return response()->json([
                 'error'   => 'Invalid file type',
@@ -47,8 +61,7 @@ class AttachmentController extends Controller
             ], 400);
         }
 
-        // Validate the real MIME type, not just the extension.
-        // Prevents disguised uploads such as an .exe renamed to .pdf.
+        // ── Validate: real MIME type (prevents .exe renamed to .pdf) ──────────
         $realMime = $file->getMimeType();
         if (!in_array($realMime, $allowedRealMimes)) {
             return response()->json([
@@ -57,34 +70,39 @@ class AttachmentController extends Controller
             ], 400);
         }
 
-        if ($file->getSize() / 1024 > 102400) {
-            return response()->json(['error' => 'File too large', 'message' => 'Maximum allowed size is 100 MB'], 400);
+        // ── Validate: file size (max 200 MB) ──────────────────────────────────
+        $maxBytes = 200 * 1024 * 1024; // 200 MB
+        if ($file->getSize() > $maxBytes) {
+            return response()->json([
+                'error'   => 'File too large',
+                'message' => 'Maximum allowed size is 200 MB',
+            ], 400);
         }
 
-        $isImage  = $this->isImage($ext);
-        $filename = Str::uuid() . '.' . $ext;
-        $s3Path   = 'chat-attachments/' . $filename;
+        $isImage = $this->isImage($ext);
 
+        // ── Upload to Azure Blob Storage ──────────────────────────────────────
         try {
-            Storage::disk('s3')->putFileAs('chat-attachments', $file, $filename);
-        } catch (\Exception) {
-            return response()->json(['error' => 'Upload failed', 'message' => 'Could not upload file. Please try again.'], 500);
+            // uploadFile() returns ['url' => '...', 'path' => '...']
+            $result   = $this->azure->uploadFile($file, 'attachments');
+            $url      = $result['url'];
+            $blobPath = $result['path'];
+        } catch (\Exception $e) {
+            return response()->json([
+                'error'   => 'Upload failed',
+                'message' => 'Could not upload file. Please try again.',
+            ], 500);
         }
 
-        // Generate a short-lived presigned URL so the response works even with private buckets.
-        try {
-            $url = Storage::disk('s3')->temporaryUrl($s3Path, now()->addMinutes(10));
-        } catch (\Exception) {
-            $url = Storage::disk('s3')->url($s3Path);
-        }
-
+        // ── Persist the attachment record ─────────────────────────────────────
         $attachment = Attachment::create([
             'url'        => $url,
-            's3_path'    => $s3Path,
+            'blob_path'  => $blobPath,
             'filename'   => $file->getClientOriginalName(),
             'mime_type'  => $realMime,
             'size'       => $file->getSize(),
             'type'       => $isImage ? 'image' : 'document',
+            // Images are immediately usable; documents need text extraction first.
             'status'     => $isImage ? 'processed' : 'pending',
             'extension'  => $ext,
             'text'       => null,
@@ -92,12 +110,13 @@ class AttachmentController extends Controller
             'session_id' => $request->input('session_id'),
         ]);
 
+        // ── Extract text from documents (synchronous, non-blocking for images) ─
         if (!$isImage) {
             try {
                 $this->ingestion->extractAndStore($attachment);
             } catch (\Exception) {
-                // Non-fatal — the attachment is saved; the chat layer will surface
-                // a graceful "could not extract" message if needed.
+                // Non-fatal — chat layer will surface a graceful error message
+                // if the text is unavailable when the user sends a message.
             }
         }
 
@@ -112,7 +131,7 @@ class AttachmentController extends Controller
     }
 
     /**
-     * Delete an attachment and its corresponding S3 object.
+     * Delete an attachment and its corresponding Azure Blob object.
      * Only the owning user may delete their own attachments.
      */
     public function destroy(Request $request, int $attachmentId): JsonResponse
@@ -125,12 +144,10 @@ class AttachmentController extends Controller
             return response()->json(['error' => 'Attachment not found'], 404);
         }
 
-        if ($attachment->s3_path) {
-            try {
-                Storage::disk('s3')->delete($attachment->s3_path);
-            } catch (\Exception) {
-                // Non-fatal — remove the DB record regardless.
-            }
+        // Delete the blob from Azure; non-fatal if it is already gone.
+        $blobPath = $attachment->blob_path ?? $attachment->s3_path ?? null;
+        if ($blobPath) {
+            $this->azure->delete($blobPath);
         }
 
         $attachment->delete();
@@ -161,6 +178,10 @@ class AttachmentController extends Controller
             'filename'      => $attachment->filename,
         ]);
     }
+
+    // =========================================================================
+    // Helpers
+    // =========================================================================
 
     private function isImage(string $ext): bool
     {

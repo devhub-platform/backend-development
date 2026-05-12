@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b7e013e69ee59242f40e5a8a4253743a",
+    "content-hash": "9dbd2229874bcc002b6ce8156c36dcf7",
     "packages": [
         {
             "name": "aerni/cloudflared",
@@ -60,6 +60,86 @@
                 "source": "https://github.com/aerni/laravel-cloudflared/tree/v1.1.0"
             },
             "time": "2025-11-13T12:02:12+00:00"
+        },
+        {
+            "name": "agencetwogether/filament-alert-box",
+            "version": "1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/agencetwogether/filament-alert-box.git",
+                "reference": "68986e072b88909b2b7f44fa00efcfdabcc460b9"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/agencetwogether/filament-alert-box/zipball/68986e072b88909b2b7f44fa00efcfdabcc460b9",
+                "reference": "68986e072b88909b2b7f44fa00efcfdabcc460b9",
+                "shasum": ""
+            },
+            "require": {
+                "filament/filament": "^4.0|^5.0",
+                "filament/spatie-laravel-settings-plugin": "^4.0|^5.0",
+                "php": "^8.2",
+                "spatie/laravel-package-tools": "^1.15.0",
+                "spatie/laravel-settings": "^3.0|^4.0"
+            },
+            "require-dev": {
+                "larastan/larastan": "^3.0",
+                "laravel/pint": "^1.0",
+                "nunomaduro/collision": "^8.0",
+                "orchestra/testbench": "^9.0|^10.0",
+                "pestphp/pest": "^3.7|^4.0",
+                "pestphp/pest-plugin-arch": "^3.0|^4.0",
+                "pestphp/pest-plugin-laravel": "^3.0|^4.0",
+                "pestphp/pest-plugin-livewire": "^3.0|^4.0"
+            },
+            "suggest": {
+                "agencetwogether/hookshelper": "Simple plugin to toggle display hooks available in current page"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Agencetwogether\\AlertBox\\AlertBoxServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Agencetwogether\\AlertBox\\": "src/",
+                    "Agencetwogether\\AlertBox\\Database\\Seeders\\": "database/seeders/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Max",
+                    "email": "contact@agencetwogether.fr",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Define and display contextual alerts anywhere on your admin panel pages — Resources, custom Pages — using Filament's native render hooks system",
+            "homepage": "https://github.com/agencetwogether/filament-alert-box",
+            "keywords": [
+                "agencetwogether",
+                "filament-alert-box",
+                "filamentphp",
+                "hooks",
+                "laravel"
+            ],
+            "support": {
+                "issues": "https://github.com/agencetwogether/filament-alert-box/issues",
+                "source": "https://github.com/agencetwogether/filament-alert-box"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/agencetwogether",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-05-10T16:12:22+00:00"
         },
         {
             "name": "algolia/algoliasearch-client-php",
@@ -1505,6 +1585,252 @@
             "time": "2026-04-14T14:52:45+00:00"
         },
         {
+            "name": "azure-oss/identity",
+            "version": "1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Azure-OSS/azure-identity-php.git",
+                "reference": "419e221cb1b29a8189f19c1e253bb6a54c1accc1"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Azure-OSS/azure-identity-php/zipball/419e221cb1b29a8189f19c1e253bb6a54c1accc1",
+                "reference": "419e221cb1b29a8189f19c1e253bb6a54c1accc1",
+                "shasum": ""
+            },
+            "require": {
+                "ext-openssl": "*",
+                "php": "^8.1",
+                "php-http/discovery": "^1.20",
+                "psr/http-client": "^1.0",
+                "psr/http-factory": "^1.0",
+                "psr/http-message": "^1.1"
+            },
+            "require-dev": {
+                "guzzlehttp/guzzle": "^7.10",
+                "laravel/pint": "^1.27",
+                "phpstan/extension-installer": "^1.4",
+                "phpstan/phpstan": "^2.1",
+                "phpstan/phpstan-deprecation-rules": "^2.0",
+                "phpstan/phpstan-phpunit": "^2.0",
+                "phpstan/phpstan-strict-rules": "^2.0",
+                "phpunit/phpunit": "^13.0"
+            },
+            "suggest": {
+                "guzzlehttp/guzzle": "Provides a PSR-18 HTTP client and PSR-17 factories (used by default when installed)."
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "AzureOss\\Identity\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "support": {
+                "issues": "https://github.com/Azure-OSS/azure-identity-php/issues",
+                "source": "https://github.com/Azure-OSS/azure-identity-php/tree/1.0.0"
+            },
+            "time": "2026-03-13T18:32:57+00:00"
+        },
+        {
+            "name": "azure-oss/storage",
+            "version": "1.9.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Azure-OSS/azure-storage-php.git",
+                "reference": "ed2d4ad652cc90fa8067d9e47468666ed942cf76"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Azure-OSS/azure-storage-php/zipball/ed2d4ad652cc90fa8067d9e47468666ed942cf76",
+                "reference": "ed2d4ad652cc90fa8067d9e47468666ed942cf76",
+                "shasum": ""
+            },
+            "require": {
+                "azure-oss/storage-common": "^1.0",
+                "ext-curl": "*",
+                "ext-json": "*",
+                "ext-simplexml": "*",
+                "guzzlehttp/guzzle": "^7.8",
+                "php": "^8.1"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "aliases.php"
+                ],
+                "psr-4": {
+                    "AzureOss\\Storage\\Blob\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Brecht Vermeersch",
+                    "email": "brechtvermeersch@outlook.be"
+                },
+                {
+                    "name": "Pim Jansen",
+                    "email": "pimjansen@gmail.com"
+                }
+            ],
+            "description": "Azure Blob Storage PHP SDK",
+            "keywords": [
+                "azure",
+                "php",
+                "sdk",
+                "storage"
+            ],
+            "support": {
+                "source": "https://github.com/Azure-OSS/azure-storage-php/tree/1.9.0"
+            },
+            "time": "2026-03-15T06:57:10+00:00"
+        },
+        {
+            "name": "azure-oss/storage-blob-flysystem",
+            "version": "1.6.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Azure-OSS/azure-storage-php-adapter-flysystem.git",
+                "reference": "2d6438b98a3779886ba90d20703e81a14a256837"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Azure-OSS/azure-storage-php-adapter-flysystem/zipball/2d6438b98a3779886ba90d20703e81a14a256837",
+                "reference": "2d6438b98a3779886ba90d20703e81a14a256837",
+                "shasum": ""
+            },
+            "require": {
+                "azure-oss/storage": "^1.4",
+                "league/flysystem": "^3.28",
+                "php": "^8.1"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "aliases.php"
+                ],
+                "psr-4": {
+                    "AzureOss\\Storage\\BlobFlysystem\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Brecht Vermeersch",
+                    "email": "brechtvermeersch@outlook.be"
+                },
+                {
+                    "name": "Pim Jansen",
+                    "email": "pimjansen@gmail.com"
+                }
+            ],
+            "description": "Flysystem adapter for Azure Storage PHP",
+            "support": {
+                "source": "https://github.com/Azure-OSS/azure-storage-php-adapter-flysystem/tree/1.6.0"
+            },
+            "time": "2026-03-05T20:52:01+00:00"
+        },
+        {
+            "name": "azure-oss/storage-blob-laravel",
+            "version": "1.7.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Azure-OSS/azure-storage-php-adapter-laravel.git",
+                "reference": "df5e2592a6aa3d900abd59a93d5afd43ff204752"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Azure-OSS/azure-storage-php-adapter-laravel/zipball/df5e2592a6aa3d900abd59a93d5afd43ff204752",
+                "reference": "df5e2592a6aa3d900abd59a93d5afd43ff204752",
+                "shasum": ""
+            },
+            "require": {
+                "azure-oss/storage-blob-flysystem": "^1.2",
+                "illuminate/filesystem": "^10|^11|^12|^13",
+                "illuminate/support": "^10|^11|^12|^13",
+                "php": "^8.1"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "AzureOss\\Storage\\BlobLaravel\\AzureStorageBlobServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "AzureOss\\Storage\\BlobLaravel\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Brecht Vermeersch",
+                    "email": "brechtvermeersch@outlook.be"
+                }
+            ],
+            "description": "Azure Storage Blob filesystem driver for Laravel",
+            "support": {
+                "source": "https://github.com/Azure-OSS/azure-storage-php-adapter-laravel/tree/1.7.0"
+            },
+            "time": "2026-03-15T21:19:49+00:00"
+        },
+        {
+            "name": "azure-oss/storage-common",
+            "version": "1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Azure-OSS/azure-storage-php-common.git",
+                "reference": "3169c2f19475a087963e71aeb2cbf183eb676025"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Azure-OSS/azure-storage-php-common/zipball/3169c2f19475a087963e71aeb2cbf183eb676025",
+                "reference": "3169c2f19475a087963e71aeb2cbf183eb676025",
+                "shasum": ""
+            },
+            "require": {
+                "azure-oss/identity": "^1.0",
+                "caseyamcl/guzzle_retry_middleware": "^2.10",
+                "guzzlehttp/guzzle": "^7.8",
+                "php": "^8.1"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "aliases.php"
+                ],
+                "psr-4": {
+                    "AzureOss\\Storage\\Common\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Brecht Vermeersch",
+                    "email": "brechtvermeersch@outlook.be"
+                }
+            ],
+            "support": {
+                "source": "https://github.com/Azure-OSS/azure-storage-php-common/tree/1.1.0"
+            },
+            "time": "2026-03-13T19:18:28+00:00"
+        },
+        {
             "name": "berkayk/onesignal-laravel",
             "version": "v2.5.0",
             "source": {
@@ -1929,6 +2255,79 @@
                 }
             ],
             "time": "2024-02-09T16:56:22+00:00"
+        },
+        {
+            "name": "caseyamcl/guzzle_retry_middleware",
+            "version": "v2.13.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/caseyamcl/guzzle_retry_middleware.git",
+                "reference": "17c9299cde438b00bbeb099c6480319a81636a60"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/caseyamcl/guzzle_retry_middleware/zipball/17c9299cde438b00bbeb099c6480319a81636a60",
+                "reference": "17c9299cde438b00bbeb099c6480319a81636a60",
+                "shasum": ""
+            },
+            "require": {
+                "guzzlehttp/guzzle": "^6.3|^7.0",
+                "php": "^7.1|^8.0"
+            },
+            "require-dev": {
+                "jaschilz/php-coverage-badger": "^2.0",
+                "nesbot/carbon": "^2.0|^3.0",
+                "phpstan/extension-installer": "^1.0",
+                "phpstan/phpstan": "^1.0",
+                "phpunit/phpunit": "^7.5|^8.0|^9.0",
+                "squizlabs/php_codesniffer": "^3.5",
+                "symfony/var-dumper": "^5.0|^6.0|^7.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.0-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "GuzzleRetry\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Casey McLaughlin",
+                    "email": "caseyamcl@gmail.com",
+                    "homepage": "https://caseymclaughlin.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Guzzle v6+ retry middleware that handles 429/503 status codes and connection timeouts",
+            "homepage": "https://github.com/caseyamcl/guzzle_retry_middleware",
+            "keywords": [
+                "Guzzle",
+                "back-off",
+                "caseyamcl",
+                "guzzle_retry_middleware",
+                "middleware",
+                "retry",
+                "retry-after"
+            ],
+            "support": {
+                "issues": "https://github.com/caseyamcl/guzzle_retry_middleware/issues",
+                "source": "https://github.com/caseyamcl/guzzle_retry_middleware/tree/v2.13.0"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/caseyamcl",
+                    "type": "github"
+                }
+            ],
+            "time": "2025-07-11T12:33:22+00:00"
         },
         {
             "name": "chillerlan/php-qrcode",
@@ -2513,6 +2912,54 @@
                 "source": "https://github.com/dflydev/dflydev-dot-access-data/tree/v3.0.3"
             },
             "time": "2024-07-08T12:26:09+00:00"
+        },
+        {
+            "name": "doctrine/deprecations",
+            "version": "1.1.6",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/doctrine/deprecations.git",
+                "reference": "d4fe3e6fd9bb9e72557a19674f44d8ac7db4c6ca"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/doctrine/deprecations/zipball/d4fe3e6fd9bb9e72557a19674f44d8ac7db4c6ca",
+                "reference": "d4fe3e6fd9bb9e72557a19674f44d8ac7db4c6ca",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^7.1 || ^8.0"
+            },
+            "conflict": {
+                "phpunit/phpunit": "<=7.5 || >=14"
+            },
+            "require-dev": {
+                "doctrine/coding-standard": "^9 || ^12 || ^14",
+                "phpstan/phpstan": "1.4.10 || 2.1.30",
+                "phpstan/phpstan-phpunit": "^1.0 || ^2",
+                "phpunit/phpunit": "^7.5 || ^8.5 || ^9.6 || ^10.5 || ^11.5 || ^12.4 || ^13.0",
+                "psr/log": "^1 || ^2 || ^3"
+            },
+            "suggest": {
+                "psr/log": "Allows logging deprecations via PSR-3 logger implementation"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Doctrine\\Deprecations\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "A small layer on top of trigger_error(E_USER_DEPRECATED) or PSR-3 logging with options to disable all deprecations or selectively for packages.",
+            "homepage": "https://www.doctrine-project.org/",
+            "support": {
+                "issues": "https://github.com/doctrine/deprecations/issues",
+                "source": "https://github.com/doctrine/deprecations/tree/1.1.6"
+            },
+            "time": "2026-02-07T07:09:04+00:00"
         },
         {
             "name": "doctrine/inflector",
@@ -3265,6 +3712,50 @@
                 "source": "https://github.com/filamentphp/filament"
             },
             "time": "2026-01-09T15:14:31+00:00"
+        },
+        {
+            "name": "filament/spatie-laravel-settings-plugin",
+            "version": "v5.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/filamentphp/spatie-laravel-settings-plugin.git",
+                "reference": "35e23966e3f87ca7db863d67a6c6d2263a3e5895"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/filamentphp/spatie-laravel-settings-plugin/zipball/35e23966e3f87ca7db863d67a6c6d2263a3e5895",
+                "reference": "35e23966e3f87ca7db863d67a6c6d2263a3e5895",
+                "shasum": ""
+            },
+            "require": {
+                "filament/filament": "self.version",
+                "php": "^8.2",
+                "spatie/laravel-settings": "^3.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Filament\\SpatieLaravelSettingsPluginServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Filament\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Filament support for `spatie/laravel-settings`.",
+            "homepage": "https://github.com/filamentphp/filament",
+            "support": {
+                "issues": "https://github.com/filamentphp/filament/issues",
+                "source": "https://github.com/filamentphp/filament"
+            },
+            "time": "2025-12-30T13:10:25+00:00"
         },
         {
             "name": "filament/support",
@@ -5744,47 +6235,6 @@
             "time": "2026-02-25T16:46:44+00:00"
         },
         {
-            "name": "league/flysystem-azure-blob-storage",
-            "version": "3.31.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/thephpleague/flysystem-azure-blob-storage.git",
-                "reference": "1d1cf31cab62bd85cfbab91687d35e668423401f"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/thephpleague/flysystem-azure-blob-storage/zipball/1d1cf31cab62bd85cfbab91687d35e668423401f",
-                "reference": "1d1cf31cab62bd85cfbab91687d35e668423401f",
-                "shasum": ""
-            },
-            "require": {
-                "league/flysystem": "^3.10.0",
-                "microsoft/azure-storage-blob": "^1.1",
-                "php": "^8.0.2"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "League\\Flysystem\\AzureBlobStorage\\": ""
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Frank de Jonge",
-                    "email": "info@frankdejonge.nl"
-                }
-            ],
-            "support": {
-                "source": "https://github.com/thephpleague/flysystem-azure-blob-storage/tree/3.31.0"
-            },
-            "abandoned": "azure-oss/storage-blob-flysystem",
-            "time": "2026-01-23T15:30:45+00:00"
-        },
-        {
             "name": "league/flysystem-local",
             "version": "3.31.0",
             "source": {
@@ -6443,74 +6893,6 @@
                 "source": "https://github.com/Masterminds/html5-php/tree/2.10.0"
             },
             "time": "2025-07-25T09:04:22+00:00"
-        },
-        {
-            "name": "matthewbdaly/laravel-azure-storage",
-            "version": "2.0.8",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/matthewbdaly/laravel-azure-storage.git",
-                "reference": "db8ee5b2390ab7628477320db65c8da93f4602d6"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/matthewbdaly/laravel-azure-storage/zipball/db8ee5b2390ab7628477320db65c8da93f4602d6",
-                "reference": "db8ee5b2390ab7628477320db65c8da93f4602d6",
-                "shasum": ""
-            },
-            "require": {
-                "league/flysystem-azure-blob-storage": "^3.0"
-            },
-            "require-dev": {
-                "infection/infection": "^0.26.15",
-                "mockery/mockery": "^1.4",
-                "orchestra/testbench": "^7.0",
-                "pestphp/pest": "^1.22",
-                "pestphp/pest-plugin-laravel": "^1.3",
-                "php-coveralls/php-coveralls": "^2.1",
-                "phpcompatibility/php-compatibility": "^9.3",
-                "phpunit/phpunit": "^9.3",
-                "psy/psysh": "^0.11",
-                "slevomat/coding-standard": "^7.2",
-                "squizlabs/php_codesniffer": "^3.6",
-                "vimeo/psalm": "^4.19"
-            },
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "Matthewbdaly\\LaravelAzureStorage\\AzureStorageServiceProvider"
-                    ]
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Matthewbdaly\\LaravelAzureStorage\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Matthew Daly",
-                    "email": "matthewbdaly@gmail.com"
-                }
-            ],
-            "description": "Microsoft Azure Blob Storage integration for Laravel's Storage API",
-            "keywords": [
-                "azure",
-                "blob",
-                "laravel",
-                "storage"
-            ],
-            "support": {
-                "issues": "https://github.com/matthewbdaly/laravel-azure-storage/issues",
-                "source": "https://github.com/matthewbdaly/laravel-azure-storage/tree/2.0.8"
-            },
-            "abandoned": "azure-oss/storage-blob-laravel",
-            "time": "2022-10-17T13:38:14+00:00"
         },
         {
             "name": "megoxv/laravel-magika",
@@ -8001,6 +8383,196 @@
             "time": "2026-04-01T15:56:08+00:00"
         },
         {
+            "name": "php-http/discovery",
+            "version": "1.20.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/php-http/discovery.git",
+                "reference": "82fe4c73ef3363caed49ff8dd1539ba06044910d"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/php-http/discovery/zipball/82fe4c73ef3363caed49ff8dd1539ba06044910d",
+                "reference": "82fe4c73ef3363caed49ff8dd1539ba06044910d",
+                "shasum": ""
+            },
+            "require": {
+                "composer-plugin-api": "^1.0|^2.0",
+                "php": "^7.1 || ^8.0"
+            },
+            "conflict": {
+                "nyholm/psr7": "<1.0",
+                "zendframework/zend-diactoros": "*"
+            },
+            "provide": {
+                "php-http/async-client-implementation": "*",
+                "php-http/client-implementation": "*",
+                "psr/http-client-implementation": "*",
+                "psr/http-factory-implementation": "*",
+                "psr/http-message-implementation": "*"
+            },
+            "require-dev": {
+                "composer/composer": "^1.0.2|^2.0",
+                "graham-campbell/phpspec-skip-example-extension": "^5.0",
+                "php-http/httplug": "^1.0 || ^2.0",
+                "php-http/message-factory": "^1.0",
+                "phpspec/phpspec": "^5.1 || ^6.1 || ^7.3",
+                "sebastian/comparator": "^3.0.5 || ^4.0.8",
+                "symfony/phpunit-bridge": "^6.4.4 || ^7.0.1"
+            },
+            "type": "composer-plugin",
+            "extra": {
+                "class": "Http\\Discovery\\Composer\\Plugin",
+                "plugin-optional": true
+            },
+            "autoload": {
+                "psr-4": {
+                    "Http\\Discovery\\": "src/"
+                },
+                "exclude-from-classmap": [
+                    "src/Composer/Plugin.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Márk Sági-Kazár",
+                    "email": "mark.sagikazar@gmail.com"
+                }
+            ],
+            "description": "Finds and installs PSR-7, PSR-17, PSR-18 and HTTPlug implementations",
+            "homepage": "http://php-http.org",
+            "keywords": [
+                "adapter",
+                "client",
+                "discovery",
+                "factory",
+                "http",
+                "message",
+                "psr17",
+                "psr7"
+            ],
+            "support": {
+                "issues": "https://github.com/php-http/discovery/issues",
+                "source": "https://github.com/php-http/discovery/tree/1.20.0"
+            },
+            "time": "2024-10-02T11:20:13+00:00"
+        },
+        {
+            "name": "phpdocumentor/reflection-common",
+            "version": "2.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/phpDocumentor/ReflectionCommon.git",
+                "reference": "1d01c49d4ed62f25aa84a747ad35d5a16924662b"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/phpDocumentor/ReflectionCommon/zipball/1d01c49d4ed62f25aa84a747ad35d5a16924662b",
+                "reference": "1d01c49d4ed62f25aa84a747ad35d5a16924662b",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^7.2 || ^8.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-2.x": "2.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "phpDocumentor\\Reflection\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Jaap van Otterdijk",
+                    "email": "opensource@ijaap.nl"
+                }
+            ],
+            "description": "Common reflection classes used by phpdocumentor to reflect the code structure",
+            "homepage": "http://www.phpdoc.org",
+            "keywords": [
+                "FQSEN",
+                "phpDocumentor",
+                "phpdoc",
+                "reflection",
+                "static analysis"
+            ],
+            "support": {
+                "issues": "https://github.com/phpDocumentor/ReflectionCommon/issues",
+                "source": "https://github.com/phpDocumentor/ReflectionCommon/tree/2.x"
+            },
+            "time": "2020-06-27T09:03:43+00:00"
+        },
+        {
+            "name": "phpdocumentor/type-resolver",
+            "version": "2.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/phpDocumentor/TypeResolver.git",
+                "reference": "327a05bbee54120d4786a0dc67aad30226ad4cf9"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/phpDocumentor/TypeResolver/zipball/327a05bbee54120d4786a0dc67aad30226ad4cf9",
+                "reference": "327a05bbee54120d4786a0dc67aad30226ad4cf9",
+                "shasum": ""
+            },
+            "require": {
+                "doctrine/deprecations": "^1.0",
+                "php": "^7.4 || ^8.0",
+                "phpdocumentor/reflection-common": "^2.0",
+                "phpstan/phpdoc-parser": "^2.0"
+            },
+            "require-dev": {
+                "ext-tokenizer": "*",
+                "phpbench/phpbench": "^1.2",
+                "phpstan/extension-installer": "^1.4",
+                "phpstan/phpstan": "^2.1",
+                "phpstan/phpstan-phpunit": "^2.0",
+                "phpunit/phpunit": "^9.5",
+                "psalm/phar": "^4"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-1.x": "1.x-dev",
+                    "dev-2.x": "2.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "phpDocumentor\\Reflection\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Mike van Riel",
+                    "email": "me@mikevanriel.com"
+                }
+            ],
+            "description": "A PSR-5 based resolver of Class names, Types and Structural Element Names",
+            "support": {
+                "issues": "https://github.com/phpDocumentor/TypeResolver/issues",
+                "source": "https://github.com/phpDocumentor/TypeResolver/tree/2.0.0"
+            },
+            "time": "2026-01-06T21:53:42+00:00"
+        },
+        {
             "name": "phpoffice/math",
             "version": "0.3.0",
             "source": {
@@ -8344,6 +8916,53 @@
                 }
             ],
             "time": "2026-04-27T07:02:15+00:00"
+        },
+        {
+            "name": "phpstan/phpdoc-parser",
+            "version": "2.3.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/phpstan/phpdoc-parser.git",
+                "reference": "a004701b11273a26cd7955a61d67a7f1e525a45a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/phpstan/phpdoc-parser/zipball/a004701b11273a26cd7955a61d67a7f1e525a45a",
+                "reference": "a004701b11273a26cd7955a61d67a7f1e525a45a",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^7.4 || ^8.0"
+            },
+            "require-dev": {
+                "doctrine/annotations": "^2.0",
+                "nikic/php-parser": "^5.3.0",
+                "php-parallel-lint/php-parallel-lint": "^1.2",
+                "phpstan/extension-installer": "^1.0",
+                "phpstan/phpstan": "^2.0",
+                "phpstan/phpstan-phpunit": "^2.0",
+                "phpstan/phpstan-strict-rules": "^2.0",
+                "phpunit/phpunit": "^9.6",
+                "symfony/process": "^5.2"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "PHPStan\\PhpDocParser\\": [
+                        "src/"
+                    ]
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "PHPDoc parser with support for nullable, intersection and generic types",
+            "support": {
+                "issues": "https://github.com/phpstan/phpdoc-parser/issues",
+                "source": "https://github.com/phpstan/phpdoc-parser/tree/2.3.2"
+            },
+            "time": "2026-01-25T14:56:51+00:00"
         },
         {
             "name": "pragmarx/google2fa",
@@ -11040,6 +11659,91 @@
             "time": "2026-02-21T21:26:49+00:00"
         },
         {
+            "name": "spatie/laravel-settings",
+            "version": "3.8.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/spatie/laravel-settings.git",
+                "reference": "09b788ee96d205699420dedb8a6aa8c4c8af84fe"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/spatie/laravel-settings/zipball/09b788ee96d205699420dedb8a6aa8c4c8af84fe",
+                "reference": "09b788ee96d205699420dedb8a6aa8c4c8af84fe",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "illuminate/database": "^11.0|^12.0|^13.0",
+                "php": "^8.2",
+                "phpdocumentor/type-resolver": "^1.5|^2.0",
+                "spatie/temporary-directory": "^1.3|^2.0"
+            },
+            "require-dev": {
+                "ext-redis": "*",
+                "mockery/mockery": "^1.4",
+                "orchestra/testbench": "^9.0|^10.0|^11.0",
+                "pestphp/pest": "^2.0|^3.0|^4.0",
+                "pestphp/pest-plugin-laravel": "^2.0|^3.0|^4.0",
+                "phpstan/extension-installer": "^1.1",
+                "phpstan/phpstan-deprecation-rules": "^1.0",
+                "phpstan/phpstan-phpunit": "^1.0",
+                "spatie/laravel-data": "^2.0.0|^4.0.0",
+                "spatie/pest-plugin-snapshots": "^2.0",
+                "spatie/phpunit-snapshot-assertions": "^4.2|^5.0",
+                "spatie/ray": "^1.36"
+            },
+            "suggest": {
+                "spatie/data-transfer-object": "Allows for DTO casting to settings. (deprecated)"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Spatie\\LaravelSettings\\LaravelSettingsServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Spatie\\LaravelSettings\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Ruben Van Assche",
+                    "email": "ruben@spatie.be",
+                    "homepage": "https://spatie.be",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Store your application settings",
+            "homepage": "https://github.com/spatie/laravel-settings",
+            "keywords": [
+                "laravel-settings",
+                "spatie"
+            ],
+            "support": {
+                "issues": "https://github.com/spatie/laravel-settings/issues",
+                "source": "https://github.com/spatie/laravel-settings/tree/3.8.0"
+            },
+            "funding": [
+                {
+                    "url": "https://spatie.be/open-source/support-us",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/spatie",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-04-28T07:05:06+00:00"
+        },
+        {
             "name": "spatie/shiki-php",
             "version": "2.4.0",
             "source": {
@@ -11103,6 +11807,67 @@
                 }
             ],
             "time": "2026-04-27T14:27:52+00:00"
+        },
+        {
+            "name": "spatie/temporary-directory",
+            "version": "2.3.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/spatie/temporary-directory.git",
+                "reference": "662e481d6ec07ef29fd05010433428851a42cd07"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/spatie/temporary-directory/zipball/662e481d6ec07ef29fd05010433428851a42cd07",
+                "reference": "662e481d6ec07ef29fd05010433428851a42cd07",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^9.5"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Spatie\\TemporaryDirectory\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Alex Vanderbist",
+                    "email": "alex@spatie.be",
+                    "homepage": "https://spatie.be",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Easily create, use and destroy temporary directories",
+            "homepage": "https://github.com/spatie/temporary-directory",
+            "keywords": [
+                "php",
+                "spatie",
+                "temporary-directory"
+            ],
+            "support": {
+                "issues": "https://github.com/spatie/temporary-directory/issues",
+                "source": "https://github.com/spatie/temporary-directory/tree/2.3.1"
+            },
+            "funding": [
+                {
+                    "url": "https://spatie.be/open-source/support-us",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/spatie",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-01-12T07:42:22+00:00"
         },
         {
             "name": "starkbank/ecdsa",

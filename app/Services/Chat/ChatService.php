@@ -8,30 +8,63 @@ use App\Services\AI\HackAIService;
 use App\Services\AI\ModelResolver;
 use App\Services\AI\TokenTracker;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class ChatService
 {
+    /**
+     * How each vision-capable model wants to receive images.
+     *
+     * 'both'   → try base64 first, fall back to URL if it fails
+     * 'base64' → inline base64 data URI only
+     * 'url'    → public URL only (model fetches it directly)
+     *
+     * Only models with 'vision' => true in ai_models.php are ever reached here.
+     * Models not listed default to 'both'.
+     */
+    private const IMAGE_STRATEGY = [
+        'google/gemini-2.5-flash' => 'both',
+        'x-ai/grok-4.1-fast'     => 'both',
+    ];
+
     public function __construct(
-        protected ChatHistoryService $history,
-        protected HackAIService      $ai,
-        protected AIResponseParser   $parser,
-        protected ChatContextCache   $cache,
-        protected ModelResolver      $resolver,
-        protected TokenTracker       $tracker,
-        protected IngestionService   $ingestion,
-    ) {}
+        protected ChatHistoryService $history,   // Persists and retrieves conversation history
+        protected HackAIService      $ai,        // Communicates with the upstream AI API
+        protected AIResponseParser   $parser,    // Normalises raw AI responses into clean text
+        protected ChatContextCache   $cache,     // Short-lived Redis cache for conversation context
+        protected ModelResolver      $resolver,  // Selects the optimal model based on message complexity
+        protected TokenTracker       $tracker,   // Estimates token counts and request cost
+        protected IngestionService   $ingestion, // Extracts plain text from uploaded documents
+    ) {
+    }
+
+    // =========================================================================
+    // Public API
+    // =========================================================================
 
     /**
-     * Handle an incoming chat request.
+     * Handle an incoming chat request end-to-end.
      *
-     * Resolves the session, builds message content, calls the AI,
-     * persists both turns, and returns the response payload.
+     * Flow:
+     *  1. Acquire a per-session distributed lock to prevent duplicate submissions.
+     *  2. IMAGE GUARD — if the requested model does not support vision and the
+     *     user attached images, reject immediately before touching the DB.
+     *     No session is created, no prompt quota is consumed.
+     *  3. Resolve or create the chat session; reject on model mismatch.
+     *  4. Build the user message payload (plain text or multimodal vision array).
+     *  5. Persist the user turn and refresh the context window from cache.
+     *  6. Call the AI with automatic retry on transient failures.
+     *  7. Persist the assistant turn and push both turns into the context cache.
+     *  8. Return a structured response payload to the controller.
      */
     public function handle(array $data, $user): array
     {
         $startTime  = microtime(true);
         $sessionKey = 'chat:lock:' . ($data['session_id'] ?? 'new:' . $user->id);
-        $lock       = Cache::lock($sessionKey, 15);
+
+        $lock = Cache::lock($sessionKey, 15);
 
         if (!$lock->get()) {
             return [
@@ -46,16 +79,43 @@ class ChatService
         }
 
         try {
-            $requestedModel = $data['model'] ?? null;
-            $defaultModel   = config('ai_models.default');
+            $requestedModel = $data['model'] ?? config('ai_models.default');
+            $attachmentIds  = $data['attachments'] ?? [];
 
+            // ── Step 2: Image guard (runs BEFORE session creation) ────────────
+            //
+            // If the model does not support vision and the user attached at least
+            // one image, we reject here — before resolveSession() is called.
+            // This prevents an empty session row being written to the DB for a
+            // request that will never produce an AI response.
+            if (!empty($attachmentIds) && !$this->modelSupportsVision($requestedModel)) {
+                $hasImages = $this->attachmentsContainImages($attachmentIds, $user->id);
+
+                if ($hasImages) {
+                    $visionModels = $this->visionModelTitles();
+
+                    return [
+                        'session_id'         => $data['session_id'] ?? null,
+                        'content'            => null,
+                        'model_used'         => $requestedModel,
+                        'processing_time_ms' => round((microtime(true) - $startTime) * 1000, 2),
+                        'success'            => false,
+                        'error'              => 'images_not_supported',
+                        'message'            => 'The model "' . $this->modelTitle($requestedModel) . '" does not support image analysis. '
+                            . 'Please remove the image and send a document (PDF, DOCX, TXT) instead, '
+                            . 'or start a new chat with a vision-capable model: ' . $visionModels . '.',
+                    ];
+                }
+            }
+
+            // ── Step 3: Resolve or create session ─────────────────────────────
             $session = $this->history->resolveSession(
                 sessionId: $data['session_id'] ?? null,
-                model:     $requestedModel ?? $defaultModel,
+                model:     $requestedModel,
                 userId:    $user->id
             );
 
-            if ($requestedModel && $requestedModel !== $session->model) {
+            if ($requestedModel !== config('ai_models.default') && $requestedModel !== $session->model) {
                 return [
                     'session_id'         => null,
                     'content'            => null,
@@ -68,13 +128,14 @@ class ChatService
                 ];
             }
 
-            $attachmentIds       = $data['attachments'] ?? [];
+            // ── Step 4: Build message payload ─────────────────────────────────
             $modelSupportsVision = $this->modelSupportsVision($session->model);
 
-            $userMessage = $modelSupportsVision && !empty($attachmentIds)
-                ? $this->buildVisionContent($data['message'], $attachmentIds, $user->id)
+            $userMessage = ($modelSupportsVision && !empty($attachmentIds))
+                ? $this->buildVisionContent($data['message'], $attachmentIds, $user->id, $session->model)
                 : $this->buildTextContent($data['message'], $attachmentIds, $user->id);
 
+            // ── Step 5: Persist user turn ─────────────────────────────────────
             $this->history->storeUserMessage($session->id, $data['message'], $attachmentIds);
 
             $context   = $this->cache->get($session->id);
@@ -83,12 +144,23 @@ class ChatService
             $model     = $this->resolver->resolve($session->model, $data['message']);
             $maxTokens = $this->calculateMaxTokens($data['message'], $model);
 
+            // ── Step 6: Call the AI ───────────────────────────────────────────
             $raw     = $this->callWithRetry($context, $model, $maxTokens);
             $content = $this->parser->parse($raw);
 
+            // ── Step 7: Persist assistant turn ────────────────────────────────
             $this->history->storeAIMessage($session->id, $content);
-            $this->cache->push($session->id, ['role' => 'user',      'content' => is_array($userMessage) ? json_encode($userMessage) : $userMessage]);
-            $this->cache->push($session->id, ['role' => 'assistant', 'content' => $content]);
+
+            // Store only plain text in cache — never base64 blobs.
+            $this->cache->push($session->id, [
+                'role'    => 'user',
+                'content' => $data['message'],
+            ]);
+
+            $this->cache->push($session->id, [
+                'role'    => 'assistant',
+                'content' => $content,
+            ]);
 
             return [
                 'session_id'         => $session->id,
@@ -111,11 +183,15 @@ class ChatService
         }
     }
 
+    // =========================================================================
+    // AI Call
+    // =========================================================================
+
     /**
-     * Attempt the AI call up to $maxAttempts times.
-     * Waits 500ms between attempts to avoid hammering a degraded service.
+     * Attempt the AI call up to $maxAttempts times with a 500 ms pause between
+     * attempts. Re-throws the last exception if all attempts are exhausted.
      *
-     * @throws \Exception Re-throws the last exception if all attempts fail.
+     * @throws \Exception
      */
     private function callWithRetry(array $context, string $model, int $maxTokens, int $maxAttempts = 2): array
     {
@@ -130,7 +206,7 @@ class ChatService
             } catch (\Exception $e) {
                 $lastException = $e;
                 if ($attempt < $maxAttempts) {
-                    usleep(500_000);
+                    usleep(500000); // 500 ms
                 }
             }
         }
@@ -142,9 +218,16 @@ class ChatService
         return $this->ai->chat($context, $model, $maxTokens);
     }
 
+    // =========================================================================
+    // Message Builders
+    // =========================================================================
+
     /**
-     * Build a plain-text message, appending extracted document content where available.
-     * Used for models that do not support vision.
+     * Build a plain-text user message.
+     *
+     * Documents are appended as labelled text blocks (truncated to 4 000 chars).
+     * Images are skipped — the guard above ensures the user has already been
+     * informed that the current model cannot process images.
      */
     private function buildTextContent(string $message, array $attachmentIds, int $userId): string
     {
@@ -152,18 +235,26 @@ class ChatService
             return $message;
         }
 
-        $parts       = [$message];
-        $attachments = Attachment::whereIn('id', $attachmentIds)
+        $parts = [$message];
+
+        $attachments = Attachment::query()
+            ->whereIn('id', $attachmentIds)
             ->where('user_id', $userId)
-            ->get(['id', 'text', 'filename', 'status', 'type', 's3_path', 'extension']);
+            ->get(['id', 'text', 'filename', 'status', 'type', 'blob_path', 'extension']);
 
         foreach ($attachments as $attachment) {
+            // Skip images — no extractable text, and the guard already blocked
+            // any request that pairs an image with a non-vision model.
+            if ($attachment->type === 'image') {
+                continue;
+            }
+
             if ($attachment->status === 'processed' && $attachment->text) {
-                $parts[] = "\n[File: {$attachment->filename}]:\n" . substr($attachment->text, 0, 1000);
+                $parts[] = "\n[File: " . $attachment->filename . "]:\n" . substr($attachment->text, 0, 4000);
             } elseif ($attachment->status === 'failed') {
-                $parts[] = "\n[File: {$attachment->filename}]: Could not extract text from this file.";
+                $parts[] = "\n[File: " . $attachment->filename . "]: Could not extract text from this file.";
             } elseif ($attachment->status === 'pending') {
-                $parts[] = "\n[File: {$attachment->filename}]: File is still processing, please try again in a moment.";
+                $parts[] = "\n[File: " . $attachment->filename . "]: File is still processing, please try again in a moment.";
             }
         }
 
@@ -172,65 +263,324 @@ class ChatService
 
     /**
      * Build a multimodal content array for vision-capable models.
-     * Images are sent as presigned URLs; documents are appended as text blocks.
+     *
+     * The image delivery strategy is determined per-model via IMAGE_STRATEGY:
+     *   'base64' → inline base64 data URI (server fetches the image)
+     *   'url'    → public Azure URL (the AI proxy fetches the image)
+     *   'both'   → try base64 first; fall back to URL if bytes unavailable
+     *
+     * Documents are always appended as plain text blocks.
      */
-    private function buildVisionContent(string $message, array $attachmentIds, int $userId): array
+    private function buildVisionContent(string $message, array $attachmentIds, int $userId, string $modelId): array
     {
-        $content     = [['type' => 'text', 'text' => $message]];
-        $attachments = Attachment::whereIn('id', $attachmentIds)
+        $content  = [['type' => 'text', 'text' => $message]];
+        $strategy = self::IMAGE_STRATEGY[$modelId] ?? 'both';
+
+        $attachments = Attachment::query()
+            ->whereIn('id', $attachmentIds)
             ->where('user_id', $userId)
-            ->get(['id', 'url', 'mime_type', 'type', 'text', 'filename', 'status', 's3_path', 'extension', 'size']);
+            ->get(['id', 'url', 'mime_type', 'type', 'text', 'filename', 'status', 'blob_path', 'extension', 'size']);
 
         foreach ($attachments as $attachment) {
             if ($attachment->type === 'image') {
-                $imageUrl = $this->resolveImageUrl($attachment);
-
-                if (!$imageUrl) {
-                    $content[] = ['type' => 'text', 'text' => "\n[Image: {$attachment->filename}]: Could not generate access URL."];
-                    continue;
-                }
-
-                if ($attachment->size && $attachment->size > 20 * 1024 * 1024) {
-                    $content[] = ['type' => 'text', 'text' => "\n[Image: {$attachment->filename}]: Image too large to send to AI (max 20MB)."];
-                    continue;
-                }
-
-                $content[] = ['type' => 'image_url', 'image_url' => ['url' => $imageUrl]];
+                $this->appendImageBlock($content, $attachment, $strategy);
             } else {
-                if ($attachment->status === 'processed' && $attachment->text) {
-                    $content[] = ['type' => 'text', 'text' => "\n[File: {$attachment->filename}]:\n" . substr($attachment->text, 0, 1000)];
-                } elseif ($attachment->status === 'pending') {
-                    $content[] = ['type' => 'text', 'text' => "\n[File: {$attachment->filename}]: Still processing, please try again."];
-                } elseif ($attachment->status === 'failed') {
-                    $content[] = ['type' => 'text', 'text' => "\n[File: {$attachment->filename}]: Could not extract text from this file."];
-                }
+                $this->appendDocumentBlock($content, $attachment);
             }
         }
 
         return $content;
     }
 
+    // =========================================================================
+    // Image Handling
+    // =========================================================================
+
     /**
-     * Return a short-lived presigned URL for the given attachment.
-     * Falls back to the stored URL if the S3 driver does not support presigning.
+     * Append an image block using the strategy appropriate for the model.
+     *
+     * Strategy 'base64':
+     *   Fetch bytes server-side → send as inline data URI.
+     *   Pro: model never needs to reach the internet.
+     *   Con: larger request payload.
+     *
+     * Strategy 'url':
+     *   Send the public Azure blob URL directly.
+     *   Pro: lightweight request.
+     *   Con: requires the AI proxy to be able to fetch the URL.
+     *
+     * Strategy 'both' (default):
+     *   Try base64 first (most reliable).
+     *   Fall back to URL if bytes cannot be fetched (e.g. stream error).
+     *   Fall back to a text notice if the URL is also unavailable.
      */
-    private function resolveImageUrl(Attachment $attachment): ?string
+    private function appendImageBlock(array &$content, Attachment $attachment, string $strategy): void
     {
-        if ($attachment->s3_path) {
-            try {
-                return \Illuminate\Support\Facades\Storage::disk('s3')
-                    ->temporaryUrl($attachment->s3_path, now()->addMinutes(10));
-            } catch (\Exception) {
-                // S3 driver does not support temporary URLs — fall through
-            }
+        // Hard limit: most vision APIs reject images over 20 MB.
+        if ($attachment->size && $attachment->size > 20 * 1024 * 1024) {
+            $content[] = [
+                'type' => 'text',
+                'text' => "\n[Image: " . $attachment->filename . "]: Image too large to send to AI (max 20 MB).",
+            ];
+            return;
         }
 
-        return $attachment->url ?: null;
+        $mimeType  = $attachment->mime_type ?: 'image/jpeg';
+        $blobPath  = $attachment->blob_path ?? null;
+        $publicUrl = $attachment->url ?? null;
+
+        // ── Strategy: url ─────────────────────────────────────────────────────
+        if ($strategy === 'url') {
+            if ($publicUrl) {
+                $content[] = $this->buildUrlBlock($publicUrl);
+                return;
+            }
+            $this->appendImageError($content, $attachment, 'No public URL available.');
+            return;
+        }
+
+        // ── Strategy: base64 ──────────────────────────────────────────────────
+        if ($strategy === 'base64') {
+            $bytes = $this->fetchBytesFromStream($blobPath)
+                ?? $this->fetchBytesFromUrl($publicUrl);
+
+            if ($bytes) {
+                $content[] = $this->buildBase64Block($bytes, $mimeType);
+                return;
+            }
+            $this->appendImageError($content, $attachment, 'Could not fetch image bytes.');
+            return;
+        }
+
+        // ── Strategy: both (default) ──────────────────────────────────────────
+        // 1. Try inline base64 via Azure stream (fastest, no proxy dependency).
+        $bytes = $this->fetchBytesFromStream($blobPath);
+        if ($bytes) {
+            $content[] = $this->buildBase64Block($bytes, $mimeType);
+            return;
+        }
+
+        // 2. Try inline base64 via HTTP GET on the public URL.
+        $bytes = $this->fetchBytesFromUrl($publicUrl);
+        if ($bytes) {
+            $content[] = $this->buildBase64Block($bytes, $mimeType);
+            return;
+        }
+
+        // 3. Fall back to sending the URL directly (proxy fetches it).
+        if ($publicUrl) {
+            Log::warning('ChatService: base64 fetch failed, falling back to URL', [
+                'attachment_id' => $attachment->id,
+            ]);
+            $content[] = $this->buildUrlBlock($publicUrl);
+            return;
+        }
+
+        // 4. Everything failed — insert a graceful text notice.
+        $this->appendImageError($content, $attachment, 'All delivery methods failed.');
     }
 
     /**
-     * Determine max output tokens based on message length and model tier.
-     * Lighter models get lower ceilings to keep response times acceptable.
+     * Append a document text block (status-aware).
+     */
+    private function appendDocumentBlock(array &$content, Attachment $attachment): void
+    {
+        if ($attachment->status === 'processed' && $attachment->text) {
+            $content[] = [
+                'type' => 'text',
+                'text' => "\n[File: " . $attachment->filename . "]:\n" . substr($attachment->text, 0, 4000),
+            ];
+        } elseif ($attachment->status === 'pending') {
+            $content[] = [
+                'type' => 'text',
+                'text' => "\n[File: " . $attachment->filename . "]: Still processing, please try again.",
+            ];
+        } elseif ($attachment->status === 'failed') {
+            $content[] = [
+                'type' => 'text',
+                'text' => "\n[File: " . $attachment->filename . "]: Could not extract text from this file.",
+            ];
+        }
+    }
+
+    // =========================================================================
+    // Image Fetch & Build Helpers
+    // =========================================================================
+
+    /**
+     * Fetch raw image bytes via the Azure Storage SDK stream.
+     * No HTTP round-trip — reads directly from the storage account.
+     *
+     * @return string|null  Raw bytes, or null on any failure.
+     */
+    private function fetchBytesFromStream(?string $blobPath): ?string
+    {
+        if (!$blobPath) {
+            return null;
+        }
+
+        try {
+            $stream = Storage::disk('azure')->readStream($blobPath);
+            if (!$stream) {
+                return null;
+            }
+
+            $bytes = stream_get_contents($stream);
+            fclose($stream);
+
+            return $bytes ?: null;
+
+        } catch (\Throwable $e) {
+            Log::debug('ChatService: Azure stream fetch failed', [
+                'blob_path' => $blobPath,
+                'error'     => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Fetch raw image bytes via an HTTP GET request to the public URL.
+     * Used as a fallback when the Azure SDK stream is unavailable.
+     *
+     * @return string|null  Raw bytes, or null on any failure.
+     */
+    private function fetchBytesFromUrl(?string $url): ?string
+    {
+        if (!$url) {
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(15)->get($url);
+
+            if ($response->successful()) {
+                return $response->body() ?: null;
+            }
+
+            Log::debug('ChatService: HTTP image fetch returned non-200', [
+                'url'    => $url,
+                'status' => $response->status(),
+            ]);
+            return null;
+
+        } catch (\Throwable $e) {
+            Log::debug('ChatService: HTTP image fetch failed', [
+                'url'   => $url,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Build an inline base64 image block (OpenAI image_url / data-URI format).
+     */
+    private function buildBase64Block(string $bytes, string $mimeType): array
+    {
+        return [
+            'type'      => 'image_url',
+            'image_url' => [
+                'url'    => 'data:' . $mimeType . ';base64,' . base64_encode($bytes),
+                'detail' => 'auto',
+            ],
+        ];
+    }
+
+    /**
+     * Build a URL-reference image block.
+     * The AI proxy fetches the image itself using the provided public URL.
+     */
+    private function buildUrlBlock(string $url): array
+    {
+        return [
+            'type'      => 'image_url',
+            'image_url' => [
+                'url'    => $url,
+                'detail' => 'auto',
+            ],
+        ];
+    }
+
+    /**
+     * Append a graceful text error message when an image cannot be delivered.
+     */
+    private function appendImageError(array &$content, Attachment $attachment, string $reason): void
+    {
+        Log::error('ChatService: image delivery failed', [
+            'attachment_id' => $attachment->id,
+            'reason'        => $reason,
+        ]);
+
+        $content[] = [
+            'type' => 'text',
+            'text' => "\n[Image: " . $attachment->filename . "]: Could not load image for analysis. Please re-upload and try again.",
+        ];
+    }
+
+    // =========================================================================
+    // Misc Helpers
+    // =========================================================================
+
+    /**
+     * Check whether any of the given attachment IDs belong to images.
+     */
+    private function attachmentsContainImages(array $attachmentIds, int $userId): bool
+    {
+        return Attachment::query()
+            ->whereIn('id', $attachmentIds)
+            ->where('user_id', $userId)
+            ->where('type', 'image')
+            ->exists();
+    }
+
+    /**
+     * Check whether the given model ID supports image (vision) input.
+     * Vision support is declared in config/ai_models.php via a `vision: true` flag.
+     */
+    private function modelSupportsVision(string $modelId): bool
+    {
+        foreach (config('ai_models.chat', []) as $model) {
+            if ($model['id'] === $modelId) {
+                return !empty($model['vision']);
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Return the display title for a model ID.
+     * Falls back to the raw ID if the model is not found in config.
+     */
+    private function modelTitle(string $modelId): string
+    {
+        foreach (config('ai_models.chat', []) as $model) {
+            if ($model['id'] === $modelId) {
+                return $model['title'] ?? $modelId;
+            }
+        }
+        return $modelId;
+    }
+
+    /**
+     * Return a comma-separated list of vision-capable model titles.
+     * Used in the images_not_supported error message.
+     */
+    private function visionModelTitles(): string
+    {
+        $titles = [];
+
+        foreach (config('ai_models.chat', []) as $model) {
+            if (!empty($model['vision'])) {
+                $titles[] = $model['title'] ?? $model['id'];
+            }
+        }
+
+        return implode(', ', $titles) ?: 'Gemini Flash, Grok 4.1';
+    }
+
+    /**
+     * Calculate the max output tokens based on message length and model tier.
      */
     private function calculateMaxTokens(string $message, string $model): int
     {
@@ -240,31 +590,13 @@ class ChatService
             || str_contains($model, 'flash');
 
         if ($isLightModel) {
-            return match(true) {
-                $length > 2000 => 1000,
-                $length > 1000 => 1500,
-                default        => 2000,
-            };
+            if ($length > 2000) return 1000;
+            if ($length > 1000) return 1500;
+            return 2000;
         }
 
-        return match(true) {
-            $length > 2000 => 2000,
-            $length > 1000 => 3000,
-            default        => 4000,
-        };
-    }
-
-    /**
-     * Check whether the given model supports image input.
-     */
-    private function modelSupportsVision(string $modelId): bool
-    {
-        foreach (config('ai_models.chat', []) as $model) {
-            if ($model['id'] === $modelId) {
-                return !empty($model['vision']);
-            }
-        }
-
-        return false;
+        if ($length > 2000) return 2000;
+        if ($length > 1000) return 3000;
+        return 4000;
     }
 }

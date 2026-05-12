@@ -5,9 +5,12 @@ namespace App\Providers;
 use App\Models\Post;
 use App\Observers\PostObserver;
 use App\Models\User;
+use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Musonza\Chat\Models\Conversation;
@@ -17,11 +20,9 @@ use Illuminate\Support\Facades\Gate;
 use Opcodes\LogViewer\Facades\LogViewer;
 use Throwable;
 
+
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
         if (class_exists(\App\Services\HackClubCdnService::class)) {
@@ -37,11 +38,14 @@ class AppServiceProvider extends ServiceProvider
         }
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
+        Storage::extend('azure-storage-blob', function (Application $app, array $config): FilesystemAdapter {
+            \AzureOss\Storage\BlobLaravel\AzureStorageBlobDiskConfig::validate($config);
+
+            return new \AzureOss\Storage\BlobLaravel\AzureStorageBlobAdapter($config);
+        });
+
         $this->configureWritableCompiledViewsPath();
 
         Route::model('conversation', Conversation::class);
@@ -65,25 +69,14 @@ class AppServiceProvider extends ServiceProvider
 
         Post::observe(PostObserver::class);
 
-        // Configure Log Viewer authorization
-        // This provides an additional layer of security on top of the viewLogViewer gate
         LogViewer::auth(function ($request) {
-            // Allow any authenticated user to access Log Viewer
-            // Adjust this logic if you need different access rules
             return $request->user() !== null;
         });
-
-        //        if (config('app.env') === 'production') {
-        //            URL::forceScheme('https');
-        //        }
     }
 
-    /**
-     * Ensure Blade compiles templates into a writable directory.
-     */
     private function configureWritableCompiledViewsPath(): void
     {
-        $compiledPath = config('view.compiled');
+        $compiledPath      = config('view.compiled');
         $compiledDirectory = is_string($compiledPath) ? dirname($compiledPath) : null;
 
         if ($this->isWritableDirectory($compiledDirectory)) {

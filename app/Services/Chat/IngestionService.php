@@ -16,10 +16,11 @@ class IngestionService
     private const MAX_CHARS     = 5000;
 
     /**
-     * Download the attachment from S3, extract its text content, and persist it.
+     * Download the attachment from Azure Blob Storage, extract its text
+     * content, and persist it.
      *
-     * This method is called at upload time from AttachmentController so that
-     * chat requests never block on file I/O.
+     * Called at upload time from AttachmentController so that chat requests
+     * are never delayed by heavy I/O.
      *
      * @return string|null  The extracted text, or null if extraction failed.
      */
@@ -33,18 +34,23 @@ class IngestionService
             return null;
         }
 
-        if (!$attachment->s3_path) {
-            throw new \RuntimeException("Attachment #{$attachment->id} is missing s3_path.");
+        // blob_path replaces the old s3_path column
+        $storagePath = $attachment->blob_path ?? $attachment->s3_path ?? null;
+
+        if (!$storagePath) {
+            throw new \RuntimeException("Attachment #{$attachment->id} is missing blob_path.");
         }
 
         $tempPath = null;
 
         try {
             $tempPath = tempnam(sys_get_temp_dir(), 'att_');
-            $stream   = Storage::disk('s3')->readStream($attachment->s3_path);
+
+            // ── Read from Azure Blob Storage ──────────────────────────────
+            $stream = Storage::disk('azure')->readStream($storagePath);
 
             if (!$stream) {
-                throw new \RuntimeException("Failed to open S3 stream for: {$attachment->s3_path}");
+                throw new \RuntimeException("Failed to open Azure stream for: {$storagePath}");
             }
 
             $dest = fopen($tempPath, 'wb');
@@ -109,7 +115,6 @@ class IngestionService
 
     /**
      * Extract text from a PDF file.
-     *
      * Font metadata parsing is disabled to reduce memory usage.
      * Only the first MAX_PDF_PAGES pages are read.
      */

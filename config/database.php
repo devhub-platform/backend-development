@@ -194,28 +194,25 @@ return [
 
     // ],
     'redis' => [
-        'client' => env('REDIS_CLIENT', 'predis'),
+
+        'client' => env('REDIS_CLIENT', 'phpredis'),
 
         'default' => [
-            'scheme' => 'tls',
             'host' => env('REDIS_HOST'),
-            'port' => env('REDIS_PORT', 6380),
             'username' => env('REDIS_USERNAME'),
             'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT', 6379),
+            'database' => env('REDIS_DB', 0),
         ],
 
         'cache' => [
-            'scheme' => 'tls',
             'host' => env('REDIS_HOST'),
-            'port' => env('REDIS_PORT', 6380),
             'username' => env('REDIS_USERNAME'),
             'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT', 6379),
+            'database' => env('REDIS_CACHE_DB', 1),
         ],
-        'options' => [
-            'parameters' => [
-                'scheme' => 'tls',
-            ],
-        ],
+
     ],
 
 ];

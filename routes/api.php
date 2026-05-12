@@ -46,6 +46,7 @@ use App\Http\Controllers\V1\FeedbackController;
 use App\Http\Controllers\V1\TrendingController;
 use App\Http\Controllers\V1\AiModels\AITopicsUserController;
 use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\V1\ProfileQuestionController;
 
 Route::prefix('v1')->group(function () {
     Route::get('/', function () {
@@ -144,7 +145,6 @@ Route::prefix('v1')->group(function () {
                 ->group(function () {
                     Route::post('generate-image', 'generateImage');
                     Route::post('generate-content', 'generateContent');
-//                    Route::post('generate-title', 'generateTitle');   // ← new
                     Route::delete('generated-images/{id}', 'discardImage');
                 });
 
@@ -241,7 +241,6 @@ Route::prefix('v1')->group(function () {
                 Route::get('profile/user/posts', 'userPosts');
                 Route::get('profile/user/comments', 'userComments');
                 Route::get('profile/user/tags', 'userTags');
-                Route::get('profile/user/questions', [QuestionController::class, 'userQuestions']);
                 Route::post('profile/upload/avatar', 'uploadAvatarImage');
                 Route::post('profile/upload/cover-image', 'uploadCoverImage');
 
@@ -251,6 +250,13 @@ Route::prefix('v1')->group(function () {
                 Route::get('profile/activity', 'activity');
                 Route::get('profile/details', 'details');
                 Route::get('profile/share-link', 'shareLink');
+            });
+            Route::prefix('profile')->middleware('auth:api')->group(function () {
+                // My own questions
+                Route::get('questions', [ProfileQuestionController::class, 'myQuestions']);
+
+                // Any user's questions
+                Route::get('{userId}/questions', [ProfileQuestionController::class, 'userQuestions']);
             });
 
             // ─── Followers ────────────────────────────────────────────────────────
@@ -373,6 +379,7 @@ Route::prefix('v1')->group(function () {
                 Route::get('reports/reported-users', 'reportedUsers');
                 Route::get('reports/blocked-users', 'blockList');
 
+                Route::get('reports/reported-users', 'reportList');
                 Route::get('reports/reasons', 'reason');
             });
 
@@ -433,6 +440,7 @@ Route::prefix('v1')->group(function () {
             // ─── AI Chat ──────────────────────────────────────────────────────────
             Route::prefix('ai-chat')->group(function () {
                 Route::post('send', [AIChatController::class, 'chat']);
+                Route::get('/prompts/usage', [AIChatController::class, 'promptUsage']);
 
                 Route::controller(AttachmentController::class)->prefix('attachments')->middleware('throttle:10,1')->group(function () {
                     Route::post('upload', 'upload');

@@ -8,6 +8,7 @@ use App\Models\Attachment;
 use App\Services\Chat\ChatHistoryService;
 use App\Services\Chat\ChatRateLimiter;
 use App\Services\Chat\ChatService;
+use App\Services\Chat\PromptLimiter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -15,13 +16,20 @@ class AIChatController extends Controller
 {
     public function __construct(
         protected ChatService        $chat,
-        protected ChatRateLimiter    $limiter,
+        protected ChatRateLimiter    $rateLimiter,
         protected ChatHistoryService $history,
+        protected PromptLimiter      $promptLimiter,
     ) {}
 
     public function chat(Request $request): JsonResponse
     {
-        $this->limiter->check($request->user()->id);
+        $userId = $request->user()->id;
+
+        // 1. Hard rate-limit (requests / minute) — prevents burst abuse
+        $this->rateLimiter->check($userId);
+
+        // 2. Soft quota check (daily / monthly prompts)
+        $this->promptLimiter->check($userId);
 
         $validated = $request->validate([
             'session_id'    => 'nullable|exists:ai_chat_sessions,id',
@@ -30,8 +38,6 @@ class AIChatController extends Controller
             'attachments'   => 'nullable|array|max:5',
             'attachments.*' => 'integer|exists:attachments,id',
         ]);
-
-        $userId = $request->user()->id;
 
         // Security: session must belong to this user
         if (!empty($validated['session_id'])) {
@@ -42,6 +48,7 @@ class AIChatController extends Controller
             if (!$session) {
                 return response()->json([
                     'success' => false,
+                    'error'   => 'session_not_found',
                     'message' => 'Session not found.',
                 ], 404);
             }
@@ -56,6 +63,7 @@ class AIChatController extends Controller
             if ($validCount !== count($validated['attachments'])) {
                 return response()->json([
                     'success' => false,
+                    'error'   => 'invalid_attachments',
                     'message' => 'One or more attachments are invalid.',
                 ], 403);
             }
@@ -68,17 +76,53 @@ class AIChatController extends Controller
             'attachments' => $validated['attachments'] ?? [],
         ], $request->user());
 
-        // Model mismatch → tell frontend to open new chat
-        if (isset($response['error']) && $response['error'] === 'model_mismatch') {
+        $error = $response['error'] ?? null;
+
+        // ── Model mismatch → 409 ──────────────────────────────────────────────
+        if ($error === 'model_mismatch') {
             return response()->json($response, 409);
         }
 
+        // ── Images not supported by this model → 422 ─────────────────────────
+        // Return a clear, human-readable message instead of "No response".
+        if ($error === 'images_not_supported') {
+            return response()->json([
+                'session_id'         => $response['session_id'] ?? null,
+                'ai_message'         => null,
+                'model_used'         => $response['model_used'] ?? config('ai_models.default'),
+                'processing_time_ms' => $response['processing_time_ms'] ?? 0,
+                'success'            => false,
+                'error'              => 'images_not_supported',
+                'message'            => $response['message'],
+            ], 422);
+        }
+
+        // ── Already processing → surface the waiting message ─────────────────
+        if ($error === 'already_processing') {
+            return response()->json([
+                'session_id'         => $response['session_id'] ?? null,
+                'ai_message'         => null,
+                'model_used'         => $response['model_used'] ?? config('ai_models.default'),
+                'processing_time_ms' => 0,
+                'success'            => false,
+                'error'              => 'already_processing',
+                'message'            => $response['message'],
+            ], 429);
+        }
+
+        // Only charge a prompt against the quota when the AI actually responded
+        if ($response['success'] ?? false) {
+            $this->promptLimiter->consume($userId);
+        }
+
+        // ── Normal response ───────────────────────────────────────────────────
         return response()->json([
             'session_id'         => $response['session_id'] ?? null,
-            'ai_message'         => $response['content'] ?? 'No response',
+            'ai_message'         => $response['content'] ?? $response['message'] ?? 'No response',
             'model_used'         => $response['model_used'] ?? config('ai_models.default'),
             'processing_time_ms' => $response['processing_time_ms'] ?? 0,
             'success'            => $response['success'] ?? false,
+            'error'              => $error,
         ]);
     }
 
@@ -88,5 +132,18 @@ class AIChatController extends Controller
             'default' => config('ai_models.default'),
             'models'  => config('ai_models.chat'),
         ]);
+    }
+
+    /**
+     * Return the current user's prompt usage stats.
+     * Useful for a "X of Y prompts used today" indicator in the frontend.
+     *
+     * GET /api/v1/ai/prompts/usage
+     */
+    public function promptUsage(Request $request): JsonResponse
+    {
+        return response()->json(
+            $this->promptLimiter->stats($request->user()->id)
+        );
     }
 }
