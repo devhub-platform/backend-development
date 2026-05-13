@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Events\ReportSubmitted;
 use App\Models\Report;
 use App\Models\User;
+use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 
 class ReportObserver
@@ -13,7 +14,7 @@ class ReportObserver
     {
         // Broadcast the report submission event in real-time
         ReportSubmitted::dispatch($report);
-        
+
         // Get all admin users and send notifications
         $admins = User::where('role', 'admin')->get();
 
@@ -23,7 +24,7 @@ class ReportObserver
                 ->body('A new report has been submitted by ' . ($report->reporter?->name ?? 'Anonymous'))
                 ->icon('heroicon-o-exclamation-triangle')
                 ->actions([
-                    \Filament\Notifications\Actions\Action::make('view')
+                    Action::make('view')
                         ->button()
                         ->url('/admin/reports/' . $report->id)
                         ->close(),
