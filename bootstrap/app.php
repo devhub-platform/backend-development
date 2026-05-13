@@ -6,7 +6,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use App\Http\Middleware\BlockedUserMiddleware;
 use App\Http\Middleware\LogViewerMiddleware;
-// use Sentry\Laravel\Integration;
+ use Sentry\Laravel\Integration;
 use Spatie\LaravelFlare\Facades\Flare;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -33,5 +33,5 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         Flare::handles($exceptions);
-        // Integration::handles($exceptions);
+         Integration::handles($exceptions);
     })->create();
