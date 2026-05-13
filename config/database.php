@@ -222,6 +222,13 @@ return [
             'username' => env('REDIS_USERNAME'),
             'password' => env('REDIS_PASSWORD'),
         ],
+        'pulse' => [
+            'scheme' => 'tls',
+            'host' => env('REDIS_HOST'),
+            'port' => env('REDIS_PORT', 6380),
+            'username' => env('REDIS_USERNAME'),
+            'password' => env('REDIS_PASSWORD'),
+        ],
         'options' => [
             'parameters' => [
                 'scheme' => 'tls',

@@ -2,21 +2,33 @@
 
 namespace App\Observers;
 
+use App\Events\FeedbackSubmitted;
 use App\Models\Feedback;
 use App\Models\User;
-use App\Notifications\FeedbackSubmittedNotification;
+use Filament\Notifications\Notification;
 
 class FeedbackObserver
 {
     public function created(Feedback $feedback): void
     {
-        // Get all admin users
+        // Broadcast the feedback submission event in real-time
+        FeedbackSubmitted::dispatch($feedback);
+        
+        // Get all admin users and send notifications
         $admins = User::where('role', 'admin')->get();
 
-        // Send notification to each admin
         foreach ($admins as $admin) {
-            $admin->notify(new FeedbackSubmittedNotification($feedback));
-            $admin->notifyBell(); // broadcasts the NotificationSent event via Reverb
+            Notification::make()
+                ->title('New Feedback Received')
+                ->body('New feedback from ' . ($feedback->user?->name ?? 'Anonymous') . ': ' . substr($feedback->message ?? $feedback->content ?? '', 0, 50) . '...')
+                ->icon('heroicon-o-chat-bubble-left')
+                ->actions([
+                    \Filament\Notifications\Actions\Action::make('view')
+                        ->button()
+                        ->url('/admin/feedbacks/' . $feedback->id)
+                        ->close(),
+                ])
+                ->broadcast($admin);
         }
     }
 }

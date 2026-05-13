@@ -19,6 +19,7 @@ use SocialiteProviders\Microsoft\Provider as MicrosoftProvider;
 use Illuminate\Support\Facades\Gate;
 use Opcodes\LogViewer\Facades\LogViewer;
 use Throwable;
+use Laravel\Pulse\Facades\Pulse;
 
 
 class AppServiceProvider extends ServiceProvider
@@ -45,6 +46,12 @@ class AppServiceProvider extends ServiceProvider
 
             return new \AzureOss\Storage\BlobLaravel\AzureStorageBlobAdapter($config);
         });
+
+        Pulse::user(fn($user) => [
+            'name' => $user->name,
+            'extra' => $user->email,
+            'avatar' => $user->avatar_url,
+        ]);
 
         $this->configureWritableCompiledViewsPath();
 
@@ -76,7 +83,7 @@ class AppServiceProvider extends ServiceProvider
 
     private function configureWritableCompiledViewsPath(): void
     {
-        $compiledPath      = config('view.compiled');
+        $compiledPath = config('view.compiled');
         $compiledDirectory = is_string($compiledPath) ? dirname($compiledPath) : null;
 
         if ($this->isWritableDirectory($compiledDirectory)) {
@@ -98,12 +105,12 @@ class AppServiceProvider extends ServiceProvider
 
     private function isWritableDirectory(?string $path): bool
     {
-        if (! $path) {
+        if (!$path) {
             return false;
         }
 
         try {
-            if (! File::isDirectory($path)) {
+            if (!File::isDirectory($path)) {
                 File::ensureDirectoryExists($path, 0755, true);
             }
         } catch (Throwable) {

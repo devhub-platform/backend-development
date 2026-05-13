@@ -29,7 +29,7 @@ use AlizHarb\ActivityLog\ActivityLogPlugin;
 use AlizHarb\ActivityLog\Widgets\ActivityHeatmapWidget;
 use AlizHarb\ActivityLog\Widgets\ActivityChartWidget;
 use Agencetwogether\AlertBox\AlertBoxPlugin;
-use YourVendor\FilamentNotificationBell\FilamentNotificationBellPlugin;
+// use Rarq\FilamentQuickNotes\FilamentQuickNotesPlugin;
 use Kholil\Nitik\NitikPlugin;
 
 class AdminPanelProvider extends PanelProvider
@@ -71,28 +71,30 @@ class AdminPanelProvider extends PanelProvider
                 ActivityHeatmapWidget::class,
                 ActivityChartWidget::class,
                 TopPostsTable::class,
+            ])
+            ->broadcasting(true)
+            ->plugins([
+                ActivityLogPlugin::make()
+                    ->label('Log')
+                    ->pluralLabel('Logs')
+                    ->navigationGroup('System')
+                //                    ->cluster('System'), // Optional: Group inside a cluster
             ])->plugins([
-                    ActivityLogPlugin::make()
-                        ->label('Log')
-                        ->pluralLabel('Logs')
-                        ->navigationGroup('System')
-                    //                    ->cluster('System'), // Optional: Group inside a cluster
-                ])->plugins([
                     AlertBoxPlugin::make(),
                 ])->plugins([
-            NitikPlugin::make(),
-        ])->plugin(FilamentNotificationBellPlugin::make()->usePusher())
+                    NitikPlugin::make(),
+                ])
             ->navigationItems([
                 NavigationItem::make('AI Analytics')
                     ->icon('heroicon-o-sparkles')
                     ->badge('Monitor', color: 'success')
                     ->url('#')  // Links to dashboard section
                     ->group('Tools'),
-                NavigationItem::make('Errors')
-                    ->url('https://flareapp.io/107264-laravel/errors')
+                NavigationItem::make('Sentry')
+                    ->url('https://software-engineer-at-informati.sentry.io/issues/?project=4511167541608528')
                     ->icon('heroicon-o-exclamation-triangle')
                     ->openUrlInNewTab()
-                    ->badge('Error', color: 'danger')
+                    ->badge('Sentry', color: 'danger')
                     ->group('Tools'),
                 NavigationItem::make('Telescope')
                     ->url('/' . config('telescope.path', 'telescope'))

@@ -1,4 +1,6 @@
 <x-pulse>
+    {{-- <livewire:pulse.servers cols="full" ignore-after="3 hours" /> --}}
+
     <livewire:pulse.servers cols="full" />
 
     <livewire:pulse.usage cols="4" rows="2" />

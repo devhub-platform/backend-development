@@ -5,6 +5,10 @@ use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Log;
 use Musonza\Chat\Models\Conversation;
 
+Broadcast::channel('admin.notifications', function ($user) {
+    return $user->role === 'admin' || $user->is_admin;
+});
+
 Broadcast::channel('private-user.{userId}', function ($user, $userId) {
     return (int)$user->id === (int)$userId;
 });

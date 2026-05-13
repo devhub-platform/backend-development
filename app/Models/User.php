@@ -28,7 +28,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
-use YourVendor\FilamentNotificationBell\Concerns\HasNotificationBell;
+// use YourVendor\FilamentNotificationBell\Concerns\HasNotificationBell;
+// use Rarq\FilamentQuickNotes\Traits\HasFilamentQuickNotes;
 
 
 #[ObservedBy([UserObserver::class])]
@@ -40,7 +41,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail, Filam
     use InteractsWithAppAuthenticationRecovery;
     use InteractsWithEmailAuthentication;
     use LogsActivity;
-    use HasNotificationBell;
+    // use HasFilamentQuickNotes;
 
 
     public function getActivitylogOptions(): LogOptions
@@ -391,7 +392,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail, Filam
      * Can be used in two ways:
      * 1. $user->notify(new OrderShipped()); $user->notifyBell();
      * 2. $user->notifyBell(new OrderShipped());
-     * 
+     *
      * Broadcasts the NotificationSent event via Reverb
      */
     // public function notifyBell($notification = null)
@@ -399,7 +400,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail, Filam
     //     if ($notification) {
     //         $this->notify($notification);
     //     }
-        
+
     //     // Broadcast notification event to trigger real-time updates via Reverb
     //     if ($notification) {
     //         event(new \Illuminate\Notifications\Events\NotificationSent($this, $notification));
