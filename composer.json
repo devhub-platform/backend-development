@@ -17,6 +17,7 @@
         "api-platform/laravel": "^4.2",
         "awssat/laravel-visits": "^6.2",
         "azure-oss/storage-blob-laravel": "^1.7",
+        "benriadh1/filament-notification-bell": "^1.0",
         "berkayk/onesignal-laravel": "^2.4",
         "binafy/laravel-reactions": "^1.0",
         "cloudinary-labs/cloudinary-laravel": "^3.0",

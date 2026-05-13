@@ -28,16 +28,20 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
+use YourVendor\FilamentNotificationBell\Concerns\HasNotificationBell;
 
 
 #[ObservedBy([UserObserver::class])]
 class User extends Authenticatable implements JWTSubject, MustVerifyEmail, FilamentUser, HasAvatar, HasAppAuthentication, HasAppAuthenticationRecovery, HasEmailAuthentication
 {
     use HasFactory, Notifiable, softDeletes, Reactor, Searchable, Messageable;
+
     use InteractsWithAppAuthentication;
     use InteractsWithAppAuthenticationRecovery;
     use InteractsWithEmailAuthentication;
     use LogsActivity;
+    use HasNotificationBell;
+
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -161,7 +165,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail, Filam
             return false;
         }
 
-        $seconds = $timeoutSeconds ?? (int)config('chat.presence_timeout_seconds', 120);
+        $seconds = $timeoutSeconds ?? (int) config('chat.presence_timeout_seconds', 120);
 
         return $this->last_seen_at->greaterThanOrEqualTo(now()->subSeconds($seconds));
     }
@@ -382,4 +386,22 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail, Filam
         return null;
     }
 
+    /**
+     * Send notification with bell broadcast event
+     * Can be used in two ways:
+     * 1. $user->notify(new OrderShipped()); $user->notifyBell();
+     * 2. $user->notifyBell(new OrderShipped());
+     * 
+     * Broadcasts the NotificationSent event via Reverb
+     */
+    // public function notifyBell($notification = null)
+    // {
+    //     if ($notification) {
+    //         $this->notify($notification);
+    //     }
+        
+    //     // Broadcast notification event to trigger real-time updates via Reverb
+    //     if ($notification) {
+    //         event(new \Illuminate\Notifications\Events\NotificationSent($this, $notification));
+    //     }
 }

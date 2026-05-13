@@ -29,7 +29,7 @@ use AlizHarb\ActivityLog\ActivityLogPlugin;
 use AlizHarb\ActivityLog\Widgets\ActivityHeatmapWidget;
 use AlizHarb\ActivityLog\Widgets\ActivityChartWidget;
 use Agencetwogether\AlertBox\AlertBoxPlugin;
-// use ZPMPackages\FilamentSshManagement\FilamentSshManagementPlugin;
+use YourVendor\FilamentNotificationBell\FilamentNotificationBellPlugin;
 use Kholil\Nitik\NitikPlugin;
 
 class AdminPanelProvider extends PanelProvider
@@ -81,7 +81,7 @@ class AdminPanelProvider extends PanelProvider
                     AlertBoxPlugin::make(),
                 ])->plugins([
             NitikPlugin::make(),
-        ])
+        ])->plugin(FilamentNotificationBellPlugin::make()->usePusher())
             ->navigationItems([
                 NavigationItem::make('AI Analytics')
                     ->icon('heroicon-o-sparkles')
