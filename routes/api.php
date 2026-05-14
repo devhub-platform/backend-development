@@ -64,8 +64,10 @@ Route::prefix('v1')->group(function () {
     Route::middleware('throttle:30,1')->group(function () {
 
         Route::controller(SocialiteMediaFrontController::class)->group(function () {
-            Route::post('front/auth/google/login', 'loginGoogle');
-            Route::get('auth/google/callback', 'callbackGoogle');
+//            Route::post('front/auth/google/login', 'loginGoogle');
+//            Route::get('auth/google/callback', 'callbackGoogle');
+            Route::get('auth/', 'loginGoogle');
+            Route::get('auth/callback', 'callbackGoogle');
 
             Route::post('front/auth/github/login', 'loginGithub');
             Route::get('auth/github/callback', 'callbackGithub');

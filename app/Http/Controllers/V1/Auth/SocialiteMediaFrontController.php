@@ -111,7 +111,11 @@ class SocialiteMediaFrontController
         $frontendUrl = rtrim(config('app.frontend_url'), '/')
             . '/auth/social-callback?token=' . urlencode($token);
 
-        return Redirect::to($frontendUrl);
+         return response()->json([
+            'user' => $user,
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+        ]);
     }
 
     /**

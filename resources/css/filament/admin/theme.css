@@ -1,5 +1,6 @@
-@import '../../../../vendor/filament/filament/resources/css/theme.css';
+@source '../../../../app/Filament/**/*.php';
+@source '../../../../resources/views/filament/**/*.blade.php';
+@source '../../../../vendor/filament/**/*.blade.php';
+@source '../../../../vendor/qalainau/filament-team-chat/resources/views/**/*.blade.php';
 
-@source '../../../../app/Filament/**/*';
-@source '../../../../resources/views/filament/**/*';
-@source '../../../../vendor/qalainau/filament-team-chat/resources/views/**/*';
+@import 'tailwindcss';
