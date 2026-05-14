@@ -9,7 +9,7 @@ class SendMessageAttchmentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'file' => ['required', 'file', 'max:5242880'], // ~5GB limit
+            'file' => ['required', 'file', 'max:102400'], // ~100MB limit
             'file_name' => ['nullable', 'string', 'max:255'],
             'message' => ['nullable', 'string', 'max:5000'],
         ];

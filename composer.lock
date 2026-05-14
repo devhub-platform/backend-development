@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7e662aa93feaed6f57a760f1eb990ad0",
+    "content-hash": "1e219c32f721a3a7080bca3913afd193",
     "packages": [
         {
             "name": "aerni/cloudflared",
@@ -10020,6 +10020,73 @@
                 "source": "https://github.com/pusher/pusher-http-php/tree/7.2.7"
             },
             "time": "2025-01-06T10:56:20+00:00"
+        },
+        {
+            "name": "qalainau/filament-team-chat",
+            "version": "v0.4.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/qalainau/filament-team-chat.git",
+                "reference": "8f0875b47031eceeea808a638938e17599f1df96"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/qalainau/filament-team-chat/zipball/8f0875b47031eceeea808a638938e17599f1df96",
+                "reference": "8f0875b47031eceeea808a638938e17599f1df96",
+                "shasum": ""
+            },
+            "require": {
+                "filament/filament": "^5.0",
+                "php": "^8.3",
+                "spatie/laravel-package-tools": "^1.16"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.0",
+                "orchestra/testbench": "^10.0",
+                "pestphp/pest": "^4.0",
+                "pestphp/pest-plugin-laravel": "^4.0",
+                "pestphp/pest-plugin-livewire": "^4.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Filament\\TeamChat\\FilamentTeamChatServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Filament\\TeamChat\\": "src/",
+                    "Filament\\TeamChat\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Qalainau",
+                    "homepage": "https://github.com/qalainau"
+                }
+            ],
+            "description": "A Slack-like team chat plugin for Filament v5",
+            "homepage": "https://github.com/qalainau/filament-team-chat",
+            "keywords": [
+                "Team",
+                "chat",
+                "filament",
+                "filament-plugin",
+                "laravel",
+                "livewire",
+                "slack"
+            ],
+            "support": {
+                "issues": "https://github.com/qalainau/filament-team-chat/issues",
+                "source": "https://github.com/qalainau/filament-team-chat/tree/v0.4.3"
+            },
+            "time": "2026-05-12T13:46:49+00:00"
         },
         {
             "name": "ralouphie/getallheaders",

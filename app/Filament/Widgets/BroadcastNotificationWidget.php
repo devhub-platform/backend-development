@@ -23,10 +23,7 @@ class BroadcastNotificationWidget extends Widget implements HasForms
 
     protected static ?int $sort = 5;
 
-    protected int|string|array $columnSpan = [
-        'md' => 2,
-        'xl' => 2,
-    ];
+    protected int|string|array $columnSpan = 'full';
 
     public ?array $data = [];
 

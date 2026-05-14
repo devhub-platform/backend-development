@@ -42,6 +42,7 @@
         "phpoffice/phpword": "^1.4",
         "predis/predis": "*",
         "pusher/pusher-php-server": "*",
+        "qalainau/filament-team-chat": "^0.4.3",
         "rarq/filament-quick-notes": "^1.0",
         "sendgrid/sendgrid": "^8.1",
         "sentry/sentry-laravel": "^4.25",

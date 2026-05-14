@@ -2,6 +2,8 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Widgets\ActivityChartDashboardWidget;
+use App\Filament\Widgets\ActivityHeatmapDashboardWidget;
 use App\Filament\Widgets\AdminOverviewStats;
 use App\Filament\Widgets\ContentActivityChart;
 use App\Filament\Widgets\TopPostsTable;
@@ -20,15 +22,17 @@ class Dashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
+            ActivityChartDashboardWidget::class,
             AIAnalyticsWidget::class,
             AdminOverviewStats::class,
             ContentActivityChart::class,
-            TopPostsTable::class,
             BroadcastNotificationWidget::class,
+            TopPostsTable::class,
+            ActivityHeatmapDashboardWidget::class,
         ];
     }
 
-    public function getColumns(): array | int
+    public function getColumns(): array|int
     {
         return [
             'default' => 1,
@@ -40,4 +44,3 @@ class Dashboard extends BaseDashboard
         ];
     }
 }
-

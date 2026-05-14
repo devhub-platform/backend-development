@@ -31,6 +31,7 @@ use AlizHarb\ActivityLog\Widgets\ActivityChartWidget;
 use Agencetwogether\AlertBox\AlertBoxPlugin;
 // use Rarq\FilamentQuickNotes\FilamentQuickNotesPlugin;
 use Kholil\Nitik\NitikPlugin;
+//use Filament\TeamChat\FilamentTeamChatPlugin;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -44,6 +45,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->authGuard('web')
             ->path('admin')
+            ->viteTheme('resources/css/filament/admin/theme.css')
             ->login()
             ->profile()
             ->multiFactorAuthentication(
@@ -68,7 +70,7 @@ class AdminPanelProvider extends PanelProvider
                 AdminOverviewStats::class,
                 ContentActivityChart::class,
                 UsersPerMonthChart::class,
-                ActivityHeatmapWidget::class,
+                // ActivityHeatmapWidget::class,
                 ActivityChartWidget::class,
                 TopPostsTable::class,
             ])
@@ -84,6 +86,7 @@ class AdminPanelProvider extends PanelProvider
                 ])->plugins([
                     NitikPlugin::make(),
                 ])
+//            ->plugin(FilamentTeamChatPlugin::make())
             ->navigationItems([
                 NavigationItem::make('AI Analytics')
                     ->icon('heroicon-o-sparkles')

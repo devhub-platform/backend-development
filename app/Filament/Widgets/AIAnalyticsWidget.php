@@ -16,6 +16,7 @@ class AIAnalyticsWidget extends StatsOverviewWidget
 
     protected int | string | array $columnSpan = [
         'md' => 2,
+        'lg' => 2,
         'xl' => 2,
     ];
 

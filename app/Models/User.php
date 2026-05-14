@@ -13,6 +13,7 @@ use Filament\Auth\MultiFactor\Email\Contracts\HasEmailAuthentication;
 use Filament\Models\Contracts\HasAvatar;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
+use Filament\TeamChat\Concerns\HasTeamChat;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -28,9 +29,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
-// use YourVendor\FilamentNotificationBell\Concerns\HasNotificationBell;
-// use Rarq\FilamentQuickNotes\Traits\HasFilamentQuickNotes;
-
 
 #[ObservedBy([UserObserver::class])]
 class User extends Authenticatable implements JWTSubject, MustVerifyEmail, FilamentUser, HasAvatar, HasAppAuthentication, HasAppAuthenticationRecovery, HasEmailAuthentication
@@ -166,7 +164,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail, Filam
             return false;
         }
 
-        $seconds = $timeoutSeconds ?? (int) config('chat.presence_timeout_seconds', 120);
+        $seconds = $timeoutSeconds ?? (int)config('chat.presence_timeout_seconds', 120);
 
         return $this->last_seen_at->greaterThanOrEqualTo(now()->subSeconds($seconds));
     }
