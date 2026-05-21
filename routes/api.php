@@ -69,8 +69,8 @@ Route::prefix('v1')->group(function () {
             Route::get('auth/', 'loginGoogle');
             Route::get('auth/callback', 'callbackGoogle');
 
-            Route::post('front/auth/github/login', 'loginGithub');
-            Route::get('auth/github/callback', 'callbackGithub');
+            Route::get('auth/github/', action: 'loginGithub');
+            Route::get('auth/github/callback', action: 'callbackGithub');
         });
 
         Route::controller(SocialiteMediaFlutterController::class)->group(function () {

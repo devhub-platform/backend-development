@@ -12,9 +12,6 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class SocialiteMediaFrontController
 {
-    /**
-     * Generate Google OAuth redirect URL
-     */
     public function loginGoogle(): JsonResponse
     {
         $redirectUrl = Socialite::driver('google')
@@ -108,8 +105,8 @@ class SocialiteMediaFrontController
         JWTAuth::factory()->setTTL(60 * 24 * 30 * 12);
         $token = JWTAuth::fromUser($user);
 
-        $frontendUrl = rtrim(config('app.frontend_url'), '/')
-            . '/auth/social-callback?token=' . urlencode($token);
+        // $frontendUrl = rtrim(config('app.frontend_url'), '/')
+        //     . '/auth/social-callback?token=' . urlencode($token);
 
          return response()->json([
             'user' => $user,
