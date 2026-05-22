@@ -45,7 +45,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->authGuard('web')
             ->path('admin')
-            ->viteTheme('resources/css/filament/admin/theme.css')
+//            ->viteTheme('resources/css/filament/admin/theme.css')
             ->login()
             ->profile()
             ->multiFactorAuthentication(

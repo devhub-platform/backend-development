@@ -44,24 +44,24 @@ return [
         'client_id' => env('GITHUB_CLIENT_ID'),
         'client_secret' => env('GITHUB_CLIENT_SECRET'),
         'redirect' => env('GITHUB_REDIRECT_URL'),
-        'token'         => env('GITHUB_TOKEN'),
+        'token' => env('GITHUB_TOKEN'),
     ],
 
     'hackai' => [
         'base_url' => env('HACKAI_BASE_URL', 'https://ai.hackclub.com/proxy/v1'),
         'token' => env('HACKAI_API_KEY'),
         'embeddings_model' => env('HACKAI_EMBEDDINGS_MODEL', 'openai/text-embedding-3-large'),
-        'embeddings_timeout' => (int) env('HACKAI_EMBEDDINGS_TIMEOUT', 20),
+        'embeddings_timeout' => (int)env('HACKAI_EMBEDDINGS_TIMEOUT', 20),
         'embeddings_enabled' => env('HACKAI_EMBEDDINGS_ENABLED', true),
     ],
 
     'hackclub_cdn' => [
         'base_url' => env('HACKCLUB_CDN_BASE_URL', 'https://cdn.hackclub.com/api/v4'),
         'token' => env('HACKCLUB_API_CDN'),
-        'timeout' => (int) env('HACKCLUB_CDN_TIMEOUT', 30),
-        'retry_times' => (int) env('HACKCLUB_CDN_RETRY_TIMES', 2),
-        'retry_sleep_ms' => (int) env('HACKCLUB_CDN_RETRY_SLEEP_MS', 200),
-        'chat_fallback_to_s3' => (bool) env('HACKCLUB_CHAT_FALLBACK_TO_S3', true),
+        'timeout' => (int)env('HACKCLUB_CDN_TIMEOUT', 30),
+        'retry_times' => (int)env('HACKCLUB_CDN_RETRY_TIMES', 2),
+        'retry_sleep_ms' => (int)env('HACKCLUB_CDN_RETRY_SLEEP_MS', 200),
+        'chat_fallback_to_s3' => (bool)env('HACKCLUB_CHAT_FALLBACK_TO_S3', true),
     ],
 
 
@@ -89,8 +89,8 @@ return [
         'base_url' => env('AI_MAIN_MODEL_BASE_URL'),
     ],
     'embedding' => [
-    'base_url' => env('HACKAI_BASE_URL', 'https://ai.hackclub.com/proxy/v1'),
-    'key'      => env('HACKAI_API_KEY'),
-    'model'    => env('HACKAI_EMBEDDINGS_MODEL', 'qwen/qwen3-embedding-8b'),
-],
+        'base_url' => env('HACKAI_BASE_URL', 'https://ai.hackclub.com/proxy/v1'),
+        'key' => env('HACKAI_API_KEY'),
+        'model' => env('HACKAI_EMBEDDINGS_MODEL', 'qwen/qwen3-embedding-8b'),
+    ],
 ];

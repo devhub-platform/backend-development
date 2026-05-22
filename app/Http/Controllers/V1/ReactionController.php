@@ -75,7 +75,7 @@ class ReactionController
                 articleUuid: (string) $post->uuid,
                 category: $tagsString ?: 'Article',
                 action: 'like',
-                duration: 0
+                duration: 50
             );
 
             return response()->json([

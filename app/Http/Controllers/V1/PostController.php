@@ -175,13 +175,13 @@ class PostController
             if ($shouldIncrementView) {
                 $this->userInterestService->trackPostInteraction($user, $post, 'view');
 
-                $tagsString = $post->tags->pluck('name')->implode(', ');
+            $tagsString = $post->tags->pluck('name')->implode(', ');
 
                 $this->interactionLoggerService->logInteraction(
                     userId: $user->id,
                     articleUuid: (string) $post->uuid,
                     category: $tagsString ?: 'Article',
-                    action: 'view',
+                    action: 'View',
                     duration: 0
                 );
             }
