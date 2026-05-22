@@ -13,18 +13,18 @@ class UserInterestService
     private const MIN_INTERACTIONS_THRESHOLD = 1;
 
     private const INTERACTION_WEIGHTS = [
-        'like' => 5,          // Strong signal
+        'like' => 5,            // Strong signal
         'comment' => 10,       // Very strong signal
-        'view' => 1,           // Weak signal
-        'share' => 3,         // Very strong signal
-        'save' => 4,          // Medium-strong signal
+        'view' => 1,          // Weak signal
+        'share' => 3,        // Very strong signal
+        'save' => 4,        // Medium-strong signal
     ];
 
     private const MIN_SCORE_FOR_AUTO_ADD = 10;
     public function trackPostInteraction(User $user, Post $post, string $interactionType = 'view', ?string $metadata = null): array
     {
         try {
-            $postTags = $post->tags()->get(['id', 'name']);
+            $postTags = $post->tags()->get(['tags.id', 'tags.name']);
 
             if ($postTags->isEmpty()) {
                 return ['tracked' => false, 'reason' => 'No tags on post'];
@@ -33,7 +33,6 @@ class UserInterestService
             $topicInteractions = [];
 
             foreach ($postTags as $tag) {
-                // Find matching topic
                 $topic = Topic::where('name', $tag->name)
                     ->where('is_active', true)
                     ->first();
@@ -84,7 +83,7 @@ class UserInterestService
                 'topics_auto_added' => array_column($topicsToAdd, 'topic_name'),
             ];
         } catch (\Exception $e) {
-            \Log::warning('Failed to track post interaction', [
+            Log::warning('Failed to track post interaction', [
                 'user_id' => $user->id,
                 'post_id' => $post->id,
                 'interaction_type' => $interactionType,
@@ -225,7 +224,7 @@ class UserInterestService
                 ];
             }, $interactions);
         } catch (\Exception $e) {
-            \Log::warning('Failed to get interaction history', ['error' => $e->getMessage()]);
+            Log::warning('Failed to get interaction history', ['error' => $e->getMessage()]);
             return [];
         }
     }

@@ -15,6 +15,7 @@ use App\Models\Tag;
 use App\Notifications\PostReportedNotification;
 use App\Services\AI\AddPostToAI;
 use App\Services\AI\PostAIImageService;
+use App\Services\InteractionLoggerService;
 use App\Services\ModerationService;
 use App\Services\Posts\PostCreationService;
 use App\Services\UserInterestService;
@@ -29,14 +30,18 @@ class PostController
 {
     use AuthorizesRequests;
 
+    private InteractionLoggerService $interactionLoggerService;
+
     public function __construct(
         private PostCreationService $postCreationService,
         private PostAIImageService  $aiImageService,
         private UserInterestService $userInterestService,
         private ModerationService   $moderationService,
         private AddPostToAI         $addPostToAI,
+        InteractionLoggerService $interactionLoggerService,
     )
     {
+        $this->interactionLoggerService = $interactionLoggerService;
     }
 
     public function topPostsViews(): JsonResponse
@@ -169,6 +174,16 @@ class PostController
 
             if ($shouldIncrementView) {
                 $this->userInterestService->trackPostInteraction($user, $post, 'view');
+
+                $tagsString = $post->tags->pluck('name')->implode(', ');
+
+                $this->interactionLoggerService->logInteraction(
+                    userId: $user->id,
+                    articleUuid: (string) $post->uuid,
+                    category: $tagsString ?: 'Article',
+                    action: 'view',
+                    duration: 0
+                );
             }
         } else {
             $shouldIncrementView = true;

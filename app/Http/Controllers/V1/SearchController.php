@@ -12,20 +12,35 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use App\Services\InteractionLoggerService;
 use App\Services\SearchService;
 
 class SearchController
 {
     private SearchService $searchService;
+    private InteractionLoggerService $interactionLoggerService;
 
-    public function __construct(SearchService $searchService)
+    public function __construct(SearchService $searchService, InteractionLoggerService $interactionLoggerService)
     {
         $this->searchService = $searchService;
+        $this->interactionLoggerService = $interactionLoggerService;
     }
 
     public function searchPosts(Request $request, Post $post): JsonResponse
     {
         $data = $this->searchService->searchPosts($request, $post);
+
+        if (auth()->check()) {
+            $searchQuery = $request->input('q', '');
+            $this->interactionLoggerService->logInteraction(
+                userId: auth()->id(),
+                articleUuid: md5($searchQuery),
+                category: 'Search',
+                action: 'search',
+                duration: 0,
+                additionalData: ['search_term' => $searchQuery]
+            );
+        }
 
         return response()->json([
             'message' => 'Posts found successfully',

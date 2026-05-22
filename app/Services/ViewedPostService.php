@@ -6,16 +6,11 @@ use App\Models\Post;
 use App\Models\PostView;
 use App\Models\User;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Log;
 
 class ViewedPostService
 {
-    /**
-     * Track a post view for a user
-     *
-     * @param int $userId
-     * @param int $postId
-     * @return PostView
-     */
+
     public function trackView(int $userId, int $postId): PostView
     {
         $postView = PostView::updateOrCreate(
@@ -32,7 +27,7 @@ class ViewedPostService
                 $userInterestService->addTopicsFromPostView($user, $post);
             }
         } catch (\Exception $e) {
-            \Log::warning('Failed to add topics on post view', [
+            Log::warning('Failed to add topics on post view', [
                 'user_id' => $userId,
                 'post_id' => $postId,
                 'error' => $e->getMessage()
@@ -42,13 +37,7 @@ class ViewedPostService
         return $postView;
     }
 
-    /**
-     * Get all viewed posts for a user with pagination
-     *
-     * @param int $userId
-     * @param int $perPage
-     * @return \Illuminate\Pagination\LengthAwarePaginator
-     */
+
     public function getUserViewedPosts(int $userId, int $perPage = 15)
     {
         return PostView::where('user_id', $userId)

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\V1;
 use App\Http\Requests\ReactionRequest;
 use App\Models\Post;
 use App\Notifications\ReactNotification;
+use App\Services\InteractionLoggerService;
 use App\Services\UserInterestService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,10 +17,12 @@ class ReactionController
     public int $numberOfReactions = 0;
 
     protected UserInterestService $userInterestService;
+    protected InteractionLoggerService $interactionLoggerService;
 
-    public function __construct(UserInterestService $userInterestService)
+    public function __construct(UserInterestService $userInterestService, InteractionLoggerService $interactionLoggerService)
     {
         $this->userInterestService = $userInterestService;
+        $this->interactionLoggerService = $interactionLoggerService;
     }
 
     public function reactToPost(ReactionRequest $request, $postId)
@@ -66,6 +69,15 @@ class ReactionController
                 json_encode(['reaction_update' => true])
             );
 
+            $tagsString = $post->tags->pluck('name')->implode(', ');
+            $this->interactionLoggerService->logInteraction(
+                userId: $user->id,
+                articleUuid: (string) $post->uuid,
+                category: $tagsString ?: 'Article',
+                action: 'like',
+                duration: 0
+            );
+
             return response()->json([
                 'message' => 'Reaction updated successfully.',
                 'reaction' => $validated['type'],
@@ -83,6 +95,15 @@ class ReactionController
             $post,
             $validated['type'],
             json_encode(['new_reaction' => true])
+        );
+
+        $tagsString = $post->tags->pluck('name')->implode(', ');
+        $this->interactionLoggerService->logInteraction(
+            userId: $user->id,
+            articleUuid: (string) $post->uuid,
+            category: $tagsString ?: 'Article',
+            action: 'like',
+            duration: 0
         );
 
         return response()->json([
