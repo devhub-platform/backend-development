@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
 //            UserSeeder::class,
 //            TagSeeder::class,
+            ProgrammingPostsSeeder::class,
             PostSeeder::class,
             CommentSeeder::class,
             ReactionSeeder::class,

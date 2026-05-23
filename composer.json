@@ -52,6 +52,9 @@
         "socialiteproviders/microsoft": "^4.7",
         "spatie/laravel-flare": "^2.8",
         "spatie/laravel-permission": "*",
+        "stechstudio/filament-phpinfo": "^1.2",
+        "stechstudio/phpinfo": "^1.1",
+        "storviaio/vantage": "^0.1.25",
         "tymon/jwt-auth": "^2.2",
         "zpm-packages/server-access-filament": "^1.0"
     },

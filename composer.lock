@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "8d85228814a3a346b8faa63455a61e89",
+    "content-hash": "1ac0a2590a385b28198d4033f255c60f",
     "packages": [
         {
             "name": "aerni/cloudflared",
@@ -12775,6 +12775,196 @@
                 "source": "https://github.com/starkbank/ecdsa-php/tree/v2.2.1"
             },
             "time": "2026-05-05T21:56:28+00:00"
+        },
+        {
+            "name": "stechstudio/filament-phpinfo",
+            "version": "v1.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/stechstudio/filament-phpinfo.git",
+                "reference": "fa3bacff1204932d5d5028cae6a582f4db8621e2"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/stechstudio/filament-phpinfo/zipball/fa3bacff1204932d5d5028cae6a582f4db8621e2",
+                "reference": "fa3bacff1204932d5d5028cae6a582f4db8621e2",
+                "shasum": ""
+            },
+            "require": {
+                "filament/filament": "^3.0|^4.0|^5.0",
+                "php": "^8.3",
+                "spatie/laravel-package-tools": "^1.9",
+                "stechstudio/phpinfo": "^0.6|^1.0"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^8.0|^9.0|^10.0|^11.0",
+                "pestphp/pest": "^2.0|^3.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "STS\\FilamentPHPInfo\\FilamentPHPInfoServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "STS\\FilamentPHPInfo\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Elias Szobody",
+                    "email": "elias@stechstudio.com"
+                },
+                {
+                    "name": "David Palmer",
+                    "email": "dp@stechstudio.com"
+                }
+            ],
+            "description": "View phpinfo from your Filament admin panel.",
+            "support": {
+                "issues": "https://github.com/stechstudio/filament-phpinfo/issues",
+                "source": "https://github.com/stechstudio/filament-phpinfo/tree/v1.2.0"
+            },
+            "time": "2026-03-30T15:43:01+00:00"
+        },
+        {
+            "name": "stechstudio/phpinfo",
+            "version": "1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/stechstudio/phpinfo.git",
+                "reference": "87a913db268b566aec2670a40bf158433688b190"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/stechstudio/phpinfo/zipball/87a913db268b566aec2670a40bf158433688b190",
+                "reference": "87a913db268b566aec2670a40bf158433688b190",
+                "shasum": ""
+            },
+            "require": {
+                "ext-dom": "*",
+                "php": "^8.3"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.29",
+                "pestphp/pest": "^4.0"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "helpers.php"
+                ],
+                "psr-4": {
+                    "STS\\Phpinfo\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Joseph Szobody",
+                    "email": "joseph@stechstudio.com"
+                }
+            ],
+            "description": "A beautiful, searchable replacement for phpinfo() with a clean programmatic API",
+            "homepage": "https://prettyphpinfo.com",
+            "keywords": [
+                "configuration",
+                "php-info",
+                "phpinfo",
+                "pretty-phpinfo",
+                "server-info"
+            ],
+            "support": {
+                "issues": "https://github.com/stechstudio/phpinfo/issues",
+                "source": "https://github.com/stechstudio/phpinfo"
+            },
+            "time": "2026-04-06T18:53:01+00:00"
+        },
+        {
+            "name": "storviaio/vantage",
+            "version": "v0.1.25",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/storviaio/vantage.git",
+                "reference": "0afdb12d0daf0d1d78cff7d48779691fc9a3f767"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/storviaio/vantage/zipball/0afdb12d0daf0d1d78cff7d48779691fc9a3f767",
+                "reference": "0afdb12d0daf0d1d78cff7d48779691fc9a3f767",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/events": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/notifications": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/queue": "^10.0|^11.0|^12.0|^13.0",
+                "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
+                "php": "^8.2|^8.3|^8.4"
+            },
+            "require-dev": {
+                "larastan/larastan": "^3.0",
+                "laravel/pint": "^1.14",
+                "orchestra/testbench": "^11.0|^10.0|^9.0|^8.0",
+                "pestphp/pest": "^3.8|^4.0",
+                "pestphp/pest-plugin-arch": "^3.0|^4.0",
+                "pestphp/pest-plugin-laravel": "^3.0|^4.0",
+                "phpstan/extension-installer": "^1.4",
+                "phpstan/phpstan": "^2.1",
+                "phpstan/phpstan-deprecation-rules": "^2.0",
+                "phpstan/phpstan-phpunit": "^2.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "Vantage": "Storvia\\Vantage\\Facades\\Vantage"
+                    },
+                    "providers": [
+                        "Storvia\\Vantage\\VantageServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Storvia\\Vantage\\": "src/",
+                    "Storvia\\Vantage\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Houda Slassi",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Vantage: Strategic queue monitoring and observability for Laravel applications.",
+            "homepage": "https://github.com/storviaio/vantage",
+            "keywords": [
+                "laravel",
+                "monitoring",
+                "observability",
+                "queue",
+                "storviaio",
+                "vantage"
+            ],
+            "support": {
+                "issues": "https://github.com/storviaio/vantage/issues",
+                "source": "https://github.com/storviaio/vantage/tree/v0.1.25"
+            },
+            "time": "2026-04-15T11:56:33+00:00"
         },
         {
             "name": "symfony/clock",
