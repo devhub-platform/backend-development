@@ -8,6 +8,7 @@ use App\Services\AI\EmbeddingService;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Request;
 
 class HomeFeedService
 {
@@ -17,24 +18,24 @@ class HomeFeedService
 
     public function build(?User $user, int $perPage = 10, int $page = 1, ?string $path = null, array $query = []): LengthAwarePaginator
     {
-        $path ??= request()->url();
-        $query = $query ?: request()->query();
+        $perPage = max(1, min(50, $perPage));
+        $page = max(1, $page);
+        $path ??= Request::url();
+        $query = $query ?: Request::query();
 
         if (!$user) {
-            return Post::query()
-                ->with(['user', 'tags'])
-                ->where('status', '!=', 'draft')
-                ->latest()
-                ->paginate($perPage, ['*'], 'page', $page);
+            return $this->guestFeed($perPage, $page, $path, $query);
         }
 
         $blockedUserIds = $this->blockedUserIds($user);
         $followingIds = $user->following()->pluck('users.id')->filter()->unique()->values()->all();
         $followedTagNames = $user->followedTags()->pluck('name')->filter()->unique()->values()->all();
-        $interestTerms = $this->selectedInterests($user, $followedTagNames);
-        $interestVector = $this->interestVector($interestTerms);
+        $seenPostIds = $this->seenPostIds($user);
+        $weightedInterestMap = $this->weightedInterestMap($user, $followedTagNames);
+        $interestTerms = array_keys($weightedInterestMap);
+        $interestVector = $this->interestVector($weightedInterestMap);
 
-        $candidates = $this->candidatePool($blockedUserIds, $followingIds, $followedTagNames);
+        $candidates = $this->candidatePool($user, $blockedUserIds, $followingIds, $followedTagNames, $interestTerms);
 
         if ($candidates->isEmpty()) {
             return Post::query()
@@ -45,20 +46,14 @@ class HomeFeedService
                 ->paginate($perPage, ['*'], 'page', $page);
         }
 
-        $scored = $candidates->map(function (Post $post) use ($interestVector, $interestTerms, $followingIds, $followedTagNames) {
+        $scored = $candidates->map(function (Post $post) use ($interestVector, $interestTerms, $followingIds, $weightedInterestMap, $seenPostIds) {
             return [
                 'post' => $post,
-                'score' => $this->scorePost($post, $interestVector, $interestTerms, $followingIds, $followedTagNames),
+                'score' => $this->scorePost($post, $interestVector, $interestTerms, $followingIds, $weightedInterestMap, $seenPostIds),
             ];
         });
 
-        $sorted = $scored->sort(function (array $left, array $right) {
-            if ($left['score'] === $right['score']) {
-                return ($right['post']->created_at?->timestamp ?? 0) <=> ($left['post']->created_at?->timestamp ?? 0);
-            }
-
-            return $right['score'] <=> $left['score'];
-        })->values()->pluck('post');
+        $sorted = $this->rerankWithDiversity($scored);
 
         $total = $sorted->count();
         $items = $sorted->slice(($page - 1) * $perPage, $perPage)->values()->all();
@@ -69,94 +64,334 @@ class HomeFeedService
         ]);
     }
 
-    private function selectedInterests(User $user, array $followedTagNames): array
+    private function guestFeed(int $perPage, int $page, string $path, array $query): LengthAwarePaginator
     {
-        $topics = $user->topics()
-            ->pluck('name')
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
+        $baseQuery = $this->baseCandidateQuery([]);
 
-        return !empty($topics) ? $topics : $followedTagNames;
+        $recent = (clone $baseQuery)
+            ->latest()
+            ->limit(180)
+            ->get();
+
+        $trending = (clone $baseQuery)
+            ->where('created_at', '>=', now()->subDays(14))
+            ->orderByRaw('(COALESCE(views, 0) * 1.5) + (comments_count * 8) + (reactions_count * 10) + (saved_by_count * 9) DESC')
+            ->limit(140)
+            ->get();
+
+        $sorted = $recent
+            ->merge($trending)
+            ->unique('id')
+            ->sortByDesc(fn(Post $post) => $this->guestScorePost($post))
+            ->values();
+
+        $total = $sorted->count();
+        $items = $sorted->slice(($page - 1) * $perPage, $perPage)->values()->all();
+
+        return new LengthAwarePaginator($items, $total, $perPage, $page, [
+            'path' => $path,
+            'query' => $query,
+        ]);
     }
 
-    private function interestVector(array $terms): array
+    private function weightedInterestMap(User $user, array $followedTagNames): array
     {
-        if (empty($terms)) {
+        $weights = [];
+
+        foreach ($user->topics()->pluck('name')->filter()->all() as $topicName) {
+            $topicName = mb_strtolower(trim((string) $topicName));
+            if ($topicName !== '') {
+                $weights[$topicName] = ($weights[$topicName] ?? 0) + 4.5;
+            }
+        }
+
+        foreach ($followedTagNames as $tagName) {
+            $tagName = mb_strtolower(trim((string) $tagName));
+            if ($tagName !== '') {
+                $weights[$tagName] = ($weights[$tagName] ?? 0) + 3.5;
+            }
+        }
+
+        $this->addTagWeightsFromPosts(
+            $user->viewedPosts()->with('tags')->latest('post_views.viewed_at')->limit(90)->get(),
+            1.0,
+            $weights
+        );
+
+        $this->addTagWeightsFromPosts(
+            $user->savedPosts()->with('tags')->latest('saved_posts.created_at')->limit(90)->get(),
+            4.0,
+            $weights
+        );
+
+        $this->addTagWeightsFromPosts(
+            Post::query()->with('tags')->whereHas('comments', fn($q) => $q->where('user_id', $user->id))->latest()->limit(60)->get(),
+            5.0,
+            $weights
+        );
+
+        $this->addTagWeightsFromPosts(
+            Post::query()->with('tags')->whereHas('reactions', fn($q) => $q->where('user_id', $user->id))->latest()->limit(60)->get(),
+            4.5,
+            $weights
+        );
+
+        if (empty($weights)) {
             return [];
         }
 
-        $cacheKey = 'home:interest-vector:' . md5(json_encode(array_values($terms)));
+        arsort($weights);
+
+        return collect($weights)
+            ->take(40)
+            ->all();
+    }
+
+    private function addTagWeightsFromPosts(Collection $posts, float $weightPerTag, array &$weights): void
+    {
+        foreach ($posts as $post) {
+            foreach ($post->tags as $tag) {
+                $name = mb_strtolower(trim((string) $tag->name));
+                if ($name === '') {
+                    continue;
+                }
+
+                $weights[$name] = ($weights[$name] ?? 0) + $weightPerTag;
+            }
+        }
+    }
+
+    private function interestVector(array $weightedMap): array
+    {
+        if (empty($weightedMap)) {
+            return [];
+        }
+
+        $cacheKey = 'home:interest-vector:v2:' . md5(json_encode($weightedMap));
+
+        $terms = collect($weightedMap)
+            ->sortDesc()
+            ->take(25)
+            ->flatMap(function (float $weight, string $term) {
+                $repeat = (int) max(1, min(4, round($weight / 2)));
+
+                return array_fill(0, $repeat, $term);
+            })
+            ->values()
+            ->all();
 
         return Cache::remember($cacheKey, now()->addHours(6), function () use ($terms) {
             return $this->embedding->embed(implode(' | ', $terms));
         });
     }
 
-    private function candidatePool(array $blockedUserIds, array $followingIds, array $followedTagNames): Collection
+    private function candidatePool(User $user, array $blockedUserIds, array $followingIds, array $followedTagNames, array $interestTerms): Collection
     {
-        $recentPosts = Post::query()
-            ->with(['user', 'tags'])
-            ->where('status', '!=', 'draft')
-            ->whereNotIn('user_id', $blockedUserIds)
+        $baseQuery = $this->baseCandidateQuery($blockedUserIds);
+
+        $recentPosts = (clone $baseQuery)
             ->latest()
-            ->limit(120)
+            ->limit(220)
             ->get();
 
         $followingPosts = empty($followingIds)
             ? collect()
-            : Post::query()
-                ->with(['user', 'tags'])
-                ->where('status', '!=', 'draft')
-                ->whereNotIn('user_id', $blockedUserIds)
+            : (clone $baseQuery)
                 ->whereIn('user_id', $followingIds)
                 ->latest()
-                ->limit(120)
+                ->limit(180)
                 ->get();
 
         $tagPosts = empty($followedTagNames)
             ? collect()
-            : Post::query()
-                ->with(['user', 'tags'])
-                ->where('status', '!=', 'draft')
-                ->whereNotIn('user_id', $blockedUserIds)
-                ->whereHas('tags', fn ($query) => $query->whereIn('name', $followedTagNames))
+            : (clone $baseQuery)
+                ->whereHas('tags', fn($query) => $query->whereIn('name', $followedTagNames))
                 ->latest()
-                ->limit(120)
+                ->limit(180)
                 ->get();
+
+        $interestPosts = empty($interestTerms)
+            ? collect()
+            : (clone $baseQuery)
+                ->whereHas('tags', fn($query) => $query->whereIn('name', $interestTerms))
+                ->latest()
+                ->limit(180)
+                ->get();
+
+        $trendingPosts = (clone $baseQuery)
+            ->where('created_at', '>=', now()->subDays(14))
+            ->orderByRaw('(COALESCE(views, 0) * 1.5) + (comments_count * 8) + (reactions_count * 10) + (saved_by_count * 9) DESC')
+            ->limit(160)
+            ->get();
+
+        $explorePosts = (clone $baseQuery)
+            ->inRandomOrder()
+            ->limit(40)
+            ->get();
+
+        $fromFollowing = max(0, 80 - count($followingIds));
+        $networkPosts = (clone $baseQuery)
+            ->whereIn('user_id', $user->followers()->limit(200)->pluck('users.id')->all())
+            ->latest()
+            ->limit($fromFollowing)
+            ->get();
 
         return $recentPosts
             ->merge($followingPosts)
             ->merge($tagPosts)
+            ->merge($interestPosts)
+            ->merge($trendingPosts)
+            ->merge($explorePosts)
+            ->merge($networkPosts)
             ->unique('id')
             ->values();
     }
 
-    private function scorePost(Post $post, array $interestVector, array $interestTerms, array $followingIds, array $followedTagNames): float
+    private function baseCandidateQuery(array $blockedUserIds)
+    {
+        return Post::query()
+            ->with(['user', 'tags'])
+            ->withCount(['comments', 'reactions', 'savedBy', 'postViews'])
+            ->where('status', '!=', 'draft')
+            ->when(!empty($blockedUserIds), fn($query) => $query->whereNotIn('user_id', $blockedUserIds));
+    }
+
+    private function seenPostIds(User $user): array
+    {
+        return $user->viewedPosts()
+            ->latest('post_views.viewed_at')
+            ->limit(350)
+            ->pluck('posts.id')
+            ->map(fn($id) => (int) $id)
+            ->all();
+    }
+
+    private function scorePost(Post $post, array $interestVector, array $interestTerms, array $followingIds, array $weightedInterestMap, array $seenPostIds): float
     {
         $score = 0.0;
         $postVector = $this->embedding->getCachedEmbedding($post);
 
         if (!empty($interestVector) && !empty($postVector)) {
-            $score += $this->embedding->cosine($interestVector, $postVector) * 100;
+            $score += $this->embedding->cosine($interestVector, $postVector) * 58;
         } else {
             $score += $this->keywordScore($post, $interestTerms);
         }
 
         if (in_array($post->user_id, $followingIds, true)) {
-            $score += 15;
+            $score += 16;
         }
 
-        $tagMatches = $post->tags->pluck('name')->intersect($followedTagNames)->count();
-        if ($tagMatches > 0) {
-            $score += min(15, $tagMatches * 5);
+        $tagAffinity = 0.0;
+        foreach ($post->tags as $tag) {
+            $tagName = mb_strtolower((string) $tag->name);
+            $tagAffinity += (float) ($weightedInterestMap[$tagName] ?? 0);
         }
 
-        $daysOld = max(1, now()->diffInDays($post->created_at));
-        $score += max(0, 10 - min(10, $daysOld / 3));
+        if ($tagAffinity > 0) {
+            $score += min(24, $tagAffinity * 1.75);
+        }
 
-        return $score;
+        $views = (int) ($post->views ?? 0);
+        $comments = (int) ($post->comments_count ?? 0);
+        $reactions = (int) ($post->reactions_count ?? 0);
+        $saved = (int) ($post->saved_by_count ?? 0);
+        $engagementScore =
+            (log(1 + $views) * 1.8) +
+            (log(1 + $comments) * 4.5) +
+            (log(1 + $reactions) * 5.0) +
+            (log(1 + $saved) * 4.0);
+        $score += min(26, $engagementScore);
+
+        $hoursOld = max(1, now()->diffInHours($post->created_at));
+        $score += 14 * exp(-$hoursOld / 96);
+
+        $isSeen = in_array((int) $post->id, $seenPostIds, true);
+        $score += $isSeen ? -10 : 5;
+
+        if (!empty($post->title)) {
+            $titleLength = mb_strlen((string) $post->title);
+            if ($titleLength >= 30 && $titleLength <= 140) {
+                $score += 1.5;
+            }
+        }
+
+        $score += random_int(0, 1000) / 1000;
+
+        return round($score, 4);
+    }
+
+    private function rerankWithDiversity(Collection $scored): Collection
+    {
+        $remaining = $scored->values()->all();
+        $ranked = collect();
+        $authorCounts = [];
+        $tagCounts = [];
+
+        while (!empty($remaining)) {
+            $bestIndex = null;
+            $bestAdjusted = -INF;
+            $bestTimestamp = 0;
+
+            foreach ($remaining as $index => $item) {
+                $post = $item['post'];
+                $baseScore = (float) $item['score'];
+
+                $authorPenalty = (($authorCounts[$post->user_id] ?? 0) * 7.0);
+
+                $tagPenalty = 0.0;
+                foreach ($post->tags as $tag) {
+                    $name = mb_strtolower((string) $tag->name);
+                    $tagPenalty += (($tagCounts[$name] ?? 0) * 1.8);
+                }
+
+                $adjusted = $baseScore - $authorPenalty - $tagPenalty;
+                $timestamp = $post->created_at?->timestamp ?? 0;
+
+                if ($adjusted > $bestAdjusted || ($adjusted === $bestAdjusted && $timestamp > $bestTimestamp)) {
+                    $bestAdjusted = $adjusted;
+                    $bestTimestamp = $timestamp;
+                    $bestIndex = $index;
+                }
+            }
+
+            if ($bestIndex === null) {
+                break;
+            }
+
+            $picked = $remaining[$bestIndex];
+            $pickedPost = $picked['post'];
+            $ranked->push($pickedPost);
+
+            $authorCounts[$pickedPost->user_id] = ($authorCounts[$pickedPost->user_id] ?? 0) + 1;
+            foreach ($pickedPost->tags as $tag) {
+                $name = mb_strtolower((string) $tag->name);
+                $tagCounts[$name] = ($tagCounts[$name] ?? 0) + 1;
+            }
+
+            unset($remaining[$bestIndex]);
+            $remaining = array_values($remaining);
+        }
+
+        return $ranked;
+    }
+
+    private function guestScorePost(Post $post): float
+    {
+        $views = (int) ($post->views ?? 0);
+        $comments = (int) ($post->comments_count ?? 0);
+        $reactions = (int) ($post->reactions_count ?? 0);
+        $saved = (int) ($post->saved_by_count ?? 0);
+
+        $hoursOld = max(1, now()->diffInHours($post->created_at));
+        $freshness = 18 * exp(-$hoursOld / 84);
+
+        $engagement =
+            (log(1 + $views) * 1.8) +
+            (log(1 + $comments) * 4.5) +
+            (log(1 + $reactions) * 5.0) +
+            (log(1 + $saved) * 4.0);
+
+        return round($freshness + min(30, $engagement), 4);
     }
 
     private function keywordScore(Post $post, array $interestTerms): float
