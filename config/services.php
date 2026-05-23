@@ -47,6 +47,12 @@ return [
         'token' => env('GITHUB_TOKEN'),
     ],
 
+    'github_react' => [
+        'client_id' => env('GITHUB_FRONTEND_CLIENT_ID'),
+        'client_secret' => env('GITHUB_FRONTEND_CLIENT_SECRET'),
+        'redirect' => env('GITHUB_FRONTEND_REDIRECT_URL'),
+    ],
+
     'hackai' => [
         'base_url' => env('HACKAI_BASE_URL', 'https://ai.hackclub.com/proxy/v1'),
         'token' => env('HACKAI_API_KEY'),

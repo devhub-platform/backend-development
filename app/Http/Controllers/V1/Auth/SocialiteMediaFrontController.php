@@ -31,6 +31,12 @@ class SocialiteMediaFrontController
      */
     public function loginGithub(): JsonResponse
     {
+        config([
+            'services.github.client_id' => env('GITHUB_FRONTEND_CLIENT_ID'),
+            'services.github.client_secret' => env('GITHUB_FRONTEND_CLIENT_SECRET'),
+            'services.github.redirect' => env('GITHUB_FRONTEND_REDIRECT_URL'),
+        ]);
+
         $redirectUrl = Socialite::driver('github')
             ->stateless()
             ->redirect()
@@ -63,6 +69,11 @@ class SocialiteMediaFrontController
     public function callbackGithub()
     {
         try {
+            config([
+                'services.github.client_id' => env('GITHUB_FRONTEND_CLIENT_ID'),
+                'services.github.client_secret' => env('GITHUB_FRONTEND_CLIENT_SECRET'),
+                'services.github.redirect' => env('GITHUB_FRONTEND_REDIRECT_URL'),
+            ]);
             $githubUser = Socialite::driver('github')->stateless()->user();
             return $this->handleSocialUser($githubUser);
         } catch (\Exception $e) {
@@ -108,7 +119,7 @@ class SocialiteMediaFrontController
         // $frontendUrl = rtrim(config('app.frontend_url'), '/')
         //     . '/auth/social-callback?token=' . urlencode($token);
 
-         return response()->json([
+        return response()->json([
             'user' => $user,
             'access_token' => $token,
             'token_type' => 'Bearer',
@@ -120,9 +131,9 @@ class SocialiteMediaFrontController
      */
     private function redirectWithError(string $error)
     {
-        $frontendUrl = rtrim(config('app.frontend_url'), '/')
-            . '/auth/social-callback?error=' . $error;
+        // $frontendUrl = rtrim(config('app.frontend_url'), '/')
+        //     . '/auth/social-callback?error=' . $error;
 
-        return Redirect::to($frontendUrl);
+        // return Redirect::to($frontendUrl);
     }
 }

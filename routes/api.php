@@ -64,13 +64,13 @@ Route::prefix('v1')->group(function () {
     Route::middleware('throttle:30,1')->group(function () {
 
         Route::controller(SocialiteMediaFrontController::class)->group(function () {
-//            Route::post('front/auth/google/login', 'loginGoogle');
+            //            Route::post('front/auth/google/login', 'loginGoogle');
 //            Route::get('auth/google/callback', 'callbackGoogle');
             Route::get('auth/', 'loginGoogle');
             Route::get('auth/callback', 'callbackGoogle');
 
             Route::get('auth/github/', action: 'loginGithub');
-            Route::get('auth/github/callback', action: 'callbackGithub');
+            Route::get('/front/auth/github/callback', action: 'callbackGithub');
         });
 
         Route::controller(SocialiteMediaFlutterController::class)->group(function () {
@@ -104,7 +104,7 @@ Route::prefix('v1')->group(function () {
         Route::get('ai-topics-user/{userId}', [AITopicsUserController::class, 'showByUserId']);
         // Public recommendations endpoint used by the front-page to fetch suggested topics/posts
         Route::get('recommendations', [RecommendationController::class, 'index']);
-//        Route::get('ai-topics-user', [AITopicsUserController::class, 'index']);
+        //        Route::get('ai-topics-user', [AITopicsUserController::class, 'index']);
 
         Route::middleware(['auth:api', 'throttle:25,1'])->group(function () {
             Route::controller(AuthController::class)->group(function () {
