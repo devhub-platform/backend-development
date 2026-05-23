@@ -72,7 +72,7 @@ class ReactionController
             $tagsString = $post->tags->pluck('name')->implode(', ');
             $this->interactionLoggerService->logInteraction(
                 userId: $user->id,
-                articleUuid: (string) $post->uuid,
+//                articleUuid: (string) $post->uuid ?? null,
                 category: $tagsString ?: 'Article',
                 action: 'like',
                 duration: 50
@@ -100,7 +100,6 @@ class ReactionController
         $tagsString = $post->tags->pluck('name')->implode(', ');
         $this->interactionLoggerService->logInteraction(
             userId: $user->id,
-            articleUuid: (string) $post->uuid,
             category: $tagsString ?: 'Article',
             action: 'like',
             duration: 0

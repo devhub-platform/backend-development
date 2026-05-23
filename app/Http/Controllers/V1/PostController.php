@@ -17,11 +17,11 @@ use App\Services\AI\AddPostToAI;
 use App\Services\AI\PostAIImageService;
 use App\Services\InteractionLoggerService;
 use App\Services\ModerationService;
+use App\Services\Posts\HomeFeedService;
 use App\Services\Posts\PostCreationService;
 use App\Services\UserInterestService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Number;
@@ -38,7 +38,8 @@ class PostController
         private UserInterestService $userInterestService,
         private ModerationService   $moderationService,
         private AddPostToAI         $addPostToAI,
-        InteractionLoggerService $interactionLoggerService,
+        InteractionLoggerService    $interactionLoggerService,
+        private HomeFeedService     $homeFeedService,
     )
     {
         $this->interactionLoggerService = $interactionLoggerService;
@@ -75,15 +76,13 @@ class PostController
     {
         $this->authorize('viewAny', Post::class);
 
-        $user = auth()->user();
-
-        $posts = Post::query()
-            ->with(['user', 'tags'])
-            ->where('status', '!=', 'draft')
-            ->when(auth()->check(), fn($query) => $query->whereNotIn('user_id', $this->blockedUserIds()))
-            ->prioritizeFollowedTags($user)
-            ->latest()
-            ->paginate(10);
+        $posts = $this->homeFeedService->build(
+            auth()->user(),
+            (int)request()->input('per_page', 15),
+            (int)request()->input('page', 1),
+            request()->url(),
+            request()->query()
+        );
 
         return new PostCollection($posts);
     }
@@ -169,21 +168,28 @@ class PostController
                 ['user_id' => $user->id, 'post_id' => $post->id],
                 ['viewed_at' => now()]
             );
-
+            $tagsString = $post->tags->pluck('name')->implode(', ');
             $shouldIncrementView = $postView->wasRecentlyCreated;
+            Http::post('https://memo1714-devhub-ai-api.hf.space/log_interaction', [
+                'user_id' => (string)$user->id,
+                'article_uuid' => null,
+                'category' => $tagsString ?: 'Article',
+                'action' => 'view',
+                'duration' => 50,
+            ]);
+//
+//            $this->interactionLoggerService->logInteraction(
+//                userId: $user->id,
+////                    articleUuid: (string) $post->uuid,
+//                category: $tagsString ?: 'Article',
+//                action: 'view',
+//                duration: 0
+//            );
 
             if ($shouldIncrementView) {
                 $this->userInterestService->trackPostInteraction($user, $post, 'view');
 
-            $tagsString = $post->tags->pluck('name')->implode(', ');
 
-                $this->interactionLoggerService->logInteraction(
-                    userId: $user->id,
-                    articleUuid: (string) $post->uuid,
-                    category: $tagsString ?: 'Article',
-                    action: 'View',
-                    duration: 0
-                );
             }
         } else {
             $shouldIncrementView = true;

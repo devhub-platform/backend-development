@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use App\Services\InteractionLoggerService;
 use App\Services\SearchService;
+use Illuminate\Support\Facades\Http;
 
 class SearchController
 {
@@ -30,17 +31,24 @@ class SearchController
     {
         $data = $this->searchService->searchPosts($request, $post);
 
-        if (auth()->check()) {
-            $searchQuery = $request->input('q', '');
-            $this->interactionLoggerService->logInteraction(
-                userId: auth()->id(),
-                articleUuid: md5($searchQuery),
-                category: 'Search',
-                action: 'search',
-                duration: 0,
-                additionalData: ['search_term' => $searchQuery]
-            );
-        }
+//        if (auth()->check()) {
+//            $searchQuery = $request->input('q', '');
+//            $this->interactionLoggerService->logInteraction(
+//                userId: auth()->id(),
+//                category: 'Search',
+//                action: 'search',
+//                duration: 0,
+//                additionalData: ['search_term' => $searchQuery]
+//            );
+//        }
+        $searchQuery = $request->input('q', '');
+
+        Http::post('https://memo1714-devhub-ai-api.hf.space/log_interaction', [
+            'user_id' => auth()->id(),
+            'category' => $searchQuery,
+            'action' => 'Search',
+            'duration' => 50,
+        ]);
 
         return response()->json([
             'message' => 'Posts found successfully',
@@ -63,6 +71,13 @@ class SearchController
     public function searchTags(Request $request, Tag $tag): JsonResponse
     {
         $data = $this->searchService->searchTags($request, $tag);
+
+        Http::post('https://memo1714-devhub-ai-api.hf.space/log_interaction', [
+            'user_id' => auth()->id(),
+            'category' => $request->input('tag', 'Article'),
+            'action' => 'Search',
+            'duration' => 50,
+        ]);
 
         return response()->json([
             'message' => 'Tags found successfully',

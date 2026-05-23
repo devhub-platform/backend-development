@@ -15,7 +15,6 @@ class LogInteractionJob implements ShouldQueue
 
     public function __construct(
         private int $userId,
-        private string $articleUuid,
         private string $category,
         private string $action,
         private int $duration = 0,
@@ -34,7 +33,7 @@ class LogInteractionJob implements ShouldQueue
 
         $interactionLogger->logInteraction(
             $this->userId,
-            $this->articleUuid,
+//            $this->articleUuid,
             $categoryToUse,
             $this->action,
             $this->duration,

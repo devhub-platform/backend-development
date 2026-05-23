@@ -45,6 +45,7 @@ use App\Http\Controllers\V1\Chats\UserPresenceShowController;
 use App\Http\Controllers\V1\FeedbackController;
 use App\Http\Controllers\V1\TrendingController;
 use App\Http\Controllers\V1\AiModels\AITopicsUserController;
+use App\Http\Controllers\V1\RecommendationController;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\V1\ProfileQuestionController;
 
@@ -101,6 +102,8 @@ Route::prefix('v1')->group(function () {
         Route::get('ai-chat/models', [AIChatController::class, 'models']);
 
         Route::get('ai-topics-user/{userId}', [AITopicsUserController::class, 'showByUserId']);
+        // Public recommendations endpoint used by the front-page to fetch suggested topics/posts
+        Route::get('recommendations', [RecommendationController::class, 'index']);
 //        Route::get('ai-topics-user', [AITopicsUserController::class, 'index']);
 
         Route::middleware(['auth:api', 'throttle:25,1'])->group(function () {

@@ -13,7 +13,6 @@ class InteractionLoggerService
 
     public function logInteraction(
         int $userId,
-        string $articleUuid,
         string $category,
         string $action,
         int $duration = 0,
@@ -22,7 +21,6 @@ class InteractionLoggerService
         try {
             $payload = [
                 'user_id' => (string)$userId,
-                'article_uuid' => $articleUuid,
                 'category' => $category,
                 'action' => $action,
                 'duration' => $duration,
@@ -35,7 +33,6 @@ class InteractionLoggerService
             if ($response->successful()) {
                 Log::info('Interaction logged successfully', [
                     'user_id' => $userId,
-                    'article_uuid' => $articleUuid,
                     'action' => $action
                 ]);
                 return true;
@@ -63,7 +60,6 @@ class InteractionLoggerService
         foreach ($interactions as $interaction) {
             $logged = $this->logInteraction(
                 $interaction['user_id'],
-                $interaction['article_uuid'],
                 $interaction['category'],
                 $interaction['action'],
                 $interaction['duration'] ?? 0,
@@ -74,4 +70,3 @@ class InteractionLoggerService
         return $success;
     }
 }
-
