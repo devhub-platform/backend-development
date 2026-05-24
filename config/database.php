@@ -63,6 +63,8 @@ return [
                     ? base_path(env('MYSQL_ATTR_SSL_CA'))
                     : null,
                 PDO::ATTR_TIMEOUT => 10,
+                PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8mb4',
+                PDO::ATTR_PERSISTENT => true,  // ← persistent connection
             ]) : [],
         ],
 
@@ -195,44 +197,33 @@ return [
     // ],
     'redis' => [
 
-        // 'client' => env('REDIS_CLIENT', 'phpredis'),
-
-        // 'options' => [
-        //     'cluster' => 'redis',
-        //     'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'),
-        //     'ssl' => [
-        //         'verify_peer' => false,
-        //         'verify_peer_name' => false,
-        //     ],
-        // ],
-
         'client' => env('REDIS_CLIENT', 'predis'),
 
-        'default' => [
-            'scheme' => 'tls',
-            'host' => env('REDIS_HOST'),
-            'port' => env('REDIS_PORT', 6380),
-            'username' => env('REDIS_USERNAME'),
-            'password' => env('REDIS_PASSWORD'),
-        ],
-        'cache' => [
-            'scheme' => 'tls',
-            'host' => env('REDIS_HOST'),
-            'port' => env('REDIS_PORT', 6380),
-            'username' => env('REDIS_USERNAME'),
-            'password' => env('REDIS_PASSWORD'),
-        ],
-        // 'pulse' => [
-        //     'scheme' => 'tls',
-        //     'host' => env('REDIS_HOST'),
-        //     'port' => env('REDIS_PORT', 6380),
-        //     'username' => env('REDIS_USERNAME'),
-        //     'password' => env('REDIS_PASSWORD'),
-        // ],
         'options' => [
-            'parameters' => [
-                'scheme' => 'tls',
-            ],
+            'cluster' => env('REDIS_CLUSTER', 'redis'),
+
+            'prefix' => env(
+                'REDIS_PREFIX',
+                Str::slug((string) env('APP_NAME', 'laravel'), '_').'_database_'
+            ),
+        ],
+
+        'default' => [
+            'host' => env('REDIS_HOST'),
+            'username' => env('REDIS_USERNAME'),
+            'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT'),
+            'database' => env('REDIS_DB', 0),
+            'scheme' => 'tcp',
+        ],
+
+        'cache' => [
+            'host' => env('REDIS_HOST'),
+            'username' => env('REDIS_USERNAME'),
+            'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT'),
+            'database' => env('REDIS_CACHE_DB', 1),
+            'scheme' => 'tcp',
         ],
 
     ],
