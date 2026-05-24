@@ -7,13 +7,16 @@ use App\Models\AIChatMessage;
 use App\Models\AIChatSession;
 use App\Models\Attachment;
 use App\Services\AzureBlobStorageService;
+use App\Services\Chat\ChatHistoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class HistoryController extends Controller
 {
     public function __construct(
         protected AzureBlobStorageService $azure,
+        protected ChatHistoryService      $history,
     ) {}
 
     public function sessions(Request $request): JsonResponse
@@ -24,16 +27,18 @@ class HistoryController extends Controller
             return response()->json(['error' => 'Authentication required'], 401);
         }
 
-        $sessions = AIChatSession::withCount('messages')
-            ->where('user_id', $userId)
-            ->orderBy('pinned', 'desc')
-            ->orderBy('updated_at', 'desc')
-            ->paginate($request->query('per_page', 20));
+        $perPage     = (int) $request->query('per_page', 20);
+        $currentPage = (int) $request->query('page', 1);
+
+        // Serve from cache — no DB query on repeated calls
+        $all   = $this->history->getSessionsList($userId);
+        $total = $all->count();
+        $items = $all->slice(($currentPage - 1) * $perPage, $perPage)->values();
 
         $modelTitles = collect(config('ai_models.chat', []))->keyBy('id');
 
         return response()->json([
-            'sessions' => $sessions->map(fn($s) => [
+            'sessions' => $items->map(fn($s) => [
                 'id'            => $s->id,
                 'title'         => $s->title,
                 'model'         => $s->model,
@@ -45,10 +50,10 @@ class HistoryController extends Controller
                 'active'        => (bool) $s->active,
             ]),
             'pagination' => [
-                'total'        => $sessions->total(),
-                'per_page'     => $sessions->perPage(),
-                'current_page' => $sessions->currentPage(),
-                'last_page'    => $sessions->lastPage(),
+                'total'        => $total,
+                'per_page'     => $perPage,
+                'current_page' => $currentPage,
+                'last_page'    => (int) ceil($total / max($perPage, 1)),
             ],
         ]);
     }
@@ -60,6 +65,9 @@ class HistoryController extends Controller
             return $this->notFound();
         }
 
+        // Serve messages from cache
+        $messages = $this->history->getSessionMessages($session->id);
+
         return response()->json([
             'session' => [
                 'id'         => $session->id,
@@ -69,16 +77,13 @@ class HistoryController extends Controller
                 'created_at' => $session->created_at->format('Y-m-d H:i:s'),
                 'updated_at' => $session->updated_at->format('Y-m-d H:i:s'),
             ],
-            'messages' => $session->messages()
-                ->orderBy('created_at', 'asc')
-                ->get()
-                ->map(fn($m) => [
-                    'id'          => $m->id,
-                    'role'        => $m->role,
-                    'content'     => $m->content,
-                    'attachments' => $m->attachments ?? [],
-                    'created_at'  => $m->created_at->format('Y-m-d H:i:s'),
-                ]),
+            'messages' => $messages->map(fn($m) => [
+                'id'          => $m->id,
+                'role'        => $m->role,
+                'content'     => $m->content,
+                'attachments' => $m->attachments ?? [],
+                'created_at'  => $m->created_at->format('Y-m-d H:i:s'),
+            ]),
         ]);
     }
 
@@ -89,13 +94,16 @@ class HistoryController extends Controller
             'model' => 'nullable|string',
         ]);
 
+        $userId  = $request->user()?->id;
         $session = AIChatSession::create([
-            'user_id' => $request->user()?->id,
+            'user_id' => $userId,
             'title'   => $request->title ?? 'New Chat',
             'model'   => $request->model ?? config('ai_models.default'),
             'active'  => true,
             'pinned'  => false,
         ]);
+
+        $this->history->bustSessionsListCache($userId);
 
         return response()->json([
             'id'         => $session->id,
@@ -112,6 +120,7 @@ class HistoryController extends Controller
             return $this->notFound();
         }
 
+        $userId        = $request->user()->id;
         $messages      = AIChatMessage::where('ai_chat_session_id', $sessionId)->get();
         $attachmentIds = $messages
             ->flatMap(fn($m) => $m->attachments ?? [])
@@ -122,11 +131,10 @@ class HistoryController extends Controller
 
         if (!empty($attachmentIds)) {
             $attachments = Attachment::whereIn('id', $attachmentIds)
-                ->where('user_id', $request->user()->id)
+                ->where('user_id', $userId)
                 ->get();
 
             foreach ($attachments as $attachment) {
-                // blob_path replaces s3_path — fall back for legacy rows
                 $path = $attachment->blob_path ?? $attachment->s3_path ?? null;
                 if ($path) {
                     $this->azure->delete($path);
@@ -134,12 +142,18 @@ class HistoryController extends Controller
             }
 
             Attachment::whereIn('id', $attachmentIds)
-                ->where('user_id', $request->user()->id)
+                ->where('user_id', $userId)
                 ->delete();
         }
 
         $messages->each->delete();
         $session->delete();
+
+        // Bust all related caches
+        $this->history->bustMessagesCache((int) $sessionId);
+        $this->history->bustSessionCache((int) $sessionId, $userId);
+        $this->history->bustSessionsListCache($userId);
+        Cache::forget("chat:ctx:{$sessionId}");
 
         return response()->json(['message' => 'Session deleted successfully']);
     }
@@ -151,7 +165,7 @@ class HistoryController extends Controller
             return $this->notFound();
         }
 
-        $session->update(['pinned' => true]);
+        $this->history->pinSession($session->id);
 
         return response()->json(['message' => 'Session pinned', 'pinned' => true]);
     }
@@ -163,7 +177,7 @@ class HistoryController extends Controller
             return $this->notFound();
         }
 
-        $session->update(['pinned' => false]);
+        $this->history->unpinSession($session->id);
 
         return response()->json(['message' => 'Session unpinned', 'pinned' => false]);
     }
@@ -177,9 +191,9 @@ class HistoryController extends Controller
             return $this->notFound();
         }
 
-        $session->update(['title' => $request->title]);
+        $this->history->updateSessionTitle($session->id, $request->title);
 
-        return response()->json(['message' => 'Title updated', 'title' => $session->title]);
+        return response()->json(['message' => 'Title updated', 'title' => $request->title]);
     }
 
     // -------------------------------------------------------------------------
@@ -190,7 +204,9 @@ class HistoryController extends Controller
             return null;
         }
 
-        return AIChatSession::where('id', $sessionId)
+        // Try cache first, fall back to DB
+        $cached = $this->history->getCachedSession((int) $sessionId, $userId);
+        return $cached ?? AIChatSession::where('id', $sessionId)
             ->where('user_id', $userId)
             ->first();
     }

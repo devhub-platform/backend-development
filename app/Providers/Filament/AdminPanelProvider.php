@@ -32,7 +32,6 @@ use Agencetwogether\AlertBox\AlertBoxPlugin;
 
 // use Rarq\FilamentQuickNotes\FilamentQuickNotesPlugin;
 use Kholil\Nitik\NitikPlugin;
-use RobertBoes\FilamentPasskeys\FilamentPasskeysPlugin;
 use MKWebDesign\FilamentWatchdog\FilamentWatchdogPlugin;
 // use MKWebDesign\FilamentWatchdog\FilamentWatchdogPlugin;
 
@@ -92,9 +91,11 @@ class AdminPanelProvider extends PanelProvider
                     NitikPlugin::make(),
                 ])->plugins([
                     \STS\FilamentPHPInfo\FilamentPHPInfoPlugin::make(),
-                ])->plugin(FilamentPasskeysPlugin::make())->plugin(FilamentWatchdogPlugin::make())
+                ])->plugin(FilamentWatchdogPlugin::make())
 
             //            ->plugin(FilamentTeamChatPlugin::make())
+            // TODO: FilamentPasskeysPlugin disabled due to bug - https://github.com/RobertBoes/filament-passkeys-plugin/issues
+            // ->plugin(FilamentPasskeysPlugin::make())
             ->navigationItems([
                 NavigationItem::make('AI Analytics')
                     ->icon('heroicon-o-sparkles')
