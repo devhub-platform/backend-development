@@ -35,14 +35,13 @@ class PostController
 
     public function __construct(
         private PostCreationService $postCreationService,
-        private PostAIImageService  $aiImageService,
+        private PostAIImageService $aiImageService,
         private UserInterestService $userInterestService,
-        private ModerationService   $moderationService,
-        private AddPostToAI         $addPostToAI,
-        InteractionLoggerService    $interactionLoggerService,
-        private HomeFeedService     $homeFeedService,
-    )
-    {
+        private ModerationService $moderationService,
+        private AddPostToAI $addPostToAI,
+        InteractionLoggerService $interactionLoggerService,
+        private HomeFeedService $homeFeedService,
+    ) {
         $this->interactionLoggerService = $interactionLoggerService;
     }
 
@@ -64,7 +63,7 @@ class PostController
         }
 
         $viewsMap = $topPosts->mapWithKeys(fn($post) => [
-            $post->id => Number::abbreviate((int)$post->views)
+            $post->id => Number::abbreviate((int) $post->views)
         ])->toArray();
 
         return response()->json([
@@ -77,15 +76,59 @@ class PostController
     {
         $this->authorize('viewAny', Post::class);
 
-        $posts = $this->homeFeedService->build(
-            auth()->user(),
-            (int)request()->input('per_page', 15),
-            (int)request()->input('page', 1),
+        $user = auth()->user();
+        $perPage = (int) request()->input('per_page', 15);
+        $page = (int) request()->input('page', 1);
+
+        // Get blocked user IDs in a single query
+        $blockedIds = $this->blockedUserIds();
+
+        // Get following user IDs directly with a subquery to avoid N+1
+        $recommendedPosts = $this->homeFeedService->build(
+            $user,
+            $perPage,
+            $page,
             request()->url(),
             request()->query()
         );
 
-        return new PostCollection($posts);
+        // Get posts from following users using a single optimized query
+        $followingPosts = Post::query()
+            ->whereIn('user_id', $user->following()->select('users.id'))
+            ->where('status', '!=', 'draft')
+            ->whereNotIn('user_id', $blockedIds)
+            ->with(['user', 'tags'])
+            ->latest()
+            ->limit($perPage * 2)
+            ->get();
+
+        // Combine and deduplicate in memory (efficient for small result sets)
+        $postMap = [];
+        foreach ($recommendedPosts as $post) {
+            $postMap[$post->id] = $post;
+        }
+        foreach ($followingPosts as $post) {
+            $postMap[$post->id] = $post;
+        }
+
+        // Sort by latest and paginate
+        $posts = collect($postMap)
+            ->sortByDesc('created_at')
+            ->slice(($page - 1) * $perPage, $perPage)
+            ->values();
+
+        // Create a paginated collection with proper metadata
+        $paginatedPosts = new \Illuminate\Pagination\Paginator(
+            $posts,
+            $perPage,
+            $page,
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
+
+        return new PostCollection($paginatedPosts);
     }
 
     public function postComments(Post $post): JsonResponse
@@ -172,25 +215,15 @@ class PostController
             $tagsString = $post->tags->pluck('name')->implode(', ');
             $shouldIncrementView = $postView->wasRecentlyCreated;
             Http::post('https://memo1714-devhub-ai-api.hf.space/log_interaction', [
-                'user_id' => (string)$user->id,
+                'user_id' => (string) $user->id,
                 'article_uuid' => null,
                 'category' => $tagsString ?: 'Article',
                 'action' => 'view',
                 'duration' => 50,
             ]);
-//
-//            $this->interactionLoggerService->logInteraction(
-//                userId: $user->id,
-////                    articleUuid: (string) $post->uuid,
-//                category: $tagsString ?: 'Article',
-//                action: 'view',
-//                duration: 0
-//            );
 
             if ($shouldIncrementView) {
                 $this->userInterestService->trackPostInteraction($user, $post, 'view');
-
-
             }
         } else {
             $shouldIncrementView = true;
@@ -202,7 +235,7 @@ class PostController
 
         return response()->json([
             'data' => new PostResource($post),
-            'views' => Number::abbreviate((int)$post->fresh()->views),
+            'views' => Number::abbreviate((int) $post->fresh()->views),
         ]);
     }
 

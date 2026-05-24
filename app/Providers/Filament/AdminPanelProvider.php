@@ -34,7 +34,7 @@ use Agencetwogether\AlertBox\AlertBoxPlugin;
 use Kholil\Nitik\NitikPlugin;
 use MKWebDesign\FilamentWatchdog\FilamentWatchdogPlugin;
 // use MKWebDesign\FilamentWatchdog\FilamentWatchdogPlugin;
-
+use RobertBoes\FilamentPasskeys\FilamentPasskeysPlugin;
 //use Filament\TeamChat\FilamentTeamChatPlugin;
 
 class AdminPanelProvider extends PanelProvider
