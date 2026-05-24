@@ -12,22 +12,11 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-/**
- * TechTrendService — Upgraded with full AI layer
- *
- * What changed from the original:
- *  - TopicDetector replaces inline topic strings (zero AI cost)
- *  - EmbeddingService::deduplicate() removes near-duplicate items
- *  - AIContentService::generateTrendExplanation() enriches each item
- *    with summary / why_trending / impact (cached 6h per item)
- *  - FeedMixer replaces pure sortByDesc() with diversity-aware mixing
- *  - personalizeBoost() uses embedding similarity (degrades to keyword on failure)
- *  - Cache key bug fixed: null user never produces a user-specific key
- */
 class TechTrendService
 {
-    private const CACHE_KEY     = 'tech_trending';
-    private const CACHE_TTL     = 60;
+    public  const BASE_CACHE_KEY = 'tech_trending:shared';
+    private const BASE_CACHE_TTL = 30; // minutes
+    private const USER_CACHE_TTL = 5;  // minutes
     private const MAX_PER_SOURCE = 5;
 
     private const REJECT_KEYWORDS = [
@@ -39,10 +28,10 @@ class TechTrendService
     ];
 
     public function __construct(
-        private EmbeddingService $embedding,
+        private EmbeddingService       $embedding,
         private TrendEnrichmentService $enrichment,
-        private TopicDetector    $topicDetector,
-        private FeedMixer        $feedMixer,
+        private TopicDetector          $topicDetector,
+        private FeedMixer              $feedMixer,
     ) {}
 
     // ─── Public Entry Point ───────────────────────────────────────────────────
@@ -52,33 +41,58 @@ class TechTrendService
         $userTopics = $this->getUserTopics();
         $userId     = Auth::id();
 
-        // Bug fix: null userId must never produce a user-scoped key
-        $cacheKey = ($userId && !empty($userTopics))
-            ? self::CACHE_KEY . ':user:' . $userId
-            : self::CACHE_KEY;
+        // 1. دايماً نجيب الـ shared cache الأول — fetch واحد بس لكل الناس
+        $shared = $this->getSharedTrends();
 
-        return Cache::remember($cacheKey, now()->addMinutes(self::CACHE_TTL), function () use ($userTopics) {
-            $github = $this->fetchGitHub();
-            $devto  = $this->fetchDevTo();
-            $hn     = $this->fetchHackerNews();
+        // 2. مفيش topics → ارجع الـ shared على طول
+        if (empty($userTopics)) {
+            return $shared;
+        }
 
-            return $this->buildFeed($github, $devto, $hn, $userTopics);
-        });
+        // 3. في topics → re-score على الـ cached data من غير أي API calls
+        return Cache::remember(
+            'tech_trending:user:' . $userId,
+            now()->addMinutes(self::USER_CACHE_TTL),
+            fn() => $this->personalizeShared($shared, $userTopics)
+        );
+    }
+
+    /**
+     * Build or return the shared (non-personalized) feed.
+     */
+    public function getSharedTrends(): array
+    {
+        return Cache::remember(
+            self::BASE_CACHE_KEY,
+            now()->addMinutes(self::BASE_CACHE_TTL),
+            function () {
+                $github = $this->fetchGitHub();
+                $devto  = $this->fetchDevTo();
+                $hn     = $this->fetchHackerNews();
+
+                return $this->buildFeed($github, $devto, $hn);
+            }
+        );
+    }
+
+    // ─── Personalization (zero API calls — pure in-memory) ────────────────────
+
+    private function personalizeShared(array $items, array $userTopics): array
+    {
+        $rescored = array_map(function ($item) use ($userTopics) {
+            $boost         = $this->keywordBoostFallback($item, $userTopics);
+            $item['score'] = ($item['score'] ?? 0) + ($boost * 0.2);
+            return $item;
+        }, $items);
+
+        usort($rescored, fn($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
+
+        return $rescored;
     }
 
     // ─── Feed Pipeline ────────────────────────────────────────────────────────
 
-    /**
-     * Full pipeline:
-     *   normalize → deduplicate → detect topics → score → AI enrich → mix
-     *
-     * WHY this order:
-     *   Dedup first reduces the pool before any AI calls.
-     *   Topic detection is free (keywords), so it runs before scoring.
-     *   AI enrichment runs last on the already-trimmed candidate set,
-     *   keeping the number of LLM calls as small as possible (≤15).
-     */
-    private function buildFeed(array $github, array $devto, array $hn, array $userTopics): array
+    private function buildFeed(array $github, array $devto, array $hn): array
     {
         $github = $this->normalizeStats($github);
         $devto  = $this->normalizeStats($devto);
@@ -90,44 +104,39 @@ class TechTrendService
             return [];
         }
 
-        // 1. Semantic deduplication — uses cached embeddings, no wasted API calls
+        // 1. Semantic deduplication
         $deduped = $this->embedding->deduplicate($all, 0.88);
 
-        // 2. Keyword topic detection — zero cost
+        // 2. Keyword topic detection
         $withTopics = $this->topicDetector->detectBatch($deduped);
 
         // 3. Score each item
-        $scored = array_map(function ($item) use ($userTopics) {
-            $item['score'] = $this->calculateScore($item, $userTopics);
+        $scored = array_map(function ($item) {
+            $item['score'] = $this->calculateScore($item, []);
             return $item;
         }, $withTopics);
 
-        // 4. Batch AI enrichment — top 5 get ONE Gemini call, rest get template fallback
+        // 4. Batch AI enrichment
         $enriched = $this->enrichment->enrich($scored);
 
         // 5. Diversity-aware feed mixing
         $mixed = $this->feedMixer->mixWithSourceDiversity($enriched);
 
-        // Strip embedding vectors from response — they are internal only
         return array_map(function ($item) {
-
             unset($item['embedding']);
-
             return [
-                'source'        => $item['source'] ?? null,
-                'title'         => $item['title'] ?? null,
-                'description'   => $item['description'] ?? null,
-                'url'           => $item['url'] ?? null,
-                'stats'         => $item['stats'] ?? 0,
-                'topic'         => $item['topic'] ?? 'general',
-                'score'         => $item['score'] ?? 0,
-
-                // AI GENERATED FIELDS
-                'summary'       => $item['summary'] ?? null,
-                'why_trending'  => $item['why_trending'] ?? null,
-                'impact'        => $item['impact'] ?? null,
+                'source'       => $item['source']       ?? null,
+                'title'        => $item['title']        ?? null,
+                'description'  => $item['description']  ?? null,
+                'url'          => $item['url']           ?? null,
+                'stats'        => $item['stats']        ?? 0,
+                'topic'        => $item['topic']        ?? 'general',
+                'score'        => $item['score']        ?? 0,
+                'tags'         => $item['tags']         ?? [],
+                'summary'      => $item['summary']      ?? null,
+                'why_trending' => $item['why_trending'] ?? null,
+                'impact'       => $item['impact']       ?? null,
             ];
-
         }, $mixed);
     }
 
@@ -156,48 +165,9 @@ class TechTrendService
             }
         }
 
-        $boost = $this->personalizeBoost($item, $userTopics);
+        $boost = empty($userTopics) ? 0.0 : $this->keywordBoostFallback($item, $userTopics);
 
         return ($normalized * 0.5) + ($recency * 0.3) + ($boost * 0.2);
-    }
-
-    /**
-     * Personalization boost using embedding similarity.
-     *
-     * Falls back to keyword matching when the embedding API is unavailable,
-     * so personalization never silently returns 0 for all users during outages.
-     */
-    private function personalizeBoost(array $item, array $userTopics): float
-    {
-        if (empty($userTopics)) {
-            return 0.0;
-        }
-
-        $titleVec = $this->embedding->embed($item['title'] ?? '');
-
-        if (empty($titleVec)) {
-            return $this->keywordBoostFallback($item, $userTopics);
-        }
-
-        $boost = 0.0;
-
-        foreach ($userTopics as $topic) {
-            $topicVec = $this->embedding->embed($topic);
-
-            if (empty($topicVec)) {
-                continue;
-            }
-
-            $sim    = $this->embedding->cosine($titleVec, $topicVec);
-            $boost += match (true) {
-                $sim >= 0.85 => 0.5,
-                $sim >= 0.70 => 0.3,
-                $sim >= 0.50 => 0.1,
-                default      => 0.0,
-            };
-        }
-
-        return min($boost, 0.8);
     }
 
     private function keywordBoostFallback(array $item, array $userTopics): float
@@ -218,49 +188,6 @@ class TechTrendService
         }
 
         return min($boost, 0.8);
-    }
-
-    // ─── Content Enrichment (template fallback) ───────────────────────────────
-
-    /**
-     * Template-based content fields — used as fallback base before AI overlay.
-     * AI enrichment overrides 'summary', 'why_trending', 'impact' from this array.
-     */
-    private function expandContent(array $item): array
-    {
-        $title    = $item['title']  ?? '';
-        $source   = $item['source'] ?? '';
-        $author   = $item['author'] ?? '';
-        $stats    = $item['stats']  ?? 0;
-        $lang     = $item['language'] ?? ($item['tags'][0] ?? null);
-        $langText = (!empty($lang) && $lang !== 'general tech') ? $lang : 'modern software development';
-
-        $openers = ["Recently,", "Currently,", "Right now,", "In the developer community,"];
-        $prefix  = $openers[array_rand($openers)];
-
-        $content = match ($source) {
-            'github'     => "{$prefix} the project \"{$title}\" is gaining traction with around {$stats} stars on GitHub. Maintained by {$author}, it reflects growing developer interest in {$langText}.",
-            'devto'      => "{$prefix} an article titled \"{$title}\" by {$author} is getting noticeable engagement with {$stats} reactions.",
-            'hackernews' => "{$prefix} a discussion titled \"{$title}\" is trending on Hacker News with a score of {$stats}.",
-            default      => "{$prefix} \"{$title}\" is attracting attention across the tech space.",
-        };
-
-        $techStack = !empty($item['tags']) ? implode(', ', array_slice($item['tags'], 0, 3)) : $langText;
-
-        return [
-            'content'      => $content,
-            'summary'      => $content,  // will be overridden by AI
-            'why_trending' => match ($source) {
-                'github'     => "Driven by continuous stars, forks, and developer contributions.",
-                'devto'      => "Strong engagement and relevance among developers.",
-                'hackernews' => "Active discussion and upvotes from the tech community.",
-                default      => "Increasing visibility in the tech ecosystem.",
-            },
-            'impact'       => "Could influence developers working in {$langText}.",
-            'tech_stack'   => $techStack,
-            'tags'         => $item['tags'] ?? [],
-            'url'          => $item['url']  ?? null,
-        ];
     }
 
     // ─── Stat Normalization ───────────────────────────────────────────────────
@@ -348,12 +275,12 @@ class TechTrendService
                 ->take(self::MAX_PER_SOURCE)
                 ->map(fn($a) => [
                     'source'      => 'devto',
-                    'title'       => $a['title']                     ?? '',
-                    'description' => $a['description']               ?? '',
-                    'author'      => $a['user']['name']              ?? '',
+                    'title'       => $a['title']                         ?? '',
+                    'description' => $a['description']                   ?? '',
+                    'author'      => $a['user']['name']                  ?? '',
                     'stats'       => (int) ($a['positive_reactions_count'] ?? 0),
-                    'url'         => $a['url']                       ?? '',
-                    'created_at'  => $a['published_at']              ?? null,
+                    'url'         => $a['url']                           ?? '',
+                    'created_at'  => $a['published_at']                  ?? null,
                     'tags'        => collect($a['tag_list'] ?? [])->take(3)->toArray(),
                 ])->values()->toArray();
 
