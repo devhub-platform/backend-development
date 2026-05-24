@@ -41,10 +41,10 @@ class Post extends Model implements HasReaction
     ];
 
     protected $casts = [
-        'views' => 'integer',
-        'embedding' => 'array',
-        'embedded_at' => 'datetime',
-        'added_to_ai_at' => 'datetime',
+        'views'         => 'integer',
+        'embedding'     => 'array',
+        'embedded_at'   => 'datetime',
+        'added_to_ai_at'=> 'datetime',
     ];
 
     public function getImageUrlAttribute($value): array
@@ -90,7 +90,6 @@ class Post extends Model implements HasReaction
         $this->attributes['image_url'] = json_encode(array_values(array_filter((array) $value)));
     }
 
-
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -123,11 +122,16 @@ class Post extends Model implements HasReaction
         return $this->hasMany(Comment::class);
     }
 
+    public function generatedImages(): HasMany
+    {
+        return $this->hasMany(GeneratedPostImage::class);
+    }
+
     public function toSearchableArray()
     {
         return [
-            'id' => $this->id,
-            'title' => $this->title,
+            'id'      => $this->id,
+            'title'   => $this->title,
             'content' => $this->content,
         ];
     }

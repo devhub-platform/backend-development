@@ -54,7 +54,17 @@ class TrendingService
     {
         $posts = Post::query()
             ->where('status', 'published')
-            ->with(['user', 'tags'])
+            ->with([
+                'user:id,name,username,avatar_url',
+                'tags',
+                'comments' => fn($q) => $q->whereNull('parent_id')
+                    ->with([
+                        'user:id,name,username,avatar_url',
+                        'replies' => fn($q) => $q->with('user:id,name,username,avatar_url'),
+                    ]),
+                'reactions',
+                'generatedImages' => fn($q) => $q->where('status', 'confirmed'),
+            ])
             ->when($tagId, fn($q) =>
             $q->whereHas('tags', fn($q) => $q->where('tags.id', $tagId))
             )
@@ -91,39 +101,7 @@ class TrendingService
 
         /*
         |----------------------------------------------------------------------
-        | Defer embedding for posts that are missing a vector.
-        |
-        | NOTE: If you do NOT see "[defer] fired" in your logs after this runs,
-        | defer() is not supported on your server/hosting. In that case you will
-        | need a scheduled command (e.g. posts:backfill-embeddings) instead.
-        |----------------------------------------------------------------------
-        */
-//        defer(function () use ($postsNeedingEmbedding) {
-//
-//            Log::info('[TrendingService][defer] fired', [
-//                'posts_needing_embedding' => $postsNeedingEmbedding,
-//            ]);
-//
-//            if (empty($postsNeedingEmbedding)) return;
-//
-//            $posts = Post::whereIn('id', $postsNeedingEmbedding)->get();
-//
-//            foreach ($posts as $post) {
-//                $vector = app(EmbeddingService::class)->embedPost($post);
-//
-//                Log::info('[TrendingService][defer] embedding result', [
-//                    'post_id'    => $post->id,
-//                    'has_vector' => !empty($vector),
-//                ]);
-//            }
-//        });
-
-        /*
-        |----------------------------------------------------------------------
         | 2. Build items + scoring
-        |
-        |    trending_score is calculated here and persisted to the DB via
-        |    updateQuietly() so it is available for direct DB queries/sorting.
         |----------------------------------------------------------------------
         */
         $items = array_map(function ($item) use ($prepared) {
@@ -134,7 +112,6 @@ class TrendingService
 
             $boost = $this->globalSimilarityBoost($embedding, $prepared, $post->id);
             $score = $this->calculateTrendingScore($post) + $boost;
-
 
             Log::info('[TrendingService] scored', [
                 'post_id' => $post->id,
@@ -188,7 +165,7 @@ class TrendingService
 
         /*
         |----------------------------------------------------------------------
-        | 6. Final output — strip internal fields before returning
+        | 6. Final output — full post data
         |----------------------------------------------------------------------
         */
         return array_values(array_map(function ($item) {
@@ -200,11 +177,58 @@ class TrendingService
                 'id'             => $post->id,
                 'title'          => $post->title,
                 'content'        => $post->content,
+                'cover_image'    => $post->cover_image,
+                'image_url'      => $post->image_url,
+
+                'author' => $post->user ? [
+                    'id'         => $post->user->id,
+                    'name'       => $post->user->name,
+                    'username'   => $post->user->username,
+                    'avatar_url' => $post->user->avatar_url,
+                ] : null,
 
                 'views'          => $post->views,
                 'tags'           => $post->tags->pluck('name')->toArray(),
                 'trending_score' => round($item['score'] ?? 0, 2),
                 'has_embedding'  => !is_null($post->embedded_at),
+
+                'comments_count' => $post->comments->count(),
+                'comments'       => $post->comments->map(fn($c) => [
+                    'id'         => $c->id,
+                    'content'    => $c->content,
+                    'is_pinned'  => $c->is_pinned,
+                    'created_at' => $c->created_at?->toIso8601String(),
+                    'user'       => $c->user ? [
+                        'id'         => $c->user->id,
+                        'name'       => $c->user->name,
+                        'username'   => $c->user->username,
+                        'avatar_url' => $c->user->avatar_url,
+                    ] : null,
+                    'replies_count' => $c->replies->count(),
+                    'replies'       => $c->replies->map(fn($r) => [
+                        'id'         => $r->id,
+                        'content'    => $r->content,
+                        'created_at' => $r->created_at?->toIso8601String(),
+                        'user'       => $r->user ? [
+                            'id'         => $r->user->id,
+                            'name'       => $r->user->name,
+                            'username'   => $r->user->username,
+                            'avatar_url' => $r->user->avatar_url,
+                        ] : null,
+                    ])->values()->toArray(),
+                ])->values()->toArray(),
+
+                'reactions_count' => $post->reactions->count(),
+                'reactions'       => $post->reactions
+                    ->groupBy('type')
+                    ->map(fn($g) => $g->count())
+                    ->toArray(),
+
+                'generated_images' => $post->generatedImages->map(fn($img) => [
+                    'id'         => $img->id,
+                    'secure_url' => $img->secure_url,
+                    'prompt'     => $img->prompt,
+                ])->values()->toArray(),
             ];
 
         }, array_filter($items)));
@@ -232,7 +256,6 @@ class TrendingService
 
     private function globalSimilarityBoost(array $postVector, array $items, int $postId): float
     {
-        // No vector means no similarity boost — skip the loop entirely
         if (empty($postVector)) return 0;
 
         $boost = 0;
@@ -241,7 +264,6 @@ class TrendingService
 
             if ($item['_model']->id === $postId) continue;
 
-            // Only compare against popular posts to keep the boost meaningful
             if (($item['_model']->views ?? 0) < 2000) continue;
 
             $vec = $item['embedding'] ?? [];
@@ -257,7 +279,6 @@ class TrendingService
         return $boost * 5;
     }
 
-    // This method retrieves the trending tags based on the number of published posts associated with each tag.
     public function getTrendingTags(): array
     {
         return Post::query()
