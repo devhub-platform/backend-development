@@ -111,6 +111,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Pulse Authorization
+    |--------------------------------------------------------------------------
+    |
+    | This callback determines if the user is authorized to access Pulse.
+    | By default it allows authenticated users.
+    |
+    */
+
+    'authorize' => function ($request) {
+        return $request->user() !== null;
+    },
+
+    /*
+    |--------------------------------------------------------------------------
     | Pulse Route Middleware
     |--------------------------------------------------------------------------
     |

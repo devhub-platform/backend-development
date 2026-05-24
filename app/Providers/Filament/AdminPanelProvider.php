@@ -32,6 +32,9 @@ use Agencetwogether\AlertBox\AlertBoxPlugin;
 
 // use Rarq\FilamentQuickNotes\FilamentQuickNotesPlugin;
 use Kholil\Nitik\NitikPlugin;
+use RobertBoes\FilamentPasskeys\FilamentPasskeysPlugin;
+use MKWebDesign\FilamentWatchdog\FilamentWatchdogPlugin;
+// use MKWebDesign\FilamentWatchdog\FilamentWatchdogPlugin;
 
 //use Filament\TeamChat\FilamentTeamChatPlugin;
 
@@ -39,15 +42,15 @@ class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
-        $isMfaEnabled = (bool)config('filament.mfa.enabled', true);
-        $isMfaRequired = $isMfaEnabled && (bool)config('filament.mfa.required', false);
+        $isMfaEnabled = (bool) config('filament.mfa.enabled', true);
+        $isMfaRequired = $isMfaEnabled && (bool) config('filament.mfa.required', false);
 
         return $panel
             ->default()
             ->id('admin')
             ->authGuard('web')
             ->path('admin')
-//            ->viteTheme('resources/css/filament/admin/theme.css')
+            //            ->viteTheme('resources/css/filament/admin/theme.css')
             ->login()
             ->profile()
             ->multiFactorAuthentication(
@@ -72,7 +75,7 @@ class AdminPanelProvider extends PanelProvider
                 AdminOverviewStats::class,
                 ContentActivityChart::class,
                 UsersPerMonthChart::class,
-                // ActivityHeatmapWidget::class,
+                    // ActivityHeatmapWidget::class,
                 ActivityChartWidget::class,
                 TopPostsTable::class,
             ])
@@ -84,13 +87,14 @@ class AdminPanelProvider extends PanelProvider
                     ->navigationGroup('System')
                 //                    ->cluster('System'), // Optional: Group inside a cluster
             ])->plugins([
-                AlertBoxPlugin::make(),
-            ])->plugins([
-                NitikPlugin::make(),
-            ])->plugins([
-                \STS\FilamentPHPInfo\FilamentPHPInfoPlugin::make(),
-            ])
-//            ->plugin(FilamentTeamChatPlugin::make())
+                    AlertBoxPlugin::make(),
+                ])->plugins([
+                    NitikPlugin::make(),
+                ])->plugins([
+                    \STS\FilamentPHPInfo\FilamentPHPInfoPlugin::make(),
+                ])->plugin(FilamentPasskeysPlugin::make())->plugin(FilamentWatchdogPlugin::make())
+
+            //            ->plugin(FilamentTeamChatPlugin::make())
             ->navigationItems([
                 NavigationItem::make('AI Analytics')
                     ->icon('heroicon-o-sparkles')
@@ -111,7 +115,7 @@ class AdminPanelProvider extends PanelProvider
                     ->group('Tools')
                     ->visible(fn(): bool => Auth::user()?->role === 'admin'),
                 NavigationItem::make('Pulse')
-                    ->url('/' . ltrim((string)config('pulse.path', 'pulse'), '/'))
+                    ->url('/' . ltrim((string) config('pulse.path', 'pulse'), '/'))
                     ->icon('heroicon-o-heart')
                     ->openUrlInNewTab()
                     ->badge('Pulse', color: 'danger')

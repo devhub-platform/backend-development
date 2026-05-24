@@ -29,9 +29,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
+use Laravel\Passkeys\Contracts\PasskeyUser;
+use Laravel\Passkeys\PasskeyAuthenticatable;
+
 
 #[ObservedBy([UserObserver::class])]
-class User extends Authenticatable implements JWTSubject, MustVerifyEmail, FilamentUser, HasAvatar, HasAppAuthentication, HasAppAuthenticationRecovery, HasEmailAuthentication
+class User extends Authenticatable implements JWTSubject, MustVerifyEmail, FilamentUser, HasAvatar, HasAppAuthentication, HasAppAuthenticationRecovery, HasEmailAuthentication, PasskeyUser
 {
     use HasFactory, Notifiable, softDeletes, Reactor, Searchable, Messageable;
 
@@ -40,6 +43,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail, Filam
     use InteractsWithEmailAuthentication;
     use LogsActivity;
     // use HasFilamentQuickNotes;
+    use PasskeyAuthenticatable;
 
 
     public function getActivitylogOptions(): LogOptions
