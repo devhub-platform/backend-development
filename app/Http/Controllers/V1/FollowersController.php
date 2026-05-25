@@ -37,14 +37,18 @@ class FollowersController
 
         if ($user->isNotificationEnabled('new_follower')) {
             Notification::send($user, new FollowNotification($authUser));
-            OneSignal::sendNotificationToUser(
-                'You have a new follower',
-                $user->onesignal_player_id,
-                'deeplink://followers?id=' . $user->id,
-                null,
-                null,
-                "{$user->name} started following you!"
-            );
+
+            // Only send OneSignal notification if player_id is set
+            if (!empty($user->onesignal_player_id)) {
+                OneSignal::sendNotificationToUser(
+                    'You have a new follower',
+                    $user->onesignal_player_id,
+                    'deeplink://followers?id=' . $user->id,
+                    null,
+                    null,
+                    "{$authUser->name} started following you!"
+                );
+            }
         }
         Log::info("User {$authUser->id} followed user {$user->id}");
 
@@ -121,7 +125,7 @@ class FollowersController
     public function suggestions(Request $request)
     {
         $user = Auth::user();
-        $limit = (int)$request->query('limit', 10);
+        $limit = (int) $request->query('limit', 10);
         $limit = max(1, min($limit, 20));
 
         $version = (int) Cache::get($this->suggestionVersionKey($user->id), 1);
@@ -137,7 +141,7 @@ class FollowersController
         }
 
         return response()->json([
-//            'suggested_users_count' => $suggestedUsers->count(),
+            //            'suggested_users_count' => $suggestedUsers->count(),
             'suggested_users' => SuggestedUsersResource::collection($suggestedUsers),
         ]);
     }
