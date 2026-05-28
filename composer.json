@@ -38,6 +38,7 @@
         "laravel/tinker": "^2.10.1",
         "league/flysystem-aws-s3-v3": "^3.31",
         "maatwebsite/excel": "^3.1",
+        "mailersend/laravel-driver": "^3.1",
         "megoxv/laravel-magika": "^1.0",
         "microsoft/azure-storage-blob": "^1.5",
         "mkwebdesign/filament-watchdog-v5": "^1.0",

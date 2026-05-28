@@ -46,11 +46,22 @@ return [
             'username' => env('MAIL_USERNAME'),
             'password' => env('MAIL_PASSWORD'),
             'timeout' => null,
-            'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string)env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
+            'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
 
         'ses' => [
             'transport' => 'ses',
+        ],
+
+        'mail' => [
+    'driver' => 'ses',
+    'key' => env('AWS_ACCESS_KEY_ID'),
+    'secret' => env('AWS_SECRET_ACCESS_KEY'),
+    'region' => env('AWS_DEFAULT_REGION')
+],
+
+        'mailersend' => [
+            'transport' => 'mailersend',
         ],
 
         'postmark' => [
@@ -115,7 +126,7 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
-//    'resend' => [
+    //    'resend' => [
 //        'transport' => 'resend',
 //    ],
 

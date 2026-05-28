@@ -1,99 +1,82 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Your OTP Code</title>
-    <style>
-        body,
-        table,
-        td,
-        p,
-        a {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-        }
-
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5;
-        }
-
-        @media only screen and (max-width: 620px) {
-            .wrapper {
-                width: 100% !important;
-            }
-
-            .content-padding {
-                padding: 24px 20px !important;
-            }
-
-            .otp-code {
-                font-size: 36px !important;
-            }
-        }
-    </style>
 </head>
 <body>
 @php
     $appName = config('app.name');
 @endphp
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f5f5f5; padding:20px 0;">
+
+<table width="100%" cellpadding="0" cellspacing="0" style="font-family: Arial, sans-serif;">
     <tr>
-        <td align="center" style="padding:0;">
-            <!-- Header -->
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%; background:linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); padding:0;">
+        <td align="center" style="padding: 20px;">
+            
+            <!-- Main Container -->
+            <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px;">
+                
+                <!-- Header -->
                 <tr>
-                    <td align="center" style="padding:30px 20px;">
-                        <h1 style="margin:0; font-size:24px; color:#ffffff; font-weight:700;">🔐 Security Code</h1>
+                    <td style="padding: 20px; text-align: left; border-bottom: 1px solid #dddddd;">
+                        <h2 style="margin: 0; font-size: 16px; font-weight: normal; color: #222222;">Security Code</h2>
                     </td>
                 </tr>
-            </table>
-
-            <!-- Main Content -->
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" class="wrapper" style="width:600px; max-width:600px; background:#ffffff; margin:20px auto;">
+                
+                <!-- Content -->
                 <tr>
-                    <td class="content-padding" style="padding:40px 34px; text-align:center;">
-                        <p style="margin:0 0 24px; font-size:15px; line-height:1.6; color:#4b5563;">
+                    <td style="padding: 30px 20px; text-align: center;">
+                        
+                        <!-- Message -->
+                        <p style="margin: 0 0 30px 0; font-size: 14px; line-height: 1.6; color: #444444;">
                             Your One-Time Password (OTP) for {{ $appName }} is:
                         </p>
-
-                        <div style="background:linear-gradient(135deg, #f0f4ff 0%, #f8faff 100%); border:2px solid #4f46e5; border-radius:12px; padding:24px; margin:24px 0;">
-                            <p class="otp-code" style="margin:0; font-size:48px; font-weight:700; letter-spacing:8px; font-family:monospace; color:#4f46e5; font-variant-numeric:tabular-nums;">
-                                {{ $user->otp }}
-                            </p>
-                        </div>
-
-                        <p style="margin:0 0 6px; font-size:13px; color:#6b7280;">
-                            Valid for <strong style="color:#111827;">10 minutes</strong>
+                        
+                        <!-- OTP Code -->
+                        <p style="margin: 0 0 30px 0; padding: 20px; background-color: #f0f0f0; border: 1px solid #cccccc; font-size: 32px; font-weight: bold; letter-spacing: 4px; font-family: monospace; color: #000000;">
+                            {{ $user->otp }}
                         </p>
-                        <p style="margin:0 0 24px; font-size:13px; color:#dc2626; font-weight:600;">
-                            ⚠️ Do not share this code with anyone
+                        
+                        <!-- Validity Info -->
+                        <p style="margin: 0 0 10px 0; font-size: 13px; color: #666666;">
+                            Valid for 10 minutes
                         </p>
-
-                        <div style="background:#fef3c7; border-left:4px solid #f59e0b; border-radius:6px; padding:16px; text-align:left; margin-top:24px;">
-                            <p style="margin:0; font-size:13px; line-height:1.6; color:#78350f;">
-                                <strong style="color:#92400e;">💡 Tip:</strong> If you didn't request this code, you can ignore this email. Your account will remain secure.
-                            </p>
-                        </div>
+                        
+                        <p style="margin: 0 0 20px 0; font-size: 13px; color: #cc0000; font-weight: bold;">
+                            Do not share this code with anyone
+                        </p>
+                        
+                        <!-- Security Note -->
+                        <p style="margin: 0; font-size: 12px; color: #666666;">
+                            If you didn't request this code, you can ignore this email. Your account will remain secure.
+                        </p>
+                        
                     </td>
                 </tr>
-
+                
+                <!-- Divider -->
+                <tr>
+                    <td style="height: 1px; background-color: #dddddd;"></td>
+                </tr>
+                
                 <!-- Footer -->
                 <tr>
-                    <td style="padding:24px 34px; background-color:#f9fafb; border-top:1px solid #e5e7eb; text-align:center;">
-                        <p style="margin:0 0 4px; font-size:12px; color:#6b7280;">
+                    <td style="padding: 20px; font-size: 12px; line-height: 1.5; color: #666666; text-align: center;">
+                        <p style="margin: 0 0 8px 0;">
                             &copy; {{ date('Y') }} {{ $appName }}. All rights reserved.
                         </p>
-                        <p style="margin:0; font-size:11px; color:#9ca3af;">
+                        <p style="margin: 0; font-size: 11px; color: #999999;">
                             Questions? Contact us at devhub-community@outlook.com
                         </p>
                     </td>
                 </tr>
+                
             </table>
+            
         </td>
     </tr>
 </table>
+
 </body>
 </html>
