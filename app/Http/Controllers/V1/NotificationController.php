@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class NotificationController
 {
-    private const NOTIFICATION_COLUMNS = ['type', 'data', 'created_at'];
+    private const NOTIFICATION_COLUMNS = ['id', 'type', 'data', 'created_at', 'read_at'];
     private const TYPE_NEW_COMMENT = 'App\\Notifications\\NewCommentNotification';
     private const TYPE_REACT = 'App\\Notifications\\ReactNotification';
     private const TYPE_FOLLOW = 'App\\Notifications\\FollowNotification';
@@ -26,6 +26,7 @@ class NotificationController
     {
         return $user->unreadNotifications()
             ->whereIn('type', $types)
+            ->orderBy('created_at', 'desc')
             ->get(self::NOTIFICATION_COLUMNS);
     }
 
@@ -42,18 +43,54 @@ class NotificationController
     public function showNewCommentNotify(): JsonResponse
     {
         $notifications = $this->unreadByType($this->user(), self::TYPE_NEW_COMMENT);
+        $transformedNotifications = $notifications->map(function ($notification) {
+            return [
+                'id' => $notification->id,
+                'type' => $notification->type,
+                'data' => $notification->data,
+                'created_at' => $notification->created_at,
+                'created_at_formatted' => $notification->created_at ? $notification->created_at->format('M d, Y \a\t h:i A') : null,
+                'created_at_relative' => $notification->created_at ? $notification->created_at->diffForHumans() : null,
+                'read_at' => $notification->read_at,
+                'read_at_formatted' => $notification->read_at ? $notification->read_at->format('M d, Y \a\t h:i A') : null,
+            ];
+        })->values();
 
         return response()->json([
-            'new_comment_notifications' => $notifications,
+            'data' => $transformedNotifications,
+            'meta' => [
+                'total' => $transformedNotifications->count(),
+                'unread_count' => $this->user()->unreadNotifications()
+                    ->where('type', self::TYPE_NEW_COMMENT)
+                    ->count(),
+            ],
         ]);
     }
 
     public function showNewReactNotify(): JsonResponse
     {
         $notifications = $this->unreadByType($this->user(), self::TYPE_REACT);
+        $transformedNotifications = $notifications->map(function ($notification) {
+            return [
+                'id' => $notification->id,
+//                'type' => $notification->type,
+                'data' => $notification->data,
+                'created_at' => $notification->created_at,
+                'created_at_formatted' => $notification->created_at ? $notification->created_at->format('M d, Y \a\t h:i A') : null,
+                'created_at_relative' => $notification->created_at ? $notification->created_at->diffForHumans() : null,
+                'read_at' => $notification->read_at,
+                'read_at_formatted' => $notification->read_at ? $notification->read_at->format('M d, Y \a\t h:i A') : null,
+            ];
+        })->values();
 
         return response()->json([
-            'new_react_notifications' => $notifications,
+            'data' => $transformedNotifications,
+            'meta' => [
+                'total' => $transformedNotifications->count(),
+                'unread_count' => $this->user()->unreadNotifications()
+                    ->where('type', self::TYPE_REACT)
+                    ->count(),
+            ],
         ]);
     }
 
@@ -88,10 +125,30 @@ class NotificationController
 
     public function showAllNotifications(): JsonResponse
     {
-        $notifications = $this->user()->notifications;
+        $notifications = $this->user()->notifications()
+            ->orderBy('created_at', 'desc')
+            ->get(self::NOTIFICATION_COLUMNS);
+
+        // Transform notification data for better layout
+        $transformedNotifications = $notifications->map(function ($notification) {
+            return [
+                'id' => $notification->id,
+//                'type' => $notification->type,
+                'data' => $notification->data,
+                'created_at' => $notification->created_at,
+                'created_at_formatted' => $notification->created_at ? $notification->created_at->format('M d, Y \a\t h:i A') : null,
+                'created_at_relative' => $notification->created_at ? $notification->created_at->diffForHumans() : null,
+                'read_at' => $notification->read_at,
+                'read_at_formatted' => $notification->read_at ? $notification->read_at->format('M d, Y \a\t h:i A') : null,
+            ];
+        })->values();
 
         return response()->json([
-            'all_notifications' => $notifications,
+            'data' => $transformedNotifications,
+            'meta' => [
+                'total' => $transformedNotifications->count(),
+                'unread_count' => $this->user()->unreadNotifications()->count(),
+            ],
         ]);
     }
 
@@ -108,8 +165,28 @@ class NotificationController
     {
         $notifications = $this->unreadByType($this->user(), self::TYPE_FOLLOW);
 
+        // Transform and reshape the notification data for better layout
+        $transformedNotifications = $notifications->map(function ($notification) {
+            return [
+                'id' => $notification->id,
+                'follower_id' => $notification->data['follower_id'],
+                'follower_name' => $notification->data['follower_name'],
+                'follower_username' => $notification->data['follower_username'],
+                'follower_avatar' => $notification->data['follower_avatar'],
+                'total_followers' => $notification->data['total_followers'],
+                'created_at' => $notification->created_at,
+                'read_at' => $notification->read_at,
+            ];
+        })->values();
+
         return response()->json([
-            'new_follower_notifications' => $notifications,
+            'data' => $transformedNotifications,
+            'meta' => [
+                'total' => $transformedNotifications->count(),
+                'unread_count' => $this->user()->unreadNotifications()
+                    ->where('type', self::TYPE_FOLLOW)
+                    ->count(),
+            ],
         ]);
     }
 
@@ -129,8 +206,34 @@ class NotificationController
     {
         $notifications = $this->unreadByType($this->user(), self::TYPE_NEW_POST);
 
+        // Transform and reshape the notification data for better layout
+        $transformedNotifications = $notifications->map(function ($notification) {
+            return [
+                'id' => $notification->id,
+                'author_id' => $notification->data['author_id'],
+                'author_name' => $notification->data['author_name'],
+                'author_username' => $notification->data['author_username'],
+                'author_avatar' => $notification->data['author_avatar'],
+                'post_id' => $notification->data['post_id'],
+                'post_title' => $notification->data['post_title'],
+                'post_slug' => $notification->data['post_slug'],
+                'message' => $notification->data['message'],
+                'created_at' => $notification->created_at,
+//                'created_at_formatted' => $notification->created_at ? $notification->created_at->format('M d, Y \a\t h:i A') : null,
+//                'created_at_relative' => $notification->created_at ? $notification->created_at->diffForHumans() : null,
+                'read_at' => $notification->read_at,
+//                'read_at_formatted' => $notification->read_at ? $notification->read_at->format('M d, Y \a\t h:i A') : null,
+            ];
+        })->values();
+
         return response()->json([
-            'new_post_from_follower_notifications' => $notifications,
+            'data' => $transformedNotifications,
+            'meta' => [
+                'total' => $transformedNotifications->count(),
+                'unread_count' => $this->user()->unreadNotifications()
+                    ->where('type', self::TYPE_NEW_POST)
+                    ->count(),
+            ],
         ]);
     }
 
@@ -138,8 +241,28 @@ class NotificationController
     {
         $notifications = $this->unreadByType($this->user(), self::TYPE_MENTION);
 
+        // Transform notification data for better layout
+        $transformedNotifications = $notifications->map(function ($notification) {
+            return [
+                'id' => $notification->id,
+                'type' => $notification->type,
+                'data' => $notification->data,
+                'created_at' => $notification->created_at,
+//                'created_at_formatted' => $notification->created_at ? $notification->created_at->format('M d, Y \a\t h:i A') : null,
+//                'created_at_relative' => $notification->created_at ? $notification->created_at->diffForHumans() : null,
+                'read_at' => $notification->read_at,
+//                'read_at_formatted' => $notification->read_at ? $notification->read_at->format('M d, Y \a\t h:i A') : null,
+            ];
+        })->values();
+
         return response()->json([
-            'new_mention_notifications' => $notifications,
+            'data' => $transformedNotifications,
+            'meta' => [
+                'total' => $transformedNotifications->count(),
+                'unread_count' => $this->user()->unreadNotifications()
+                    ->where('type', self::TYPE_MENTION)
+                    ->count(),
+            ],
         ]);
     }
 
@@ -213,8 +336,28 @@ class NotificationController
     {
         $notifications = $this->unreadByType($this->user(), self::TYPE_QUESTION_CREATED);
 
+        // Transform notification data for better layout
+        $transformedNotifications = $notifications->map(function ($notification) {
+            return [
+                'id' => $notification->id,
+                'type' => $notification->type,
+                'data' => $notification->data,
+                'created_at' => $notification->created_at,
+//                'created_at_formatted' => $notification->created_at ? $notification->created_at->format('M d, Y \a\t h:i A') : null,
+//                'created_at_relative' => $notification->created_at ? $notification->created_at->diffForHumans() : null,
+                'read_at' => $notification->read_at,
+//                'read_at_formatted' => $notification->read_at ? $notification->read_at->format('M d, Y \a\t h:i A') : null,
+            ];
+        })->values();
+
         return response()->json([
-            'questions_notifications' => $notifications,
+            'data' => $transformedNotifications,
+            'meta' => [
+                'total' => $transformedNotifications->count(),
+                'unread_count' => $this->user()->unreadNotifications()
+                    ->where('type', self::TYPE_QUESTION_CREATED)
+                    ->count(),
+            ],
         ]);
     }
 
@@ -222,8 +365,28 @@ class NotificationController
     {
         $notifications = $this->unreadByType($this->user(), self::TYPE_NEW_ANSWER);
 
+        // Transform notification data for better layout
+        $transformedNotifications = $notifications->map(function ($notification) {
+            return [
+                'id' => $notification->id,
+                'type' => $notification->type,
+                'data' => $notification->data,
+                'created_at' => $notification->created_at,
+//                'created_at_formatted' => $notification->created_at ? $notification->created_at->format('M d, Y \a\t h:i A') : null,
+//                'created_at_relative' => $notification->created_at ? $notification->created_at->diffForHumans() : null,
+                'read_at' => $notification->read_at,
+//                'read_at_formatted' => $notification->read_at ? $notification->read_at->format('M d, Y \a\t h:i A') : null,
+            ];
+        })->values();
+
         return response()->json([
-            'answers_notifications' => $notifications,
+            'data' => $transformedNotifications,
+            'meta' => [
+                'total' => $transformedNotifications->count(),
+                'unread_count' => $this->user()->unreadNotifications()
+                    ->where('type', self::TYPE_NEW_ANSWER)
+                    ->count(),
+            ],
         ]);
     }
 

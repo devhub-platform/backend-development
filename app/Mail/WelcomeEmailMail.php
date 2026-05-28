@@ -22,7 +22,9 @@ class WelcomeEmailMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Welcome To DevHub Community',
+            from: 'welcome@' . parse_url(config('app.url'), PHP_URL_HOST),
+            replyTo: ['devhub-community@outlook.com'],
+            subject: 'Welcome to ' . config('app.name') . ' - Get Started Today! 🚀',
         );
     }
 
