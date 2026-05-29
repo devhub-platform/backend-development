@@ -8,11 +8,17 @@ use App\Http\Resources\UserResource;
 use App\Mail\VerifyAltEmailMail;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class VerifyAltEmailController
 {
+    private const CACHE_ALT_EMAIL_OTP_PREFIX = 'alt_email_otp:';
+    private const CACHE_ALT_EMAIL_RATE_LIMIT_PREFIX = 'alt_email_rate_limit:';
+    private const ALT_EMAIL_OTP_EXPIRY_MINUTES = 10;
+    private const ALT_EMAIL_RATE_LIMIT_MINUTES = 1;
+
     public function addAltEmail(AddAltEmailRequest $request)
     {
         try {
@@ -39,7 +45,14 @@ class VerifyAltEmailController
             $altEmail = $request->validated()['alt_email'];
 
             $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-            $expiresAt = Carbon::now()->addMinutes(10);
+            $expiresAt = Carbon::now()->addMinutes(self::ALT_EMAIL_OTP_EXPIRY_MINUTES);
+
+            // Store OTP in cache
+            Cache::put(
+                self::CACHE_ALT_EMAIL_OTP_PREFIX . $user->id,
+                $otp,
+                $expiresAt
+            );
 
             $user->update([
                 'alt_email' => $altEmail,
@@ -86,18 +99,26 @@ class VerifyAltEmailController
                 ], 400);
             }
 
-            if (!$user->alt_email_otp_expires_at || Carbon::now()->isAfter($user->alt_email_otp_expires_at)) {
-                return response()->json([
-                    'message' => 'Verification code has expired. Please request a new one.',
-                ], 400);
+            $cachedOtp = Cache::get(self::CACHE_ALT_EMAIL_OTP_PREFIX . $user->id);
+
+            if (!$cachedOtp) {
+                if (!$user->alt_email_otp_expires_at || Carbon::now()->isAfter($user->alt_email_otp_expires_at)) {
+                    return response()->json([
+                        'message' => 'Verification code has expired. Please request a new one.',
+                    ], 400);
+                }
+                $cachedOtp = $user->alt_email_otp;
             }
 
-            if ($user->alt_email_otp !== $request->otp) {
+            if ($cachedOtp !== $request->otp) {
                 Log::warning("Invalid OTP attempt for alt email verification - user: {$user->email}");
                 return response()->json([
                     'message' => 'Invalid verification code.',
                 ], 400);
             }
+
+            // Clear OTP from cache
+            Cache::forget(self::CACHE_ALT_EMAIL_OTP_PREFIX . $user->id);
 
             $user->update([
                 'alt_email_verified_at' => Carbon::now(),
@@ -142,8 +163,26 @@ class VerifyAltEmailController
                 ], 400);
             }
 
+            if (Cache::has(self::CACHE_ALT_EMAIL_RATE_LIMIT_PREFIX . $user->id)) {
+                return response()->json([
+                    'message' => 'Please wait before requesting another OTP.',
+                ], 429);
+            }
+
             $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-            $expiresAt = Carbon::now()->addMinutes(10);
+            $expiresAt = Carbon::now()->addMinutes(self::ALT_EMAIL_OTP_EXPIRY_MINUTES);
+
+            Cache::put(
+                self::CACHE_ALT_EMAIL_OTP_PREFIX . $user->id,
+                $otp,
+                $expiresAt
+            );
+
+            Cache::put(
+                self::CACHE_ALT_EMAIL_RATE_LIMIT_PREFIX . $user->id,
+                true,
+                now()->addMinutes(self::ALT_EMAIL_RATE_LIMIT_MINUTES)
+            );
 
             $user->update([
                 'alt_email_otp' => $otp,
@@ -189,6 +228,10 @@ class VerifyAltEmailController
             }
 
             $altEmail = $user->alt_email;
+
+            // Clear cache
+            Cache::forget(self::CACHE_ALT_EMAIL_OTP_PREFIX . $user->id);
+            Cache::forget(self::CACHE_ALT_EMAIL_RATE_LIMIT_PREFIX . $user->id);
 
             $user->update([
                 'alt_email' => null,
@@ -261,6 +304,9 @@ class VerifyAltEmailController
 
             $oldPrimaryEmail = $user->email;
             $newPrimaryEmail = $user->alt_email;
+
+            Cache::forget(self::CACHE_ALT_EMAIL_OTP_PREFIX . $user->id);
+            Cache::forget(self::CACHE_ALT_EMAIL_RATE_LIMIT_PREFIX . $user->id);
 
             $user->update([
                 'email' => $newPrimaryEmail,

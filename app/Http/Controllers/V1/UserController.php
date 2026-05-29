@@ -6,14 +6,20 @@ use App\Http\Resources\CommentResource;
 use App\Http\Resources\MutualRusersResource;
 use App\Http\Resources\MutualUsersResource;
 use App\Http\Resources\PostResource;
+use App\Http\Resources\RecommendedUserResource;
 use App\Http\Resources\TrendingPostResource;
 use App\Http\Resources\UserResource;
 use App\Http\Resources\UsersCollection;
 use App\Models\User;
+use App\Services\ImprovedRecommendationService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use App\Services\UserEmbeddingService;
+//use App\Services\UserEmbeddingService;
 
 class UserController extends Controller
 {
@@ -31,7 +37,9 @@ class UserController extends Controller
 
     public function showUserProfile(int $userId): JsonResponse
     {
-        $user = User::findOrFail($userId);
+        $user = Cache::remember("user_profile_{$userId}", now()->addHours(24), function () use ($userId) {
+            return User::findOrFail($userId);
+        });
 
         return response()->json([
             'data' => new UserResource($user),
@@ -204,26 +212,94 @@ class UserController extends Controller
         }
 
         $limit = $request->query('limit', 10);
+        $forceRefresh = $request->query('force_refresh', false);
 
-        $authUserFollowerIds = $authUser->followers()
-            ->pluck('users.id');
+        $recommendationService = new ImprovedRecommendationService(
+            app(UserEmbeddingService::class)
+        );
 
-        $alreadyFollowingIds = $authUser->following()
-            ->pluck('users.id');
+        $recommendedUsers = $recommendationService->getRecommendedUsers(
+            $authUser,
+            $limit,
+            ['force_refresh' => $forceRefresh]
+        );
 
-        // Get followers of user's followers (people they have mutual connections with)
-        $followersOfFollowers = User::whereHas('followers', function ($query) use ($authUserFollowerIds) {
-            $query->whereIn('follower_id', $authUserFollowerIds);
-        })
-            ->whereNotIn('id', [$authUser->id])
-            ->whereNotIn('id', $alreadyFollowingIds)
-            ->limit($limit)
-            ->get();
+        if ($recommendedUsers->isEmpty()) {
+            return response()->json([
+                'count' => 0,
+                'data' => [],
+                'message' => 'No recommendations available at this time',
+            ]);
+        }
+
+        $transformedUsers = $recommendedUsers->map(function (User $user) {
+            $embedding1 = app(UserEmbeddingService::class)->generateUserEmbedding(auth()->user());
+            $embedding2 = app(UserEmbeddingService::class)->generateUserEmbedding($user);
+
+            $score = app(UserEmbeddingService::class)->calculateSimilarityScore($embedding1, $embedding2);
+
+            $reasons = $this->getRecommendationReasons(auth()->user(), $user);
+
+            $resource = new RecommendedUserResource($user);
+            $resource->setRecommendationScore($score);
+            $resource->setRecommendationReasons($reasons);
+
+            return $resource;
+        });
 
         return response()->json([
-            'count' => $followersOfFollowers->count(),
-            'data' => UserResource::collection($followersOfFollowers),
+            'count' => $transformedUsers->count(),
+            'data' => $transformedUsers,
         ]);
+    }
+
+    /**
+     * Get human-readable reasons for recommendation
+     */
+    private function getRecommendationReasons(User $authUser, User $recommendedUser): array
+    {
+        $reasons = [];
+
+        // Check for mutual connections
+        $mutualFollowers = $authUser->followers()
+            ->whereIn('users.id', $recommendedUser->followers()->pluck('users.id'))
+            ->count();
+
+        if ($mutualFollowers > 0) {
+            $reasons[] = "You have {$mutualFollowers} mutual follower(s)";
+        }
+
+        // Check for skill match
+        $authSkills = is_array($authUser->skills) ? $authUser->skills : [];
+        $recSkills = is_array($recommendedUser->skills) ? $recommendedUser->skills : [];
+        $matchingSkills = array_intersect($authSkills, $recSkills);
+
+        if (!empty($matchingSkills)) {
+            $skillsStr = implode(', ', array_slice($matchingSkills, 0, 2));
+            $reasons[] = "Shares skills: {$skillsStr}";
+        }
+
+        // Check for similar interests
+        $mutualTopics = $authUser->topics()
+            ->whereIn('topics.id', $recommendedUser->topics()->pluck('topics.id'))
+            ->count();
+
+        if ($mutualTopics > 0) {
+            $reasons[] = "Interested in {$mutualTopics} same topic(s)";
+        }
+
+        // Profile completeness
+        if ($recommendedUser->bio && $recommendedUser->avatar_url) {
+            $reasons[] = "Complete profile";
+        }
+
+        // Activity level
+        $activityCount = $recommendedUser->posts()->count() + $recommendedUser->questions()->count();
+        if ($activityCount > 10) {
+            $reasons[] = "Active community member";
+        }
+
+        return array_slice($reasons, 0, 3); // Return top 3 reasons
     }
 
     public function getUsersWithSimilarSkills(int $userId, Request $request): JsonResponse
