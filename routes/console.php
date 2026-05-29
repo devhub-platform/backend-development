@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('attachments:cleanup')->everyTwoHours();
 Schedule::command('posts:cleanup-generated-images')->hourly();
+Schedule::command('notifications:cleanup')->daily();

@@ -68,15 +68,27 @@ class CommentController
         // Send notification to post author if any one comment in his post, if author comment in his own post do not notify
         if ($post->user_id !== auth()->id() && $post->user->isNotificationEnabled('new_comment')) {
             Notification::send($post->user, new NewCommentNotification($comment));
-            OneSignal::sendNotificationToUser(
-                Str::limit($validated['content'], 50),
-                $post->user->onesignal_player_id,
-                'deeplink://comments?id=' . $comment->id,
-                null,
-                null,
-                null,
-                'You have a new comment on your post "' . $post->title . '"'
-            );
+
+            if (!empty($post->user->onesignal_player_id)) {
+                try {
+                    OneSignal::sendNotificationToUser(
+                        Str::limit($validated['content'], 50),
+                        $post->user->onesignal_player_id,
+                        'deeplink://comments?id=' . $comment->id,
+                        null,
+                        null,
+                        null,
+                        'You have a new comment on your post "' . $post->title . '"'
+                    );
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to send OneSignal comment notification', [
+                        'post_id' => $post->id,
+                        'comment_id' => $comment->id,
+                        'user_id' => $post->user->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
         }
 
         $this->notifyMentionedUsers($comment, auth()->user());
@@ -247,14 +259,26 @@ class CommentController
         // Notify the parent comment author
         if ($parentComment->user_id !== auth()->id() && $parentComment->user->isNotificationEnabled('new_comment')) {
             Notification::send($parentComment->user, new NewCommentNotification($comment));
-            OneSignal::sendNotificationToUser(
-                'You have a new reply on your comment',
-                $parentComment->user->onesignal_player_id,
-                'deeplink://comments?id=' . $comment->id,
-                null,
-                null,
-                'New Reply to Your Comment'
-            );
+
+            if (!empty($parentComment->user->onesignal_player_id)) {
+                try {
+                    OneSignal::sendNotificationToUser(
+                        'You have a new reply on your comment',
+                        $parentComment->user->onesignal_player_id,
+                        'deeplink://comments?id=' . $comment->id,
+                        null,
+                        null,
+                        'New Reply to Your Comment'
+                    );
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to send OneSignal reply notification', [
+                        'parent_comment_id' => $parentComment->id,
+                        'comment_id' => $comment->id,
+                        'user_id' => $parentComment->user->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
         }
 
         // Detect and notify mentioned users
