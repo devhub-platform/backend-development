@@ -27,8 +27,8 @@ use Musonza\Chat\Traits\Messageable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
-use Spatie\Activitylog\Traits\LogsActivity;
-use Spatie\Activitylog\LogOptions;
+// use Spatie\Activitylog\Traits\LogsActivity;
+// use Spatie\Activitylog\LogOptions;
 use Laravel\Passkeys\Contracts\PasskeyUser;
 use Laravel\Passkeys\PasskeyAuthenticatable;
 
@@ -41,7 +41,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail, Filam
     use InteractsWithAppAuthentication;
     use InteractsWithAppAuthenticationRecovery;
     use InteractsWithEmailAuthentication;
-    use LogsActivity;
+    // use LogsActivity;
     // use HasFilamentQuickNotes;
     use PasskeyAuthenticatable;
 

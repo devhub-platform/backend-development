@@ -102,7 +102,7 @@ Route::prefix('v1')->group(function () {
         Route::get('recommendations', [RecommendationController::class, 'index']);
         //        Route::get('ai-topics-user', [AITopicsUserController::class, 'index']);
 
-        Route::middleware(['auth:api', 'throttle:25,1'])->group(function () {
+        Route::middleware(['auth:api', 'throttle:25,1','verified'])->group(function () {
             Route::controller(AuthController::class)->group(function () {
                 Route::post('logout', 'logout');
                 Route::post('refresh', 'refreshToken');
