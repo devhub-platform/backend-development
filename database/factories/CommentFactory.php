@@ -13,28 +13,27 @@ class CommentFactory extends Factory
 
     public function definition(): array
     {
-        $createdAt = $this->faker->dateTimeBetween('-30 days', 'now');
+        $comments = [
+            'Great explanation. Thanks for sharing.',
+            'This solved a production issue I had recently.',
+            'I think Redis caching would improve this workflow.',
+            'Interesting approach. Have you tested scalability?',
+            'Very clean implementation and architecture.',
+            'This is one of the best tutorials I have read.',
+            'Can you explain more about optimization strategies?',
+            'I encountered similar issues in my Laravel project.',
+            'Security considerations here are very important.',
+            'This helped me improve application performance.',
+        ];
 
         return [
-            'post_id'    => Post::where('status', 'published')->inRandomOrder()->value('id') ?? Post::factory()->published(),
-            'user_id'    => User::inRandomOrder()->value('id') ?? User::factory(),
-            'content'    => $this->faker->paragraph(rand(1, 3)),
-            'parent_id'  => null,
-            'is_pinned'  => false,
-            'created_at' => $createdAt,
-            'updated_at' => $createdAt,
+            'post_id' => Post::inRandomOrder()->value('id'),
+            'user_id' => User::inRandomOrder()->value('id'),
+            'content' => fake()->randomElement($comments),
+            'parent_id' => null,
+            'is_pinned' => rand(1, 100) <= 3,
+            'created_at' => now()->subDays(rand(0, 90)),
+            'updated_at' => now(),
         ];
-    }
-
-    public function reply(): static
-    {
-        return $this->state(fn() => [
-            'parent_id' => Comment::inRandomOrder()->value('id'),
-        ]);
-    }
-
-    public function pinned(): static
-    {
-        return $this->state(fn() => ['is_pinned' => true]);
     }
 }

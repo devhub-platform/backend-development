@@ -468,7 +468,10 @@ Route::prefix('v1')->group(function () {
                 ->group(function () {
                     Route::get('posts', 'posts');
                     Route::get('tags', 'tags');
-                    Route::get('tech', 'tech');
+                    // Tech Trends Feed — lightweight, instant
+                    Route::get('/tech', 'tech');
+                    // Tech Trend Detail — with AI enrichment on-demand
+                    Route::get('/tech/{id}', 'techDetail');
                 });
         });
     });

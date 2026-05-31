@@ -6,51 +6,36 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\User>
- */
 class UserFactory extends Factory
 {
-    /**
-     * The current password being used by the factory.
-     */
     protected static ?string $password;
 
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
+        $skills = [
+            'Laravel','PHP','JavaScript','TypeScript','React','Vue',
+            'Node.js','Python','Docker','Cyber Security','DevOps',
+            'AI','Machine Learning','MySQL','Redis',
+        ];
+
         return [
             'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
             'username' => fake()->unique()->userName(),
             'role' => 'user',
-            'avatar_url' => fake()->imageUrl(200, 200, 'people'),
-            'bio' => fake()->sentence(),
-            'location' => fake()->city(),
-            'currently_learning' => fake()->sentence(),
-            'website_url' => fake()->url(),
-//            'pronouns' => fake()->randomElement(['he/him', 'she/her', 'they/them']),
-            'linkedin_username' => fake()->userName(),
-            'github_username' => fake()->userName(),
-            'created_at' => now(),
-            'updated_at' => now(),
+            'avatar_url' => 'https://i.pravatar.cc/300?img=' . rand(1, 70),
+            'bio' => fake()->randomElement([
+                'Backend developer passionate about scalable systems.',
+                'Frontend engineer focused on performance and UX.',
+                'Cybersecurity enthusiast and bug bounty hunter.',
+                'Full-stack developer exploring AI integrations.',
+                'Software engineer building modern web applications.',
+            ]),
+            'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'created_at' => now()->subDays(rand(0, 365)),
+            'updated_at' => now(),
         ];
-    }
-
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
-    public function unverified(): static
-    {
-        return $this->state(fn(array $attributes) => [
-            'email_verified_at' => null,
-        ]);
     }
 }
