@@ -44,8 +44,8 @@
     const conversationId = Number(new URLSearchParams(window.location.search).get('conversation_id') || 10);
     const currentUserId = Number(new URLSearchParams(window.location.search).get('viewer_id') || '{{ auth()->id() ?? 0 }}');
     const peerIdFromQuery = Number(new URLSearchParams(window.location.search).get('peer_id') || 0);
-    const AUTH_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vZGV2LWh1YnMudGVjaC9hcGkvdjEvbG9naW4iLCJpYXQiOjE3NzYzNjk5NDgsImV4cCI6MTc3ODk2MTk0OCwibmJmIjoxNzc2MzY5OTQ4LCJqdGkiOiJmNURGOFBKZDU0YkQxQkxDIiwic3ViIjoiNjk5IiwicHJ2IjoiMjNiZDVjODk0OWY2MDBhZGIzOWU3MDFjNDAwODcyZGI3YTU5NzZmNyJ9.vu8R9lj4pnzsaRsdyFXBZ12lUES1TK_mTG4arO6YvxY";
-    const API_BASE_URL = "https://dev-hubs.tech/api/v1";
+    const AUTH_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vbGFyYWNvbi5oYWNrY2x1Yi5hcHAvYXBpL3YxL3JlZ2lzdGVyIiwiaWF0IjoxNzgwMTAxNjUxLCJleHAiOjE3ODc4Nzc2NTEsIm5iZiI6MTc4MDEwMTY1MSwianRpIjoicGRuMGtaTERYY1E4TjczOCIsInN1YiI6IjEiLCJwcnYiOiIyM2JkNWM4OTQ5ZjYwMGFkYjM5ZTcwMWM0MDA4NzJkYjdhNTk3NmY3In0.r6RvRFnWfT0YnvD9nFxE-SPEYnLIVs_NcBcDi7f9tFM";
+    const API_BASE_URL = "https://laracon.hackclub.app/api/v1";
     const STATUS_BASE_CLASS = 'mt-3 rounded-lg border px-3 py-2 text-sm font-medium';
     const STATUS_VARIANTS = {
         info: 'bg-sky-50 text-sky-700 border-sky-200',
@@ -62,7 +62,7 @@
 
     const pusher = new Pusher(APP_KEY, {
         cluster: CLUSTER,
-        authEndpoint: "https://dev-hubs.tech/api/broadcasting/auth",
+        authEndpoint: "https://laracon.hackclub.app/api/broadcasting/auth",
         auth: {
             headers: {
                 Authorization: "Bearer " + AUTH_TOKEN

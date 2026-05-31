@@ -53,6 +53,17 @@ return [
             'transport' => 'ses',
         ],
 
+        'mail' => [
+    'driver' => 'ses',
+    'key' => env('AWS_ACCESS_KEY_ID'),
+    'secret' => env('AWS_SECRET_ACCESS_KEY'),
+    'region' => env('AWS_DEFAULT_REGION')
+],
+
+        'mailersend' => [
+            'transport' => 'mailersend',
+        ],
+
         'postmark' => [
             'transport' => 'postmark',
             // 'message_stream_id' => env('POSTMARK_MESSAGE_STREAM_ID'),
@@ -114,5 +125,9 @@ return [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
+
+    //    'resend' => [
+//        'transport' => 'resend',
+//    ],
 
 ];

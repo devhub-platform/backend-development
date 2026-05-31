@@ -62,10 +62,7 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::middleware('throttle:30,1')->group(function () {
-
         Route::controller(SocialiteMediaFrontController::class)->group(function () {
-            //            Route::post('front/auth/google/login', 'loginGoogle');
-//            Route::get('auth/google/callback', 'callbackGoogle');
             Route::get('auth/', 'loginGoogle');
             Route::get('auth/callback', 'callbackGoogle');
 
@@ -86,7 +83,6 @@ Route::prefix('v1')->group(function () {
             Route::post('register', 'register');
         });
 
-        // ─── Email Verification ───────────────────────────────────────────────────
         Route::controller(VerifyEmailController::class)->group(function () {
             Route::post('email/verify-otp', 'verifyEmailOtp');
             Route::post('email/send-otp', 'sendEmailOTP');
@@ -106,7 +102,7 @@ Route::prefix('v1')->group(function () {
         Route::get('recommendations', [RecommendationController::class, 'index']);
         //        Route::get('ai-topics-user', [AITopicsUserController::class, 'index']);
 
-        Route::middleware(['auth:api', 'throttle:25,1'])->group(function () {
+        Route::middleware(['auth:api', 'throttle:25,1','verified'])->group(function () {
             Route::controller(AuthController::class)->group(function () {
                 Route::post('logout', 'logout');
                 Route::post('refresh', 'refreshToken');
@@ -329,7 +325,7 @@ Route::prefix('v1')->group(function () {
                 Route::get('user/interaction-analytics', 'getUserAnalytics');
             });
 
-            // ─── Tags Follow ──────────────────────────────────────────────────────
+            // ─── Tags Follow ───────────────────HH───────────────────────────────────
             Route::controller(TagFollowController::class)->group(function () {
                 Route::post('tags/{tag}/follow', 'follow');
                 Route::delete('tags/{tag}/unfollow', 'unfollow');
@@ -497,20 +493,20 @@ Route::get('/test-redis', function () {
 });
 
 Route::post('upload-on-azure', function (\App\Services\AzureBlobStorageService $azureService) {
-   $file = request()->file('file');
+    $file = request()->file('file');
 
-   if (!$file) {
-       return response()->json(['error' => 'No file provided'], 400);
-   }
+    if (!$file) {
+        return response()->json(['error' => 'No file provided'], 400);
+    }
 
-   $filePath = $azureService->uploadImage($file, 'devhub');
+    $filePath = $azureService->uploadImage($file, 'devhub');
 
-   if (!$filePath) {
-       return response()->json(['error' => 'Failed to upload file to Azure Blobs'], 500);
-   }
+    if (!$filePath) {
+        return response()->json(['error' => 'Failed to upload file to Azure Blobs'], 500);
+    }
 
-   return response()->json([
-       'file_path' => $filePath,
-       'message' => 'File uploaded successfully to Azure Blobs',
-   ]);
+    return response()->json([
+        'file_path' => $filePath,
+        'message' => 'File uploaded successfully to Azure Blobs',
+    ]);
 });

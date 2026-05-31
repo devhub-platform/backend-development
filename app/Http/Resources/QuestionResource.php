@@ -13,6 +13,9 @@ class QuestionResource extends JsonResource
         $votes = $this->whenLoaded('votes');
         $upvotes = $votes ? $this->votes->where('vote_type', 'upvote')->count() : 0;
         $downvotes = $votes ? $this->votes->where('vote_type', 'downvote')->count() : 0;
+        $tags = $this->relationLoaded('tags') ? $this->tags : collect();
+        $acceptedAnswers = $this->relationLoaded('acceptedAnswers') ? $this->acceptedAnswers : collect();
+        $answers = $this->relationLoaded('answers') ? $this->answers : collect();
 
         // Current user vote from loaded collection - zero extra queries
         $currentUserVote = null;
@@ -27,7 +30,7 @@ class QuestionResource extends JsonResource
             'title' => $this->title,
             'content' => $this->content,
             'slug' => $this->slug,
-            'tags' => $this->whenLoaded('tags')->map(fn($tag) => [
+            'tags' => $tags->map(fn($tag) => [
                 'id'   => $tag->id,
                 'name' => $tag->name,
             ]),
@@ -44,8 +47,8 @@ class QuestionResource extends JsonResource
                 'name'   => $this->user?->name,
                 'avatar' => $this->user?->avatar_url,
             ],
-            'accepted_answers' => AnswerResource::collection($this->whenLoaded('acceptedAnswers')),
-            'answers' => AnswerResource::collection($this->whenLoaded('answers')),
+            'accepted_answers' => AnswerResource::collection($acceptedAnswers),
+            'answers' => AnswerResource::collection($answers),
             'created_at' => $this->created_at->diffForHumans(),
             'updated_at' => $this->updated_at->diffForHumans(),
         ];

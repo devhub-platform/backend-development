@@ -107,7 +107,7 @@ class MessageController extends Controller
                  $playerId,
                  'deeplink://chats?id=' . $conversation->id,
                  null,
-                 null,
+                 null,null,
                  'New attachment from ' . (auth()->user()->name)
              );
          }
@@ -170,7 +170,7 @@ class MessageController extends Controller
                 $playerId,
                 'deeplink://chats?id=' . $conversation->id,
                 null,
-                null,
+                null,null,
                 'New voice message from ' . (auth()->user()->name)
             );
         }

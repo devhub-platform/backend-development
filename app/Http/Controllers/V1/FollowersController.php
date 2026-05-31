@@ -46,6 +46,7 @@ class FollowersController
                     'deeplink://followers?id=' . $user->id,
                     null,
                     null,
+                    null,
                     "{$authUser->name} started following you!"
                 );
             }

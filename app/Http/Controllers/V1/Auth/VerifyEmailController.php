@@ -4,65 +4,34 @@ namespace App\Http\Controllers\V1\Auth;
 
 use App\Http\Requests\EmailVerificationReqests\ResendEmailRequest;
 use App\Http\Requests\EmailVerificationReqests\VerifyEmailRequest;
-use App\Mail\VerifiedSuccessfullyMail;
-use App\Mail\VerifyOtpMail;
-use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Hash;
+use App\Services\EmailVerificationService;
 
 class VerifyEmailController
 {
+    public function __construct(private EmailVerificationService $emailVerificationService)
+    {}
+
     public function verifyEmailOtp(VerifyEmailRequest $request)
     {
-        $user = User::where('email', $request->email)->first();
+        $result = $this->emailVerificationService->verifyEmailOtp(
+            $request->email,
+            $request->otp
+        );
 
-        if (!$user || $user->otp !== $request->otp) {
-            return $this->errorResponse('Invalid email or verification code', 400);
-        }
-
-        if ($user->two_factor_expires_at && $user->two_factor_expires_at < now()) {
-            return $this->errorResponse('OTP has expired', 400);
-        }
-
-        $user->update([
-            'email_verified_at' => now(),
-            'otp' => null,
-            'two_factor_expires_at' => null,
-        ]);
-
-        Log::info('Email verified successfully for user ID: ' . $user->id);
-        Mail::to($user->email)->send(new VerifiedSuccessfullyMail($user));
-
-        return $this->successResponse('Email verified successfully');
+        return response()->json(
+            ['message' => $result['message']],
+            $result['status']
+        );
     }
 
-    public function sendEmailOTP(ResendEmailRequest $request) // resend OTP to email
+    public function sendEmailOTP(ResendEmailRequest $request)
     {
-        $user = User::where('email', $request->email)->first();
+        $result = $this->emailVerificationService->sendEmailOtp($request->email);
 
-        if (!$user) {
-            return $this->errorResponse('Email not found', 404);
-        }
-
-        if ($user->email_verified_at) {
-            return $this->errorResponse('Email is already verified', 400);
-        }
-
-        if ($user->two_factor_expires_at && $user->two_factor_expires_at > now()->subMinutes(1)) {
-            return $this->errorResponse('Please wait before requesting another OTP', 429);
-        }
-
-        $otp = random_int(100000, 999999);
-        $user->update([
-            'otp' => $otp,
-            'two_factor_expires_at' => now()->addMinutes(10),
-        ]);
-
-        Mail::to($user->email)->send(new VerifyOtpMail($otp));
-        Log::notice('Verification code resent to email: ' . $user->email);
-        return $this->successResponse('Verification code sent successfully');
+        return response()->json(
+            ['message' => $result['message']],
+            $result['status']
+        );
     }
 
     public function isVerified()
@@ -70,23 +39,17 @@ class VerifyEmailController
         $user = auth()->user();
 
         if (!$user) {
-            return $this->errorResponse('Unauthenticated. Please log in to check verification status.', 401);
+            return response()->json(
+                ['error' => 'Unauthenticated. Please log in to check verification status.'],
+                401
+            );
         }
 
-        if ($user->email_verified_at) {
-            return $this->successResponse('Email is verified for user: ' . $user->name);
-        }
+        $result = $this->emailVerificationService->isEmailVerified($user);
 
-        return $this->errorResponse('Email is not verified. Please complete the verification process.', 400);
-    }
-
-    private function errorResponse(string $message, int $status)
-    {
-        return response()->json(['error' => $message], $status);
-    }
-
-    private function successResponse(string $message)
-    {
-        return response()->json(['message' => $message], 200);
+        return response()->json(
+            ['message' => $result['message']],
+            $result['status']
+        );
     }
 }

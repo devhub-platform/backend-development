@@ -23,7 +23,10 @@ class QuestionCreatedNotification extends Notification
     {
         return [
             'message' => 'New question: ' . $this->question->title,
+            'asker_id' => $this->question->user->id,
             'asker_name' => $this->question->user->name,
+            'asker_username' => $this->question->user->username,
+            'asker_avatar' => $this->question->user->avatar_url,
             'question_title' => $this->question->title,
             'question_id' => $this->question->id,
             'post_id' => $this->question->post_id,

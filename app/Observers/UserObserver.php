@@ -4,7 +4,7 @@ namespace App\Observers;
 
 use App\Models\User;
 use Illuminate\Support\Str;
-
+use Illuminate\Support\Facades\Cache;
 class UserObserver
 {
     public function creating(User $user): void
@@ -16,12 +16,12 @@ class UserObserver
 
     public function updated(User $user): void
     {
-//        $user->github_username = 'https://github.com/'.$user->github_username;
-//        $user->linkedin_username = 'https://www.linkedin.com/in/'.$user->linkedin_username;
+        Cache::forget("user_profile_{$user->id}");
     }
 
     public function deleted(User $user): void
     {
+        Cache::forget("user_profile_{$user->id}");
     }
 
     public function restored(User $user): void

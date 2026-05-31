@@ -3,12 +3,13 @@
 namespace App\Http\Controllers\V1;
 
 use App\Models\User;
+use App\Services\Notifications\NotificationFormatterService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class NotificationController
 {
-    private const NOTIFICATION_COLUMNS = ['type', 'data', 'created_at'];
+    private const NOTIFICATION_COLUMNS = ['id', 'type', 'data', 'created_at', 'read_at'];
     private const TYPE_NEW_COMMENT = 'App\\Notifications\\NewCommentNotification';
     private const TYPE_REACT = 'App\\Notifications\\ReactNotification';
     private const TYPE_FOLLOW = 'App\\Notifications\\FollowNotification';
@@ -16,6 +17,10 @@ class NotificationController
     private const TYPE_MENTION = 'App\\Notifications\\MentionInCommentNotification';
     private const TYPE_QUESTION_CREATED = 'App\\Notifications\\QuestionCreatedNotification';
     private const TYPE_NEW_ANSWER = 'App\\Notifications\\NewAnswerNotification';
+
+    public function __construct(private readonly NotificationFormatterService $formatter)
+    {
+    }
 
     private function user(): User
     {
@@ -26,6 +31,7 @@ class NotificationController
     {
         return $user->unreadNotifications()
             ->whereIn('type', $types)
+            ->orderBy('created_at', 'desc')
             ->get(self::NOTIFICATION_COLUMNS);
     }
 
@@ -42,18 +48,32 @@ class NotificationController
     public function showNewCommentNotify(): JsonResponse
     {
         $notifications = $this->unreadByType($this->user(), self::TYPE_NEW_COMMENT);
+        $transformedNotifications = $this->formatter->formatMany($notifications);
 
         return response()->json([
-            'new_comment_notifications' => $notifications,
+            'data' => $transformedNotifications,
+            'meta' => [
+                'total' => $transformedNotifications->count(),
+                'unread_count' => $this->user()->unreadNotifications()
+                    ->where('type', self::TYPE_NEW_COMMENT)
+                    ->count(),
+            ],
         ]);
     }
 
     public function showNewReactNotify(): JsonResponse
     {
         $notifications = $this->unreadByType($this->user(), self::TYPE_REACT);
+        $transformedNotifications = $this->formatter->formatMany($notifications);
 
         return response()->json([
-            'new_react_notifications' => $notifications,
+            'data' => $transformedNotifications,
+            'meta' => [
+                'total' => $transformedNotifications->count(),
+                'unread_count' => $this->user()->unreadNotifications()
+                    ->where('type', self::TYPE_REACT)
+                    ->count(),
+            ],
         ]);
     }
 
@@ -88,10 +108,18 @@ class NotificationController
 
     public function showAllNotifications(): JsonResponse
     {
-        $notifications = $this->user()->notifications;
+        $notifications = $this->user()->notifications()
+            ->orderBy('created_at', 'desc')
+            ->get(self::NOTIFICATION_COLUMNS);
+
+        $transformedNotifications = $this->formatter->formatMany($notifications);
 
         return response()->json([
-            'all_notifications' => $notifications,
+            'data' => $transformedNotifications,
+            'meta' => [
+                'total' => $transformedNotifications->count(),
+                'unread_count' => $this->user()->unreadNotifications()->count(),
+            ],
         ]);
     }
 
@@ -107,9 +135,16 @@ class NotificationController
     public function showNewFollowersNotifications(): JsonResponse
     {
         $notifications = $this->unreadByType($this->user(), self::TYPE_FOLLOW);
+        $transformedNotifications = $this->formatter->formatMany($notifications);
 
         return response()->json([
-            'new_follower_notifications' => $notifications,
+            'data' => $transformedNotifications,
+            'meta' => [
+                'total' => $transformedNotifications->count(),
+                'unread_count' => $this->user()->unreadNotifications()
+                    ->where('type', self::TYPE_FOLLOW)
+                    ->count(),
+            ],
         ]);
     }
 
@@ -128,18 +163,16 @@ class NotificationController
     public function newPostCreateFromFollower(): JsonResponse
     {
         $notifications = $this->unreadByType($this->user(), self::TYPE_NEW_POST);
+        $transformedNotifications = $this->formatter->formatMany($notifications);
 
         return response()->json([
-            'new_post_from_follower_notifications' => $notifications,
-        ]);
-    }
-
-    public function showNewMentionNotifications(): JsonResponse
-    {
-        $notifications = $this->unreadByType($this->user(), self::TYPE_MENTION);
-
-        return response()->json([
-            'new_mention_notifications' => $notifications,
+            'data' => $transformedNotifications,
+            'meta' => [
+                'total' => $transformedNotifications->count(),
+                'unread_count' => $this->user()->unreadNotifications()
+                    ->where('type', self::TYPE_NEW_POST)
+                    ->count(),
+            ],
         ]);
     }
 
@@ -212,18 +245,48 @@ class NotificationController
     public function getQuestionsNotifications(): JsonResponse
     {
         $notifications = $this->unreadByType($this->user(), self::TYPE_QUESTION_CREATED);
+        $transformedNotifications = $this->formatter->formatMany($notifications);
 
         return response()->json([
-            'questions_notifications' => $notifications,
+            'data' => $transformedNotifications,
+            'meta' => [
+                'total' => $transformedNotifications->count(),
+                'unread_count' => $this->user()->unreadNotifications()
+                    ->where('type', self::TYPE_QUESTION_CREATED)
+                    ->count(),
+            ],
+        ]);
+    }
+
+    public function showNewMentionNotifications(): JsonResponse
+    {
+        $notifications = $this->unreadByType($this->user(), self::TYPE_MENTION);
+        $transformedNotifications = $this->formatter->formatMany($notifications);
+
+        return response()->json([
+            'data' => $transformedNotifications,
+            'meta' => [
+                'total' => $transformedNotifications->count(),
+                'unread_count' => $this->user()->unreadNotifications()
+                    ->where('type', self::TYPE_MENTION)
+                    ->count(),
+            ],
         ]);
     }
 
     public function getAnswersNotifications(): JsonResponse
     {
         $notifications = $this->unreadByType($this->user(), self::TYPE_NEW_ANSWER);
+        $transformedNotifications = $this->formatter->formatMany($notifications);
 
         return response()->json([
-            'answers_notifications' => $notifications,
+            'data' => $transformedNotifications,
+            'meta' => [
+                'total' => $transformedNotifications->count(),
+                'unread_count' => $this->user()->unreadNotifications()
+                    ->where('type', self::TYPE_NEW_ANSWER)
+                    ->count(),
+            ],
         ]);
     }
 

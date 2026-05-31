@@ -1,28 +1,82 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    @vite('resources/css/app.css')
-    <title>OTP</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Your OTP Code</title>
 </head>
-<body class="bg-gray-50 flex items-center justify-center min-h-screen">
-<div class="bg-white rounded-xl shadow-lg p-8 max-w-md w-full">
-    <h1 class="text-2xl font-bold text-center text-gray-900 mb-4">Your OTP Code</h1>
-    <p class="text-center text-gray-700 mb-6">
-        Your One-Time Password (OTP) is:
-    </p>
-    <div class="flex justify-center mb-6">
-            <span class="text-3xl font-mono font-semibold tracking-widest bg-gray-100 px-6 py-3 rounded-lg border border-gray-200 text-blue-600">
-                {{ $user->otp }}
-            </span>
-    </div>
-    <p class="text-center text-gray-500 text-sm">
-        This code is valid for the next <span class="font-medium text-gray-700">10 minutes</span>.<br>
-        <span class="text-red-500 font-semibold">Do not share this code with anyone.</span>
-    </p>
-</div>
+<body>
+@php
+    $appName = config('app.name');
+@endphp
+
+<table width="100%" cellpadding="0" cellspacing="0" style="font-family: Arial, sans-serif;">
+    <tr>
+        <td align="center" style="padding: 20px;">
+            
+            <!-- Main Container -->
+            <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px;">
+                
+                <!-- Header -->
+                <tr>
+                    <td style="padding: 20px; text-align: left; border-bottom: 1px solid #dddddd;">
+                        <h2 style="margin: 0; font-size: 16px; font-weight: normal; color: #222222;">Security Code</h2>
+                    </td>
+                </tr>
+                
+                <!-- Content -->
+                <tr>
+                    <td style="padding: 30px 20px; text-align: center;">
+                        
+                        <!-- Message -->
+                        <p style="margin: 0 0 30px 0; font-size: 14px; line-height: 1.6; color: #444444;">
+                            Your One-Time Password (OTP) for {{ $appName }} is:
+                        </p>
+                        
+                        <!-- OTP Code -->
+                        <p style="margin: 0 0 30px 0; padding: 20px; background-color: #f0f0f0; border: 1px solid #cccccc; font-size: 32px; font-weight: bold; letter-spacing: 4px; font-family: monospace; color: #000000;">
+                            {{ $user->otp }}
+                        </p>
+                        
+                        <!-- Validity Info -->
+                        <p style="margin: 0 0 10px 0; font-size: 13px; color: #666666;">
+                            Valid for 10 minutes
+                        </p>
+                        
+                        <p style="margin: 0 0 20px 0; font-size: 13px; color: #cc0000; font-weight: bold;">
+                            Do not share this code with anyone
+                        </p>
+                        
+                        <!-- Security Note -->
+                        <p style="margin: 0; font-size: 12px; color: #666666;">
+                            If you didn't request this code, you can ignore this email. Your account will remain secure.
+                        </p>
+                        
+                    </td>
+                </tr>
+                
+                <!-- Divider -->
+                <tr>
+                    <td style="height: 1px; background-color: #dddddd;"></td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                    <td style="padding: 20px; font-size: 12px; line-height: 1.5; color: #666666; text-align: center;">
+                        <p style="margin: 0 0 8px 0;">
+                            &copy; {{ date('Y') }} {{ $appName }}. All rights reserved.
+                        </p>
+                        <p style="margin: 0; font-size: 11px; color: #999999;">
+                            Questions? Contact us at devhub-community@outlook.com
+                        </p>
+                    </td>
+                </tr>
+                
+            </table>
+            
+        </td>
+    </tr>
+</table>
+
 </body>
 </html>
