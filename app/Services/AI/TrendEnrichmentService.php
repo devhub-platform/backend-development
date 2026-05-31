@@ -29,6 +29,8 @@ class TrendEnrichmentService
         $results = $this->callBatch([$item]);
         $r       = $results[0] ?? [];
 
+        Log::info('[Gemini] enrichSingle result', ['r' => $r, 'results' => $results]);
+
         if (!empty($r)) {
             Cache::put($cacheKey, $r, self::TTL);
             return array_merge($item, $r, ['ai_ready' => true]);
@@ -97,9 +99,10 @@ class TrendEnrichmentService
                 'contents' => [[
                     'parts' => [[
                         'text' =>
-                            "You are a tech trend analyst. Analyze each item and return ONLY a valid JSON array. " .
-                            "No markdown, no explanation, no backticks. " .
-                            "Format: [{\"id\": <int>, \"summary\": \"<2 sentences>\", \"why_trending\": \"<1 sentence>\", \"impact\": \"<1 sentence>\"}]\n\n" .
+                            "You are a senior tech trend analyst writing for experienced developers. " .
+                            "Analyze each trending tech item and return ONLY a valid JSON array. " .
+                            "No markdown, no explanation, no backticks. Be specific, insightful, and technical. Avoid generic phrases like 'high engagement' or 'growing interest'. " .
+                            "Format: [{\"id\": <int>, \"summary\": \"<3 sentences explaining what it is and why it matters technically>\", \"why_trending\": \"<1 specific sentence about what triggered the current spike in interest>\", \"impact\": \"<1 sentence about concrete technical or industry impact>\"}]\n\n" .
                             json_encode($payload, JSON_UNESCAPED_UNICODE),
                     ]]
                 ]]
@@ -127,6 +130,8 @@ class TrendEnrichmentService
             }
 
             $raw = $res->json('candidates.0.content.parts.0.text');
+
+            Log::info('[Gemini] Raw response', ['raw' => $raw, 'status' => $res->status()]);
 
             if (empty($raw)) {
                 Log::warning('[Gemini] Empty response text');

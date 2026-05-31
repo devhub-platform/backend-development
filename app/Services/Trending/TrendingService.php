@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 
 class TrendingService
 {
-    private const CACHE_TTL            = 5;   // minutes
+    private const CACHE_TTL            = 5;
     private const MAX_POSTS_PER_AUTHOR = 2;
     private const FETCH_LIMIT          = 50;
 
@@ -78,7 +78,7 @@ class TrendingService
 
         if ($posts->isEmpty()) return [];
 
-        // ── Step 1: Load cached embeddings (zero API calls) ───────────────────
+        // ── Step 1: Load cached embeddings ────────────────────────────────────
         $postsNeedingEmbedding = [];
 
         $prepared = $posts->map(function (Post $post) use (&$postsNeedingEmbedding) {
@@ -90,6 +90,9 @@ class TrendingService
 
             return ['_model' => $post, 'embedding' => $embedding];
         })->values()->toArray();
+
+        // Free the collection from memory
+        unset($posts);
 
         // Embed missing posts in background AFTER response is sent
         if (!empty($postsNeedingEmbedding)) {
@@ -109,12 +112,6 @@ class TrendingService
             $base  = $this->calculateTrendingScore($post);
             $boost = min($this->globalSimilarityBoost($embedding, $prepared, $post->id), 10);
 
-            Log::info('[TrendingService] scored', [
-                'post_id' => $post->id,
-                'score'   => $base + $boost,
-                'boost'   => $boost,
-            ]);
-
             return [
                 '_model'    => $post,
                 'id'        => $post->id,
@@ -122,6 +119,9 @@ class TrendingService
                 'score'     => $base + $boost,
             ];
         }, $prepared);
+
+        // Free prepared from memory
+        unset($prepared);
 
         // ── Step 3: Deduplicate by id ─────────────────────────────────────────
         $items = $this->deduplicateById($items);
@@ -131,6 +131,7 @@ class TrendingService
         $without = array_values(array_filter($items, fn($i) =>  empty($i['embedding'])));
         $withEmb = $this->embedding->deduplicate($withEmb, 0.88);
         $items   = array_merge($withEmb, $without);
+        unset($withEmb, $without);
 
         // ── Step 5: Sort before author cap ───────────────────────────────────
         usort($items, fn($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
@@ -149,12 +150,12 @@ class TrendingService
         // ── Step 8: Feed mixing ───────────────────────────────────────────────
         $items = $this->feedMixer->mix($items);
 
-        // ── Step 9: Final mapping ─────────────────────────────────────────────
-        return array_values(array_filter(array_map(function ($item) {
+        // ── Step 9: Final mapping — free _model and embedding after use ───────
+        $result = array_values(array_filter(array_map(function ($item) {
             $post = $item['_model'] ?? null;
             if (!$post) return null;
 
-            return [
+            $mapped = [
                 'id'          => $post->id,
                 'title'       => $post->title,
                 'excerpt'     => Str::limit(strip_tags($post->content), 180),
@@ -176,7 +177,16 @@ class TrendingService
                 'reactions_count' => $post->reactions_count,
                 'created_at'      => $post->created_at?->toIso8601String(),
             ];
+
+            // Explicitly free heavy objects
+            unset($item['_model'], $item['embedding']);
+
+            return $mapped;
         }, $items)));
+
+        unset($items);
+
+        return $result;
     }
 
     // ─── Scoring ──────────────────────────────────────────────────────────────
@@ -201,8 +211,6 @@ class TrendingService
 
         foreach ($items as $item) {
             if (($item['_model']->id ?? null) === $postId) continue;
-
-            // Compare against top 5 only — avoids O(n²) on large datasets
             if ($count >= 5) break;
 
             $vec = $item['embedding'] ?? [];

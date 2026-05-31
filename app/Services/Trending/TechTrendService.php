@@ -82,17 +82,35 @@ class TechTrendService
      */
     public function getSharedTrends(): array
     {
-        return Cache::remember(
-            self::BASE_CACHE_KEY,
-            now()->addMinutes(self::BASE_CACHE_TTL),
-            function () {
-                $github = $this->fetchGitHub();
-                $devto  = $this->fetchDevTo();
-                $hn     = $this->fetchHackerNews();
+        // Return cached feed instantly if available
+        $cached = Cache::get(self::BASE_CACHE_KEY);
+        if ($cached) return $cached;
 
-                return $this->buildFeed($github, $devto, $hn);
+        // Cache miss — build feed WITHOUT waiting for embeddings
+        $github = $this->fetchGitHub();
+        $devto  = $this->fetchDevTo();
+        $hn     = $this->fetchHackerNews();
+
+        $feed = $this->buildFeed($github, $devto, $hn);
+
+        Cache::put(self::BASE_CACHE_KEY, $feed, now()->addMinutes(self::BASE_CACHE_TTL));
+
+        // Compute embeddings in background after response is sent
+        // Next request will have embeddings ready for semantic dedup + personalization
+        defer(function () use ($feed) {
+            foreach ($feed as $item) {
+                $embKey = 'tech:emb:' . md5(($item['title'] ?? '') . ($item['description'] ?? ''));
+                if (!Cache::has($embKey)) {
+                    $text   = ($item['title'] ?? '') . ' ' . ($item['description'] ?? '');
+                    $vector = $this->embedding->embed($text);
+                    if (!empty($vector)) {
+                        Cache::put($embKey, $vector, now()->addDays(7));
+                    }
+                }
             }
-        );
+        });
+
+        return $feed;
     }
 
     /**
@@ -103,37 +121,39 @@ class TechTrendService
     public function getTrendById(string $id): ?array
     {
         $trends = $this->getSharedTrends();
-
-        // Find the item by its cache key id
-        $item = collect($trends)->firstWhere('id', $id);
+        $item   = collect($trends)->firstWhere('id', $id);
 
         if (!$item) return null;
 
-        // Check if AI enrichment is already cached
-        $aiCacheKey = $this->enrichment->getKey($item);
-        $cached     = Cache::get($aiCacheKey);
-
-        if ($cached) {
-            // AI ready → return full item instantly
-            return array_merge($item, $cached);
-        }
-
-        // AI not ready → trigger background enrichment via defer()
-        defer(fn() => $this->enrichment->enrichSingle($item));
-
-        // Return item with fallback AI fields
-        $fallback = $this->enrichment->getFallback($item);
-
-        return array_merge($item, $fallback, ['ai_ready' => false]);
+        // Direct call — waits for Gemini, cached after first generation
+        return $this->enrichment->enrichSingle($item);
     }
 
     // ─── Personalization ──────────────────────────────────────────────────────
 
     private function personalizeShared(array $items, array $userTopics): array
     {
-        $rescored = array_map(function ($item) use ($userTopics) {
-            $boost         = $this->keywordBoostFallback($item, $userTopics);
-            $item['score'] = ($item['score'] ?? 0) + ($boost * 0.2);
+        // Compute user embedding once (cached 7 days)
+        $userEmbKey    = 'tech:user_emb:' . md5(implode(',', $userTopics));
+        $userEmbedding = Cache::remember(
+            $userEmbKey,
+            now()->addDays(7),
+            fn() => $this->embedding->embed(implode(' ', $userTopics))
+        );
+
+        $rescored = array_map(function ($item) use ($userTopics, $userEmbedding) {
+            $itemEmbedding = $item['embedding'] ?? [];
+
+            // Semantic similarity if both embeddings available
+            if (!empty($userEmbedding) && !empty($itemEmbedding)) {
+                $similarity    = $this->embedding->cosine($userEmbedding, $itemEmbedding);
+                $item['score'] = ($item['score'] * 0.6) + ($similarity * 0.4);
+            } else {
+                // Fallback to keyword boost
+                $boost         = $this->keywordBoostFallback($item, $userTopics);
+                $item['score'] = ($item['score'] ?? 0) + ($boost * 0.2);
+            }
+
             return $item;
         }, $items);
 
@@ -154,20 +174,36 @@ class TechTrendService
 
         if (empty($all)) return [];
 
-        // 1. Compute embeddings (cached 7 days — zero API calls after first run)
-        $all = array_map(function ($item) {
-            $embKey = 'tech:emb:' . md5(($item['title'] ?? '') . ($item['description'] ?? ''));
+        // 1. Load cached embeddings only (zero API calls in request)
+        //    Missing embeddings are computed in background via defer()
+        $itemsNeedingEmbedding = [];
 
-            $item['embedding'] = Cache::remember(
-                $embKey,
-                now()->addDays(7),
-                fn() => $this->embedding->embed(
-                    ($item['title'] ?? '') . ' ' . ($item['description'] ?? '')
-                )
-            );
+        $all = array_map(function ($item) use (&$itemsNeedingEmbedding) {
+            $embKey    = 'tech:emb:' . md5(($item['title'] ?? '') . ($item['description'] ?? ''));
+            $embedding = Cache::get($embKey);
 
+            if (empty($embedding)) {
+                $itemsNeedingEmbedding[] = [
+                    'key'  => $embKey,
+                    'text' => ($item['title'] ?? '') . ' ' . ($item['description'] ?? ''),
+                ];
+            }
+
+            $item['embedding'] = $embedding ?? [];
             return $item;
         }, $all);
+
+        // Compute missing embeddings in background after response is sent
+        if (!empty($itemsNeedingEmbedding)) {
+            defer(function () use ($itemsNeedingEmbedding) {
+                foreach ($itemsNeedingEmbedding as $entry) {
+                    $vector = $this->embedding->embed($entry['text']);
+                    if (!empty($vector)) {
+                        Cache::put($entry['key'], $vector, now()->addDays(7));
+                    }
+                }
+            });
+        }
 
         // 2. Semantic deduplication — removes same story from different sources
         //    Falls back to title-based dedup for items without embedding
