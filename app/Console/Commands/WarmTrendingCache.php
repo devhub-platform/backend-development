@@ -31,7 +31,7 @@ class WarmTrendingCache extends Command
         $this->info('✓ Tech trends cache warmed (' . count($trends) . ' items)');
 
         // 3. Compute and cache embeddings for all tech trend items
-        // This runs in the cron so requests never wait for embedding API calls
+        // Uses TechTrendService::buildDocumentText to avoid code duplication
         $this->info('Computing embeddings for tech trends...');
         $computed = 0;
 
@@ -39,8 +39,7 @@ class WarmTrendingCache extends Command
             $embKey = 'tech:emb:' . md5(($item['title'] ?? '') . ($item['description'] ?? ''));
 
             if (!Cache::has($embKey)) {
-                $text   = ($item['title'] ?? '') . ' ' . ($item['description'] ?? '');
-                $vector = $embedding->embed($text);
+                $vector = $embedding->embed($techTrendService->buildDocumentText($item));
 
                 if (!empty($vector)) {
                     Cache::put($embKey, $vector, now()->addDays(7));

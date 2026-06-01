@@ -55,22 +55,45 @@ class FeedMixer
 
     public function mixWithSourceDiversity(array $items): array
     {
+        $total = 15;
+
+        // Source caps: 40% github, 30% hackernews, 30% devto
+        $caps = [
+            'github'     => (int) ceil($total * 0.40), // 6
+            'hackernews' => (int) ceil($total * 0.30), // 5
+            'devto'      => (int) ceil($total * 0.30), // 5
+        ];
+
         $groups = [];
         foreach ($items as $item) {
-            $groups[$item['source'] ?? 'unknown'][] = $item;
+            $source = $item['source'] ?? 'unknown';
+            $groups[$source][] = $item;
         }
 
-        $result = [];
-        while (count($result) < 15) {
+        // Sort each group by score
+        foreach ($groups as &$group) {
+            usort($group, fn($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
+        }
+        unset($group);
+
+        $result      = [];
+        $sourceCounts = [];
+
+        // Round-robin respecting caps
+        while (count($result) < $total) {
             $progress = false;
 
-            foreach ($groups as &$group) {
-                if (!empty($group)) {
-                    $result[] = array_shift($group);
-                    $progress = true;
+            foreach ($groups as $source => &$group) {
+                if (empty($group)) continue;
 
-                    if (count($result) >= 15) break 2;
-                }
+                $cap = $caps[$source] ?? (int) ceil($total * 0.30);
+                if (($sourceCounts[$source] ?? 0) >= $cap) continue;
+
+                $result[]                = array_shift($group);
+                $sourceCounts[$source]   = ($sourceCounts[$source] ?? 0) + 1;
+                $progress                = true;
+
+                if (count($result) >= $total) break 2;
             }
             unset($group);
 

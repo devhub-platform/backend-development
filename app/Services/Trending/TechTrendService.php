@@ -36,13 +36,30 @@ class TechTrendService
         'i thought coding', 'lessons learned', 'thought coding',
         'freelance', 'mindset', 'impostor', 'imposter',
         'work life', 'work-life', 'side hustle',
+        // More DEV.to noise
+        'my experience', '100 days', 'i built', 'my app',
+        'day 10', 'day 30', 'day 100', 'learning journey',
+        'newbie', 'beginner', 'first project', 'started coding',
     ];
 
-    // DEV.to tags that indicate non-technical content
     private const REJECT_TAGS = [
         'career', 'motivation', 'learning', 'freelance',
         'mindset', 'journey', 'discuss', 'watercooler',
         'beginners', 'codenewbie', 'devjournal',
+    ];
+
+    // HN domains that are typically low-quality for tech trends
+    private const HN_REJECT_DOMAINS = [
+        'youtube.com', 'youtu.be', 'twitter.com', 'x.com',
+        'reddit.com', 'linkedin.com', 'medium.com',
+        'substack.com', 'news.ycombinator.com',
+    ];
+
+    // NSFW keywords to filter from GitHub repos
+    private const NSFW_KEYWORDS = [
+        'porn', 'nsfw', 'xxx', 'sex', 'nude', 'naked', 'adult',
+        'masturbat', 'dick', 'cock', 'pussy', 'hentai', 'erotic',
+        'onlyfans', 'strip', 'fetish', 'escort',
     ];
 
     public function __construct(
@@ -95,13 +112,13 @@ class TechTrendService
 
         Cache::put(self::BASE_CACHE_KEY, $feed, now()->addMinutes(self::BASE_CACHE_TTL));
 
-        // Compute embeddings in background after response is sent
-        // Next request will have embeddings ready for semantic dedup + personalization
+        // Compute embeddings in background after response is sent.
+        // Next request will have embeddings ready for semantic dedup + personalization.
         defer(function () use ($feed) {
             foreach ($feed as $item) {
                 $embKey = 'tech:emb:' . md5(($item['title'] ?? '') . ($item['description'] ?? ''));
                 if (!Cache::has($embKey)) {
-                    $text   = ($item['title'] ?? '') . ' ' . ($item['description'] ?? '');
+                    $text   = $this->buildDocumentText($item);
                     $vector = $this->embedding->embed($text);
                     if (!empty($vector)) {
                         Cache::put($embKey, $vector, now()->addDays(7));
@@ -115,7 +132,7 @@ class TechTrendService
 
     /**
      * Get a single trend item with AI enrichment.
-     * Called by GET /tech-trends/{id}
+     * Called by GET /tech-trends/{id}.
      * Returns cached AI data instantly, or fallback + triggers background enrichment.
      */
     public function getTrendById(string $id): ?array
@@ -133,23 +150,27 @@ class TechTrendService
 
     private function personalizeShared(array $items, array $userTopics): array
     {
-        // Compute user embedding once (cached 7 days)
+        // Compute user embedding once (cached 7 days).
+        // Qwen3 needs "query: " prefix for retrieval queries.
         $userEmbKey    = 'tech:user_emb:' . md5(implode(',', $userTopics));
         $userEmbedding = Cache::remember(
             $userEmbKey,
             now()->addDays(7),
-            fn() => $this->embedding->embed(implode(' ', $userTopics))
+            fn() => $this->embedding->embed('query: ' . implode(' ', $userTopics))
         );
 
         $rescored = array_map(function ($item) use ($userTopics, $userEmbedding) {
-            $itemEmbedding = $item['embedding'] ?? [];
+            // buildFeed() strips embeddings from the response shape, so we
+            // reload from cache here using the same key used during ingestion.
+            $embKey        = 'tech:emb:' . md5(($item['title'] ?? '') . ($item['description'] ?? ''));
+            $itemEmbedding = Cache::get($embKey, []);
 
             // Semantic similarity if both embeddings available
             if (!empty($userEmbedding) && !empty($itemEmbedding)) {
                 $similarity    = $this->embedding->cosine($userEmbedding, $itemEmbedding);
                 $item['score'] = ($item['score'] * 0.6) + ($similarity * 0.4);
             } else {
-                // Fallback to keyword boost
+                // Fallback to keyword boost when embeddings aren't cached yet
                 $boost         = $this->keywordBoostFallback($item, $userTopics);
                 $item['score'] = ($item['score'] ?? 0) + ($boost * 0.2);
             }
@@ -174,8 +195,8 @@ class TechTrendService
 
         if (empty($all)) return [];
 
-        // 1. Load cached embeddings only (zero API calls in request)
-        //    Missing embeddings are computed in background via defer()
+        // 1. Load cached embeddings only (zero API calls in request).
+        //    Missing embeddings are computed in background via defer().
         $itemsNeedingEmbedding = [];
 
         $all = array_map(function ($item) use (&$itemsNeedingEmbedding) {
@@ -185,7 +206,7 @@ class TechTrendService
             if (empty($embedding)) {
                 $itemsNeedingEmbedding[] = [
                     'key'  => $embKey,
-                    'text' => ($item['title'] ?? '') . ' ' . ($item['description'] ?? ''),
+                    'text' => $this->buildDocumentText($item),
                 ];
             }
 
@@ -205,8 +226,8 @@ class TechTrendService
             });
         }
 
-        // 2. Semantic deduplication — removes same story from different sources
-        //    Falls back to title-based dedup for items without embedding
+        // 2. Semantic deduplication — removes same story from different sources.
+        //    Falls back to title-based dedup for items without embeddings.
         $withEmb = array_values(array_filter($all, fn($i) => !empty($i['embedding'])));
         $without = array_values(array_filter($all, fn($i) =>  empty($i['embedding'])));
 
@@ -215,19 +236,22 @@ class TechTrendService
 
         $deduped = array_merge($withEmb, $without);
 
-        // 2. Topic detection
+        // 3. Topic detection
         $withTopics = $this->topicDetector->detectBatch($deduped);
 
-        // 3. Score
+        // 4. Score
         $scored = array_map(function ($item) {
             $item['score'] = $this->calculateScore($item, []);
             return $item;
         }, $withTopics);
 
-        // 4. Diversity mixing
+        // 5. Source diversity mixing
         $mixed = $this->feedMixer->mixWithSourceDiversity($scored);
 
-        // 5. Final mapping — lightweight, no AI fields
+        // 6. Topic diversity cap — prevents any single topic from flooding the feed
+        $diverse = $this->enforceTopicDiversity($mixed);
+
+        // 7. Final mapping — strip embedding, return clean response shape
         return array_map(function ($item) {
             unset($item['embedding']);
             return [
@@ -241,7 +265,25 @@ class TechTrendService
                 'score'       => $item['score']       ?? 0,
                 'tags'        => $item['tags']        ?? [],
             ];
-        }, $mixed);
+        }, $diverse);
+    }
+
+    // ─── Document Text Builder ────────────────────────────────────────────────
+
+    /**
+     * Build rich document text for embedding.
+     * Qwen3 needs "document: " prefix for documents (vs "query: " for queries).
+     * Rich context improves semantic similarity quality significantly.
+     */
+    public function buildDocumentText(array $item): string
+    {
+        $title       = $item['title']       ?? '';
+        $description = $item['description'] ?? '';
+        $source      = $item['source']      ?? '';
+        $topic       = $item['topic']       ?? '';
+        $tags        = implode(', ', $item['tags'] ?? []);
+
+        return "document: Title: {$title}\nDescription: {$description}\nTopic: {$topic}\nTags: {$tags}\nSource: {$source}";
     }
 
     // ─── Title-based Deduplication ───────────────────────────────────────────
@@ -264,6 +306,35 @@ class TechTrendService
         }));
     }
 
+    // ─── Topic Diversity ──────────────────────────────────────────────────────
+
+    /**
+     * Cap items per topic to prevent any single topic (e.g. AI) from
+     * dominating the feed. Called after source-diversity mixing so both
+     * constraints are respected.
+     */
+    private function enforceTopicDiversity(array $items, int $maxPerTopic = 3): array
+    {
+        if (empty($items)) return [];
+
+        // Sort by score descending so the best items in each topic survive the cap
+        usort($items, fn($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
+
+        $counts = [];
+        $result = [];
+
+        foreach ($items as $item) {
+            $topic          = $item['topic'] ?? 'general';
+            $counts[$topic] = ($counts[$topic] ?? 0) + 1;
+
+            if ($counts[$topic] <= $maxPerTopic) {
+                $result[] = $item;
+            }
+        }
+
+        return $result;
+    }
+
     // ─── Scoring ─────────────────────────────────────────────────────────────
 
     private function calculateScore(array $item, array $userTopics): float
@@ -275,14 +346,16 @@ class TechTrendService
             default      => 0.7,
         };
 
-        // Use pre-computed source-relative normalized stats (0→1 within same source)
+        // Source-relative normalized stats (0→1 within same source)
         $normalized = ($item['normalized_stats'] ?? 0) * $sourceWeight;
 
+        // Recency decay — sharpened so content older than ~48h drops noticeably.
+        // exp(-0.07 * h): 24h → 0.19, 48h → 0.04, 7d → ~0
         $recency = 0.5;
         if (!empty($item['created_at'])) {
             try {
                 $hours   = max(now()->diffInHours(Carbon::parse($item['created_at'])), 1);
-                $recency = exp(-$hours / 24);
+                $recency = exp(-0.07 * $hours); // FIX: was exp(-$hours / 24) — too weak
             } catch (\Exception) {
                 $recency = 0.5;
             }
@@ -290,7 +363,10 @@ class TechTrendService
 
         $boost = empty($userTopics) ? 0.0 : $this->keywordBoostFallback($item, $userTopics);
 
-        return ($normalized * 0.5) + ($recency * 0.3) + ($boost * 0.2);
+        // Weighted: popularity 50%, recency 30%, boost 20%
+        $popularityScore = pow($normalized, 0.7) * $sourceWeight;
+
+        return ($popularityScore * 0.5) + ($recency * 0.3) + ($boost * 0.2);
     }
 
     private function keywordBoostFallback(array $item, array $userTopics): float
@@ -349,7 +425,17 @@ class TechTrendService
             }
 
             return collect($response->json('items', []))
-                ->filter(fn($r) => !empty(trim($r['description'] ?? '')) && !empty($r['language']))
+                ->filter(function ($r) {
+                    if (empty(trim($r['description'] ?? '')) || empty($r['language'])) return false;
+
+                    // NSFW filter — check title and description
+                    $text = strtolower(($r['full_name'] ?? '') . ' ' . ($r['description'] ?? ''));
+                    foreach (self::NSFW_KEYWORDS as $kw) {
+                        if (str_contains($text, $kw)) return false;
+                    }
+
+                    return true;
+                })
                 ->map(function ($repo) {
                     $desc = strtolower($repo['description'] ?? '');
                     $tags = array_values(array_filter([
@@ -359,14 +445,14 @@ class TechTrendService
                         str_contains($desc, 'api')      ? 'api'      : null,
                     ]));
 
-                    // Velocity = stars per day since creation
-                    // This ranks repos gaining stars fast over all-time giants
-                    $createdAt   = $repo['created_at'] ?? null;
-                    $ageInDays   = $createdAt
-                        ? max(1, now()->diffInDays(\Carbon\Carbon::parse($createdAt)))
+                    // Velocity = stars per day since creation.
+                    // Ranks repos gaining stars fast over all-time giants.
+                    $createdAt = $repo['created_at'] ?? null;
+                    $ageInDays = $createdAt
+                        ? max(1, now()->diffInDays(Carbon::parse($createdAt)))
                         : 365;
-                    $stars       = (int) ($repo['stargazers_count'] ?? 0);
-                    $velocity    = (int) ($stars / $ageInDays);
+                    $stars    = (int) ($repo['stargazers_count'] ?? 0);
+                    $velocity = (int) ($stars / $ageInDays);
 
                     return [
                         'source'      => 'github',
@@ -434,9 +520,9 @@ class TechTrendService
         }
 
         // Reject if ALL tags are noise tags (allow if at least one real tech tag)
-        $tags        = array_map('strtolower', $article['tag_list'] ?? []);
-        $noisyTags   = array_intersect($tags, self::REJECT_TAGS);
-        $techTags    = array_diff($tags, self::REJECT_TAGS);
+        $tags      = array_map('strtolower', $article['tag_list'] ?? []);
+        $noisyTags = array_intersect($tags, self::REJECT_TAGS);
+        $techTags  = array_diff($tags, self::REJECT_TAGS);
 
         if (!empty($noisyTags) && empty($techTags)) return false;
 
@@ -498,6 +584,13 @@ class TechTrendService
         if (empty($item) || empty($item['url'])) return false;
         if (($item['score'] ?? 0) < 50) return false;
         if (empty($this->extractTechKeywords($item['title'] ?? ''))) return false;
+
+        // Reject low-quality domains
+        $host = parse_url($item['url'], PHP_URL_HOST) ?? '';
+        $host = strtolower(preg_replace('/^www\./', '', $host));
+        foreach (self::HN_REJECT_DOMAINS as $domain) {
+            if ($host === $domain || str_ends_with($host, '.' . $domain)) return false;
+        }
 
         foreach (self::REJECT_KEYWORDS as $kw) {
             if (preg_match('/\b' . preg_quote($kw, '/') . '\b/i', $item['title'] ?? '')) return false;

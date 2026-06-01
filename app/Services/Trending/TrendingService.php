@@ -32,7 +32,12 @@ class TrendingService
         int  $page    = 1,
     ): LengthAwarePaginator {
 
-        $cacheKey = 'trending:v19:' . md5(json_encode([$tagId, $perPage, $page]));
+        // Cache the full pipeline result once per tag — not per page.
+        // Pagination is done in PHP from the single cached array,
+        // avoiding N separate cache entries for the same underlying data.
+        $cacheKey = $tagId
+            ? 'trending:posts:tag:' . $tagId
+            : 'trending:posts:all';
 
         $allItems = Cache::remember(
             $cacheKey,
@@ -110,7 +115,7 @@ class TrendingService
             $embedding = $item['embedding'];
 
             $base  = $this->calculateTrendingScore($post);
-            $boost = min($this->globalSimilarityBoost($embedding, $prepared, $post->id), 10);
+            $boost = $this->globalSimilarityBoost($embedding, $prepared, $post->id);
 
             return [
                 '_model'    => $post,
@@ -202,6 +207,14 @@ class TrendingService
         return round($views + $comments + $reactions + $freshness, 2);
     }
 
+    /**
+     * Compute a similarity boost from the top-5 most similar posts in the feed.
+     *
+     * Capped at 0.125 so embedding similarity stays a gentle enhancement
+     * rather than overriding the popularity/recency signals. Previously this
+     * multiplied by 5 which caused high-similarity posts to jump ~4 points,
+     * dominating the entire score.
+     */
     private function globalSimilarityBoost(array $postVector, array $items, int $postId): float
     {
         if (empty($postVector)) return 0;
@@ -220,7 +233,9 @@ class TrendingService
             $count++;
         }
 
-        return $boost * 5;
+        // FIX: was $boost * 5 — multiplier of 5 caused similarity to dwarf all
+        // other signals. Capped at 0.125 so it enhances without dominating.
+        return min($boost * 0.125, 0.125);
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
