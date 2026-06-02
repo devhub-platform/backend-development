@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class EmailVerificationService
 {
@@ -16,6 +17,7 @@ class EmailVerificationService
     private const CACHE_RATE_LIMIT_PREFIX = 'email_otp_rate_limit:';
     private const OTP_EXPIRY_MINUTES = 10;
     private const RATE_LIMIT_MINUTES = 1;
+    private const USER_TABLE = 'users';
 
     /**
      * Verify email OTP and update user
@@ -48,11 +50,7 @@ class EmailVerificationService
         }
 
         // Verify OTP and update user
-        $user->update([
-            'email_verified_at' => now(),
-            'otp' => null,
-            'two_factor_expires_at' => null,
-        ]);
+        $user->update($this->buildOtpUpdatePayload(null, verified: true));
 
         Cache::forget(self::CACHE_OTP_PREFIX . $user->id);
 
@@ -126,10 +124,7 @@ class EmailVerificationService
         );
 
         // Update user with OTP and expiry (for backup/redundancy)
-        $user->update([
-            'otp' => $otp,
-            'two_factor_expires_at' => now()->addMinutes(self::OTP_EXPIRY_MINUTES),
-        ]);
+        $user->update($this->buildOtpUpdatePayload($otp));
 
         // Send OTP email
         try {
@@ -208,6 +203,36 @@ class EmailVerificationService
     private function generateOtp(): string
     {
         return str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Build the update payload for OTP fields based on the current schema.
+     *
+     * @param string|null $otp
+     * @param bool $verified
+     * @return array<string, mixed>
+     */
+    private function buildOtpUpdatePayload(?string $otp, bool $verified = false): array
+    {
+        $payload = [
+            'otp' => $otp,
+        ];
+
+        if ($verified) {
+            $payload['email_verified_at'] = now();
+        }
+
+        $expiresAt = $verified ? null : now()->addMinutes(self::OTP_EXPIRY_MINUTES);
+
+        if (Schema::hasColumn(self::USER_TABLE, 'two_factor_expires_at')) {
+            $payload['two_factor_expires_at'] = $expiresAt;
+        }
+
+        if (Schema::hasColumn(self::USER_TABLE, 'otp_expires_at')) {
+            $payload['otp_expires_at'] = $expiresAt;
+        }
+
+        return $payload;
     }
 }
 

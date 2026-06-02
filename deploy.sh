@@ -30,3 +30,17 @@ Mail::raw('Hello from AWS SES!', function ($message) {
 # 16) 
 
 
+
+
+
+
+
+9gwbk.{tag}@inbox.testmail.app
+
+9gwbk.youssef123@inbox.testmail.app
+
+9gwbk.ali123@inbox.testmail.app
+
+9gwbk.asdsadad@inbox.testmail.app
+
+Testmail service
