@@ -38,7 +38,17 @@ class HomeFeedService
 
         $interestVector = empty($interestTerms) ? [] : $this->interestVector($weightedInterestMap);
 
-        $candidates = $this->optimizedCandidatePool($user, $blockedUserIds, $followingIds, $followedTagNames, $interestTerms);
+        $cacheKey = 'home:candidates:' . $user->id . ':' . md5(json_encode([
+            'blocked' => $blockedUserIds,
+            'following' => $followingIds,
+            'tags' => $followedTagNames,
+            'interest_terms' => $interestTerms,
+        ]));
+
+        // Cache candidate pool briefly to avoid repeated expensive DB queries
+        $candidates = Cache::remember($cacheKey, now()->addSeconds(20), function () use ($user, $blockedUserIds, $followingIds, $followedTagNames, $interestTerms) {
+            return $this->optimizedCandidatePool($user, $blockedUserIds, $followingIds, $followedTagNames, $interestTerms);
+        });
 
         if ($candidates->isEmpty()) {
             return Post::query()
@@ -257,10 +267,10 @@ class HomeFeedService
     {
         $baseQuery = $this->baseCandidateQuery($blockedUserIds);
 
-        // Single query for recent posts instead of multiple
+        // Single query for recent posts instead of multiple (reduced limit)
         $recentPosts = (clone $baseQuery)
             ->latest()
-            ->limit(200)
+            ->limit(120)
             ->get();
 
         // Combine following + trending in priority order
@@ -275,7 +285,7 @@ class HomeFeedService
             })
             ->where('created_at', '>=', now()->subDays(14))
             ->orderByRaw('(COALESCE(views, 0) * 1.5) + (comments_count * 8) + (reactions_count * 10) DESC')
-            ->limit(160)
+            ->limit(90)
             ->get();
 
         // Interest-based posts
@@ -284,7 +294,7 @@ class HomeFeedService
             : (clone $baseQuery)
                 ->whereHas('tags', fn($query) => $query->whereIn('name', $interestTerms))
                 ->latest()
-                ->limit(120)
+                ->limit(80)
                 ->get();
 
         return $recentPosts

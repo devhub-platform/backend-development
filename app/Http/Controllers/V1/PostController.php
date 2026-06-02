@@ -119,12 +119,12 @@ class PostController
                 ->select('id', 'user_id', 'title', 'content', 'slug', 'created_at', 'updated_at', 'views')
                 ->with(['user:id,name,username,avatar_url', 'tags:id,name'])
                 ->orderByDesc('created_at')
-                ->limit($perPage * 3)
+                ->limit($perPage * 2)
                 ->get();
 
-            $recommendationPager = $this->homeFeedService->build(
+                $recommendationPager = $this->homeFeedService->build(
                 $user,
-                $perPage * 3,
+                $perPage * 2,
                 1,
                 request()->url(),
                 request()->query()
