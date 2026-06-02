@@ -231,5 +231,79 @@ class TopicController
             'message' => 'All topics cleared successfully',
         ], 200);
     }
+
+    /**
+     * Complete onboarding by selecting initial topics
+     * Only allowed for first-time users who haven't completed onboarding yet
+     */
+    public function completeOnboarding(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        if ($user->onboarding_completed_at) {
+            return response()->json([
+                'message' => 'User has already completed onboarding',
+                'onboarding_completed_at' => $user->onboarding_completed_at,
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'topic_ids' => 'required|array|min:1|max:10',
+            'topic_ids.*' => 'integer|exists:topics,id',
+        ]);
+
+        $topics = Topic::where('is_active', true)
+            ->whereIn('id', $validated['topic_ids'])
+            ->pluck('id')
+            ->toArray();
+
+        if (count($topics) !== count($validated['topic_ids'])) {
+            return response()->json([
+                'message' => 'One or more selected topics are invalid or inactive',
+            ], 422);
+        }
+
+        // Attach topics
+        $user->topics()->sync($topics);
+
+        $user->update(['onboarding_completed_at' => now()]);
+
+        Cache::forget("user_topics_{$user->id}");
+
+        return response()->json([
+            'message' => 'Onboarding completed successfully',
+            'onboarding_completed_at' => $user->onboarding_completed_at,
+            'data' => $user->topics()->get()->makeHidden('pivot'),
+        ], 200);
+    }
+
+    /**
+     * Get onboarding status
+     * Returns whether user needs to complete onboarding
+     */
+    public function getOnboardingStatus(): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $needsOnboarding = !$user->onboarding_completed_at;
+
+        return response()->json([
+            'needs_onboarding' => $needsOnboarding,
+            'onboarding_completed_at' => $user->onboarding_completed_at,
+            'selected_topics_count' => $user->topics()->count(),
+        ], 200);
+    }
 }
 

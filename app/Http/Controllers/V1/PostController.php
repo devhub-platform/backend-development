@@ -19,13 +19,16 @@ use App\Services\InteractionLoggerService;
 use App\Services\ModerationService;
 use App\Services\Posts\HomeFeedService;
 use App\Services\Posts\PostCreationService;
+use App\Services\TopicPostsService;
 use App\Services\UserInterestService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Pagination\LengthAwarePaginator;
+use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Number;
 
 class PostController
@@ -36,13 +39,15 @@ class PostController
 
     public function __construct(
         private PostCreationService $postCreationService,
-        private PostAIImageService $aiImageService,
+        private PostAIImageService  $aiImageService,
         private UserInterestService $userInterestService,
-        private ModerationService $moderationService,
-        private AddPostToAI $addPostToAI,
-        InteractionLoggerService $interactionLoggerService,
-        private HomeFeedService $homeFeedService,
-    ) {
+        private ModerationService   $moderationService,
+        private AddPostToAI         $addPostToAI,
+        InteractionLoggerService    $interactionLoggerService,
+        private HomeFeedService     $homeFeedService,
+        private TopicPostsService   $topicPostsService,
+    )
+    {
         $this->interactionLoggerService = $interactionLoggerService;
     }
 
@@ -64,7 +69,7 @@ class PostController
         }
 
         $viewsMap = $topPosts->mapWithKeys(fn($post) => [
-            $post->id => Number::abbreviate((int) $post->views)
+            $post->id => Number::abbreviate((int)$post->views)
         ])->toArray();
 
         return response()->json([
@@ -78,8 +83,8 @@ class PostController
         $this->authorize('viewAny', Post::class);
 
         $user = auth()->user();
-        $perPage = (int) request()->input('per_page', 15);
-        $page = (int) request()->input('page', 1);
+        $perPage = (int)request()->input('per_page', 15);
+        $page = (int)request()->input('page', 1);
 
         if (!$user) {
             return new PostCollection(
@@ -94,6 +99,12 @@ class PostController
         }
 
         $blockedIds = $this->blockedUserIds();
+
+        $topicPosts = $this->topicPostsService->forUser($user, $perPage, $page, $blockedIds);
+
+        if ($topicPosts instanceof LengthAwarePaginator) {
+            return new PostCollection($topicPosts);
+        }
 
         $followingIds = $user->following()
             ->select('users.id')
@@ -223,7 +234,7 @@ class PostController
             $tagsString = $post->tags->pluck('name')->implode(', ');
             $shouldIncrementView = $postView->wasRecentlyCreated;
             Http::post('https://memo1714-devhub-ai-api.hf.space/log_interaction', [
-                'user_id' => (string) $user->id,
+                'user_id' => (string)$user->id,
                 'article_uuid' => null,
                 'category' => $tagsString ?: 'Article',
                 'action' => 'view',
@@ -243,7 +254,7 @@ class PostController
 
         return response()->json([
             'data' => new PostResource($post),
-            'views' => Number::abbreviate((int) $post->fresh()->views),
+            'views' => Number::abbreviate((int)$post->fresh()->views),
         ]);
     }
 

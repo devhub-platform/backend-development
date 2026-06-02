@@ -147,6 +147,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail, Filam
     {
         return [
             'email_verified_at' => 'datetime',
+            'onboarding_completed_at' => 'datetime',
             'password' => 'hashed',
             'alt_email_verified_at' => 'datetime',
             'alt_email_otp_expires_at' => 'datetime',

@@ -121,6 +121,9 @@ Route::prefix('v1')->group(function () {
                 Route::post('add', 'addTopics');
                 Route::post('remove', 'removeTopics');
                 Route::post('clear', 'clearTopics');
+
+                Route::post('onboarding/complete', 'completeOnboarding');
+                Route::get('onboarding/status', 'getOnboardingStatus');
             });
 
             // ─── Posts ────────────────────────────────────────────────────────────
