@@ -53,7 +53,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/', function () {
         return response()->json([
             'message' => 'Devhub Community API v2.0.0',
-            'status' => 'OK - Server on nest-server is running',
+            'status' => 'OK - Server on nest-server hachclub is running',
             'base_url' => 'https://dev-hubs.tech/api/v1',
             'api_docs' => 'https://devhub.apidog.io/',
             'admin_panel' => 'https://dev-hubs.tech/admin',
@@ -102,68 +102,7 @@ Route::prefix('v1')->group(function () {
         Route::get('recommendations', [RecommendationController::class, 'index']);
         //        Route::get('ai-topics-user', [AITopicsUserController::class, 'index']);
 
-        // ─── PUBLIC ROUTES - Content Viewing (No Auth Required) ───────────────────────────────
-        Route::controller(PostController::class)->group(function () {
-            Route::get('posts', 'index');                    // Home feed
-            Route::get('posts/recent', 'recentPosts');      // Recent posts
-            Route::get('posts/top-views', 'topPostsViews'); // Top posts
-            Route::get('posts/{post}', 'show');             // Single post view
-            Route::get('posts/{post}/tags', 'postsTags');
-            Route::get('posts/{post}/tags-list', 'postsTagsList');
-        });
-
-        Route::controller(PostViewController::class)->group(function () {
-            Route::get('posts/viewed/recent', 'getRecentViewedPosts');
-        });
-
-        Route::controller(QuestionController::class)->group(function () {
-            Route::get('questions', 'index');
-            Route::get('questions/hot', 'trending');
-            Route::get('questions/{question}', 'show');
-        });
-
-        Route::controller(AnswerController::class)->group(function () {
-            Route::get('questions/{question}/answers', 'index');
-            Route::get('questions/{question}/answers/{answer}', 'show');
-        });
-
-        Route::controller(UserController::class)->group(function () {
-            Route::get('users', 'index');
-            Route::get('users/recommended', 'getRecommendedUsers');
-            Route::get('users/{id}', 'showUserProfile');
-            Route::get('users/{id}/similar-skills', 'getUsersWithSimilarSkills');
-            Route::get('users/{user}/posts', 'userPosts');
-            Route::get('users/{user}/comments', 'userComments');
-            Route::get('users/{user}/tags', 'userTags');
-            Route::get('users/{user}/followers', 'usersFollowers');
-            Route::get('users/{user}/followers/count', 'usersFollowersCount');
-            Route::get('users/{user}/following', 'usersFollowing');
-            Route::get('users/{user}/mutual-followers', 'getMutualFollowers');
-            Route::get('users/{user}/mutual-following', 'getMutualFollowing');
-            Route::get('users/{user}/mutual-check', 'checkMutualFollowing');
-        });
-
-        Route::controller(SearchController::class)->group(function () {
-            Route::get('search/posts', 'searchPosts');
-            Route::get('search/users', 'searchUsersByUsername');
-            Route::get('search/tags', 'searchTags');
-        });
-
-        Route::controller(CommentController::class)->group(function () {
-            Route::get('posts/{postId}/comments', 'getByPost');
-            Route::get('posts/{postId}/comments/count', 'countByPost');
-            Route::get('users/{userId}/comments', 'getByUser');
-            Route::get('comments/{comment}/replies', 'getReplies');
-            Route::get('comments/{comment}/thread', 'getThread');
-            Route::get('comments/{comment}/reactions', 'getReactions');
-        });
-
-        Route::controller(TagController::class)->group(function () {
-            Route::get('tags/popular', 'popularTag');
-            Route::get('tags', 'allTags');
-        });
-
-        Route::middleware(['auth:api', 'throttle:25,1', 'verified'])->group(function () {
+        Route::middleware(['auth:api', 'throttle:25,1','verified'])->group(function () {
             Route::controller(AuthController::class)->group(function () {
                 Route::post('logout', 'logout');
                 Route::post('refresh', 'refreshToken');
@@ -177,28 +116,29 @@ Route::prefix('v1')->group(function () {
 
                 Route::post('/', 'store');           // Admin only
                 Route::delete('{topic}', 'destroy'); // Admin only
-                Route::delete('{topic}', 'update');  // Admin only
+                Route::put('{topic}', 'update');  // Admin only
 
                 Route::post('add', 'addTopics');
                 Route::post('remove', 'removeTopics');
                 Route::post('clear', 'clearTopics');
             });
 
-            // ─── Posts - Write Actions ────────────────────────────────────────────────────────
+            // ─── Posts ────────────────────────────────────────────────────────────
             Route::controller(PostController::class)->group(function () {
-                Route::post('posts', 'store');                   // Create post
-                Route::put('posts/{post}', 'update');           // Update post
-                Route::delete('posts/{post}', 'destroy');       // Delete post (soft delete)
-                Route::post('posts/{post}/restore', 'restore'); // Restore post
-                Route::delete('posts/{post}/force', 'forceDelete'); // Permanent delete
-
-                Route::get('user/posts', 'userPosts');          // My posts
-                Route::get('posts/drafts', 'drafts');           // My drafts
-                Route::get('posts/archives', 'archivesTrashed'); // My archived
+                Route::get('user/posts', 'userPosts');
+                Route::delete('posts/{post}/force', 'forceDelete');
+                Route::post('posts/{post}/restore', 'restore');
+                Route::get('posts/recent', 'recentPosts');
+                Route::get('posts/top-views', 'topPostsViews');
+                Route::get('posts/drafts', 'drafts');
+                Route::get('posts/archives', 'archivesTrashed');
                 Route::get('posts/report/reasons', 'reasonsToReport');
-                Route::post('posts/{post}/report', 'reportPost'); // Report a post
+                Route::get('posts/{post}/tags', 'postsTags');
+                Route::get('posts/{post}/tags-list', 'postsTagsList');
                 Route::get('posts/{post}/comments', 'postComments');
+                Route::post('posts/{post}/report', 'reportPost');
             });
+            Route::apiResource('posts', PostController::class);
 
             // ─── Post AI ──────────────────────────────────────────────────────────
             Route::prefix('posts/ai')->middleware('throttle:10,1')->controller(PostAIController::class)
@@ -211,18 +151,24 @@ Route::prefix('v1')->group(function () {
             Route::post('posts/{post}/ai-chat', [PostChatController::class, 'chat']);
 
             Route::controller(PostViewController::class)->group(function () {
+                Route::get('posts/viewed/recent', 'getRecentViewedPosts');
                 Route::delete('posts/viewed/clear', 'clearViewedPosts');
             });
 
             Route::controller(QuestionController::class)->group(function () {
+                Route::get('questions', 'index');
                 Route::post('questions/create', 'store');
+                Route::get('questions/hot', 'trending');
+                Route::get('questions/{question}', 'show');
                 Route::put('questions/{question}', 'update');
                 Route::delete('questions/{question}', 'destroy');
                 Route::post('questions/{question}/vote', 'vote');
             });
 
             Route::controller(AnswerController::class)->group(function () {
+                Route::get('questions/{question}/answers', 'index');
                 Route::post('questions/{question}/answers/create', 'store');
+                Route::get('questions/{question}/answers/{answer}', 'show');
                 Route::put('questions/{question}/answers/{answer}', 'update');
                 Route::delete('questions/{question}/answers/{answer}', 'destroy');
                 Route::post('questions/{question}/answers/{answer}/vote', 'vote');
@@ -232,7 +178,31 @@ Route::prefix('v1')->group(function () {
 
             Route::post('questions/{question}/ai-chat', [QuestionChatController::class, 'chat']);
 
-            // ─── Comments - Write Actions ─────────────────────────────────────────────────────
+            Route::controller(UserController::class)->group(function () {
+                Route::get('users', 'index');
+                Route::get('users/recommended', 'getRecommendedUsers');
+                Route::get('users/{id}', 'showUserProfile');
+                Route::get('users/{id}/similar-skills', 'getUsersWithSimilarSkills');
+                Route::get('users/{user}/posts', 'userPosts');
+                Route::get('users/{user}/comments', 'userComments');
+                Route::get('users/{user}/tags', 'userTags');
+                Route::get('users/{user}/followers', 'usersFollowers');
+                Route::get('users/{user}/followers/count', 'usersFollowersCount');
+                Route::get('users/{user}/following', 'usersFollowing');
+                Route::get('users/{user}/mutual-followers', 'getMutualFollowers');
+                Route::get('users/{user}/mutual-following', 'getMutualFollowing');
+                Route::get('users/{user}/mutual-check', 'checkMutualFollowing');
+            });
+
+            Route::controller(SearchController::class)->group(function () {
+                Route::get('search/posts', 'searchPosts');
+                Route::get('search/users', 'searchUsersByUsername');
+                Route::get('search/tags', 'searchTags');
+                Route::get('search/histories', 'getSearchHistory');
+                Route::delete('search/clear', 'clearSearchHistory');
+            });
+
+            // ─── Comments ─────────────────────────────────────────────────────────
             Route::middleware('blocked.user')->controller(CommentController::class)->group(function () {
                 Route::post('posts/{post}/comments', 'store');
                 Route::post('posts/{post}/comments/{parentComment}/reply', 'reply');
@@ -241,17 +211,24 @@ Route::prefix('v1')->group(function () {
             });
 
             Route::controller(CommentController::class)->group(function () {
+                Route::get('posts/{postId}/comments', 'getByPost');
+                Route::get('posts/{postId}/comments/count', 'countByPost');
+                Route::get('users/{userId}/comments', 'getByUser');
+                Route::get('comments/{comment}/replies', 'getReplies');
+                Route::get('comments/{comment}/thread', 'getThread');
                 Route::post('comments/{comment}/pin', 'pin');
                 Route::post('comments/{comment}/unpin', 'unpin');
                 Route::get('comments/{comment}/my-reaction', 'myReaction');
+                Route::get('comments/{comment}/reactions', 'getReactions');
                 Route::delete('comments/{id}/force', 'forceDelete');
                 Route::get('my/comments', 'myRecentComments');
                 Route::get('my/comments/stats', 'myCommentStats');
-                Route::delete('search/clear', 'clearSearchHistory');
             });
 
-            // ─── Tags - Write Actions ────────────────────────────────────────────────────────
+            // ─── Tags ─────────────────────────────────────────────────────────────
             Route::controller(TagController::class)->group(function () {
+                Route::get('tags/popular', 'popularTag');
+                Route::get('tags', 'allTags');
                 Route::post('tags', 'store');
                 Route::post('posts/{post}/tags', 'attachTagsToPost');
                 Route::delete('posts/{post}/tags/{tag}', 'detachTagFromPost');

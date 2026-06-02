@@ -81,80 +81,62 @@ class PostController
         $perPage = (int) request()->input('per_page', 15);
         $page = (int) request()->input('page', 1);
 
+        if (!$user) {
+            return new PostCollection(
+                $this->homeFeedService->build(
+                    null,
+                    $perPage,
+                    $page,
+                    request()->url(),
+                    request()->query()
+                )
+            );
+        }
+
         $blockedIds = $this->blockedUserIds();
 
-        $followingIds = $user ? $user->following()->pluck('users.id')->all() : [];
+        $followingIds = $user->following()
+            ->select('users.id')
+            ->pluck('users.id')
+            ->all();
 
-        $followingPosts = collect();
         if (!empty($followingIds)) {
             $followingPosts = Post::query()
                 ->whereIn('user_id', $followingIds)
                 ->where('status', '!=', 'draft')
-                ->when(auth()->check(), fn($query) => $query->whereNotIn('user_id', $blockedIds))
-                ->with(['user', 'tags'])
-                ->latest()
+                ->whereNotIn('user_id', $blockedIds)
+                ->select('id', 'user_id', 'title', 'content', 'slug', 'created_at', 'views')
+                ->with(['user:id,name,username,avatar_url', 'tags:id,name'])
+                ->orderByDesc('created_at')
                 ->limit($perPage * 3)
                 ->get();
+
+            $total = $followingPosts->count();
+            $pageItems = $followingPosts->slice(($page - 1) * $perPage, $perPage)->values();
+
+            $paginatedPosts = new LengthAwarePaginator(
+                $pageItems,
+                $total,
+                $perPage,
+                $page,
+                [
+                    'path' => request()->url(),
+                    'query' => request()->query(),
+                ]
+            );
+
+            return new PostCollection($paginatedPosts);
         }
 
-        $recommendedPosts = $this->homeFeedService->build(
-            $user,
-            $perPage * 2,
-            1,
-            request()->url(),
-            request()->query()
+        return new PostCollection(
+            $this->homeFeedService->build(
+                $user,
+                $perPage,
+                $page,
+                request()->url(),
+                request()->query()
+            )
         );
-
-        // Merge posts giving higher priority to following posts
-        $itemsMap = collect();
-
-        foreach ($followingPosts as $post) {
-            $itemsMap->put($post->id, [
-                'post' => $post,
-                'priority' => 2, // Higher priority for following
-            ]);
-        }
-
-        foreach ($recommendedPosts as $post) {
-            if (!$itemsMap->has($post->id)) {
-                $itemsMap->put($post->id, [
-                    'post' => $post,
-                    'priority' => 1, // Lower priority for recommended
-                ]);
-            }
-        }
-
-        // Compute a numeric score so we can reliably sort by priority then date
-        $scored = $itemsMap->map(function ($item) {
-            // priority is small (1 or 2); multiply by a large constant to preserve ordering
-            $priorityPart = ($item['priority'] ?? 0) * 10000000000;
-            $timePart = $item['post']->created_at->timestamp ?? 0;
-
-            return [
-                'post' => $item['post'],
-                'score' => $priorityPart + $timePart,
-            ];
-        });
-
-        // Sort descending by score (higher priority and newer posts first)
-        $sorted = $scored->sortByDesc('score')->values()->map(fn($it) => $it['post']);
-
-        // Prepare LengthAwarePaginator so clients receive totals and paging meta
-        $total = $sorted->count();
-        $pageItems = $sorted->forPage($page, $perPage)->values();
-
-        $paginatedPosts = new LengthAwarePaginator(
-            $pageItems,
-            $total,
-            $perPage,
-            $page,
-            [
-                'path' => request()->url(),
-                'query' => request()->query(),
-            ]
-        );
-
-        return new PostCollection($paginatedPosts);
     }
 
     public function postComments(Post $post): JsonResponse

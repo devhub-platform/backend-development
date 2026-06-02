@@ -28,18 +28,21 @@ class HomeFeedService
         }
 
         $blockedUserIds = $this->blockedUserIds($user);
-        $followingIds = $user->following()->pluck('users.id')->filter()->unique()->values()->all();
-        $followedTagNames = $user->followedTags()->pluck('name')->filter()->unique()->values()->all();
+
+        $followingIds = $user->following()->select('users.id')->pluck('users.id')->all();
+        $followedTagNames = $user->followedTags()->select('name')->pluck('name')->all();
         $seenPostIds = $this->seenPostIds($user);
+
         $weightedInterestMap = $this->weightedInterestMap($user, $followedTagNames);
         $interestTerms = array_keys($weightedInterestMap);
-        $interestVector = $this->interestVector($weightedInterestMap);
 
-        $candidates = $this->candidatePool($user, $blockedUserIds, $followingIds, $followedTagNames, $interestTerms);
+        $interestVector = empty($interestTerms) ? [] : $this->interestVector($weightedInterestMap);
+
+        $candidates = $this->optimizedCandidatePool($user, $blockedUserIds, $followingIds, $followedTagNames, $interestTerms);
 
         if ($candidates->isEmpty()) {
             return Post::query()
-                ->with(['user', 'tags'])
+                ->with(['user:id,name,username,avatar_url', 'tags:id,name'])
                 ->where('status', '!=', 'draft')
                 ->prioritizeFollowedTags($user)
                 ->latest()
@@ -99,14 +102,14 @@ class HomeFeedService
         $weights = [];
 
         foreach ($user->topics()->pluck('name')->filter()->all() as $topicName) {
-            $topicName = mb_strtolower(trim((string) $topicName));
+            $topicName = mb_strtolower(trim((string)$topicName));
             if ($topicName !== '') {
                 $weights[$topicName] = ($weights[$topicName] ?? 0) + 4.5;
             }
         }
 
         foreach ($followedTagNames as $tagName) {
-            $tagName = mb_strtolower(trim((string) $tagName));
+            $tagName = mb_strtolower(trim((string)$tagName));
             if ($tagName !== '') {
                 $weights[$tagName] = ($weights[$tagName] ?? 0) + 3.5;
             }
@@ -151,7 +154,7 @@ class HomeFeedService
     {
         foreach ($posts as $post) {
             foreach ($post->tags as $tag) {
-                $name = mb_strtolower(trim((string) $tag->name));
+                $name = mb_strtolower(trim((string)$tag->name));
                 if ($name === '') {
                     continue;
                 }
@@ -173,7 +176,7 @@ class HomeFeedService
             ->sortDesc()
             ->take(25)
             ->flatMap(function (float $weight, string $term) {
-                $repeat = (int) max(1, min(4, round($weight / 2)));
+                $repeat = (int)max(1, min(4, round($weight / 2)));
 
                 return array_fill(0, $repeat, $term);
             })
@@ -247,10 +250,59 @@ class HomeFeedService
             ->values();
     }
 
+    /**
+     * Optimized candidate pool - reduces queries by combining results
+     */
+    private function optimizedCandidatePool(User $user, array $blockedUserIds, array $followingIds, array $followedTagNames, array $interestTerms): Collection
+    {
+        $baseQuery = $this->baseCandidateQuery($blockedUserIds);
+
+        // Single query for recent posts instead of multiple
+        $recentPosts = (clone $baseQuery)
+            ->latest()
+            ->limit(200)
+            ->get();
+
+        // Combine following + trending in priority order
+        $priorityPosts = (clone $baseQuery)
+            ->where(function ($query) use ($followingIds, $followedTagNames) {
+                if (!empty($followingIds)) {
+                    $query->whereIn('user_id', $followingIds);
+                }
+                if (!empty($followedTagNames)) {
+                    $query->orWhereHas('tags', fn($q) => $q->whereIn('name', $followedTagNames));
+                }
+            })
+            ->where('created_at', '>=', now()->subDays(14))
+            ->orderByRaw('(COALESCE(views, 0) * 1.5) + (comments_count * 8) + (reactions_count * 10) DESC')
+            ->limit(160)
+            ->get();
+
+        // Interest-based posts
+        $interestPosts = empty($interestTerms)
+            ? collect()
+            : (clone $baseQuery)
+                ->whereHas('tags', fn($query) => $query->whereIn('name', $interestTerms))
+                ->latest()
+                ->limit(120)
+                ->get();
+
+        return $recentPosts
+            ->merge($priorityPosts)
+            ->merge($interestPosts)
+            ->unique('id')
+            ->shuffle()
+            ->values();
+    }
+
     private function baseCandidateQuery(array $blockedUserIds)
     {
         return Post::query()
-            ->with(['user', 'tags'])
+            ->select('id', 'user_id', 'title', 'content', 'slug', 'status', 'created_at', 'views')
+            ->with([
+                'user:id,name,username,avatar_url',
+                'tags:id,name'
+            ])
             ->withCount(['comments', 'reactions', 'savedBy', 'postViews'])
             ->where('status', '!=', 'draft')
             ->when(!empty($blockedUserIds), fn($query) => $query->whereNotIn('user_id', $blockedUserIds));
@@ -259,10 +311,11 @@ class HomeFeedService
     private function seenPostIds(User $user): array
     {
         return $user->viewedPosts()
+            ->select('posts.id')
             ->latest('post_views.viewed_at')
-            ->limit(350)
+            ->limit(200)
             ->pluck('posts.id')
-            ->map(fn($id) => (int) $id)
+            ->map(fn($id) => (int)$id)
             ->all();
     }
 
@@ -283,18 +336,18 @@ class HomeFeedService
 
         $tagAffinity = 0.0;
         foreach ($post->tags as $tag) {
-            $tagName = mb_strtolower((string) $tag->name);
-            $tagAffinity += (float) ($weightedInterestMap[$tagName] ?? 0);
+            $tagName = mb_strtolower((string)$tag->name);
+            $tagAffinity += (float)($weightedInterestMap[$tagName] ?? 0);
         }
 
         if ($tagAffinity > 0) {
             $score += min(24, $tagAffinity * 1.75);
         }
 
-        $views = (int) ($post->views ?? 0);
-        $comments = (int) ($post->comments_count ?? 0);
-        $reactions = (int) ($post->reactions_count ?? 0);
-        $saved = (int) ($post->saved_by_count ?? 0);
+        $views = (int)($post->views ?? 0);
+        $comments = (int)($post->comments_count ?? 0);
+        $reactions = (int)($post->reactions_count ?? 0);
+        $saved = (int)($post->saved_by_count ?? 0);
         $engagementScore =
             (log(1 + $views) * 1.8) +
             (log(1 + $comments) * 4.5) +
@@ -305,11 +358,11 @@ class HomeFeedService
         $hoursOld = max(1, now()->diffInHours($post->created_at));
         $score += 14 * exp(-$hoursOld / 96);
 
-        $isSeen = in_array((int) $post->id, $seenPostIds, true);
+        $isSeen = in_array((int)$post->id, $seenPostIds, true);
         $score += $isSeen ? -10 : 5;
 
         if (!empty($post->title)) {
-            $titleLength = mb_strlen((string) $post->title);
+            $titleLength = mb_strlen((string)$post->title);
             if ($titleLength >= 30 && $titleLength <= 140) {
                 $score += 1.5;
             }
@@ -334,13 +387,13 @@ class HomeFeedService
 
             foreach ($remaining as $index => $item) {
                 $post = $item['post'];
-                $baseScore = (float) $item['score'];
+                $baseScore = (float)$item['score'];
 
                 $authorPenalty = (($authorCounts[$post->user_id] ?? 0) * 7.0);
 
                 $tagPenalty = 0.0;
                 foreach ($post->tags as $tag) {
-                    $name = mb_strtolower((string) $tag->name);
+                    $name = mb_strtolower((string)$tag->name);
                     $tagPenalty += (($tagCounts[$name] ?? 0) * 1.8);
                 }
 
@@ -364,7 +417,7 @@ class HomeFeedService
 
             $authorCounts[$pickedPost->user_id] = ($authorCounts[$pickedPost->user_id] ?? 0) + 1;
             foreach ($pickedPost->tags as $tag) {
-                $name = mb_strtolower((string) $tag->name);
+                $name = mb_strtolower((string)$tag->name);
                 $tagCounts[$name] = ($tagCounts[$name] ?? 0) + 1;
             }
 
@@ -377,10 +430,10 @@ class HomeFeedService
 
     private function guestScorePost(Post $post): float
     {
-        $views = (int) ($post->views ?? 0);
-        $comments = (int) ($post->comments_count ?? 0);
-        $reactions = (int) ($post->reactions_count ?? 0);
-        $saved = (int) ($post->saved_by_count ?? 0);
+        $views = (int)($post->views ?? 0);
+        $comments = (int)($post->comments_count ?? 0);
+        $reactions = (int)($post->reactions_count ?? 0);
+        $saved = (int)($post->saved_by_count ?? 0);
 
         $hoursOld = max(1, now()->diffInHours($post->created_at));
         $freshness = 18 * exp(-$hoursOld / 84);
@@ -404,7 +457,7 @@ class HomeFeedService
         $score = 0.0;
 
         foreach ($interestTerms as $term) {
-            $term = mb_strtolower(trim((string) $term));
+            $term = mb_strtolower(trim((string)$term));
             if ($term === '') {
                 continue;
             }
