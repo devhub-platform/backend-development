@@ -22,6 +22,7 @@ use App\Services\Posts\PostCreationService;
 use App\Services\UserInterestService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -80,46 +81,71 @@ class PostController
         $perPage = (int) request()->input('per_page', 15);
         $page = (int) request()->input('page', 1);
 
-        // Get blocked user IDs in a single query
         $blockedIds = $this->blockedUserIds();
 
-        // Get following user IDs directly with a subquery to avoid N+1
+        $followingIds = $user ? $user->following()->pluck('users.id')->all() : [];
+
+        $followingPosts = collect();
+        if (!empty($followingIds)) {
+            $followingPosts = Post::query()
+                ->whereIn('user_id', $followingIds)
+                ->where('status', '!=', 'draft')
+                ->when(auth()->check(), fn($query) => $query->whereNotIn('user_id', $blockedIds))
+                ->with(['user', 'tags'])
+                ->latest()
+                ->limit($perPage * 3)
+                ->get();
+        }
+
         $recommendedPosts = $this->homeFeedService->build(
             $user,
-            $perPage,
-            $page,
+            $perPage * 2,
+            1,
             request()->url(),
             request()->query()
         );
 
-        // Get posts from following users using a single optimized query
-        $followingPosts = Post::query()
-            ->whereIn('user_id', $user->following()->select('users.id'))
-            ->where('status', '!=', 'draft')
-            ->whereNotIn('user_id', $blockedIds)
-            ->with(['user', 'tags'])
-            ->latest()
-            ->limit($perPage * 2)
-            ->get();
+        // Merge posts giving higher priority to following posts
+        $itemsMap = collect();
 
-        // Combine and deduplicate in memory (efficient for small result sets)
-        $postMap = [];
-        foreach ($recommendedPosts as $post) {
-            $postMap[$post->id] = $post;
-        }
         foreach ($followingPosts as $post) {
-            $postMap[$post->id] = $post;
+            $itemsMap->put($post->id, [
+                'post' => $post,
+                'priority' => 2, // Higher priority for following
+            ]);
         }
 
-        // Sort by latest and paginate
-        $posts = collect($postMap)
-            ->sortByDesc('created_at')
-            ->slice(($page - 1) * $perPage, $perPage)
-            ->values();
+        foreach ($recommendedPosts as $post) {
+            if (!$itemsMap->has($post->id)) {
+                $itemsMap->put($post->id, [
+                    'post' => $post,
+                    'priority' => 1, // Lower priority for recommended
+                ]);
+            }
+        }
 
-        // Create a paginated collection with proper metadata
-        $paginatedPosts = new \Illuminate\Pagination\Paginator(
-            $posts,
+        // Compute a numeric score so we can reliably sort by priority then date
+        $scored = $itemsMap->map(function ($item) {
+            // priority is small (1 or 2); multiply by a large constant to preserve ordering
+            $priorityPart = ($item['priority'] ?? 0) * 10000000000;
+            $timePart = $item['post']->created_at->timestamp ?? 0;
+
+            return [
+                'post' => $item['post'],
+                'score' => $priorityPart + $timePart,
+            ];
+        });
+
+        // Sort descending by score (higher priority and newer posts first)
+        $sorted = $scored->sortByDesc('score')->values()->map(fn($it) => $it['post']);
+
+        // Prepare LengthAwarePaginator so clients receive totals and paging meta
+        $total = $sorted->count();
+        $pageItems = $sorted->forPage($page, $perPage)->values();
+
+        $paginatedPosts = new LengthAwarePaginator(
+            $pageItems,
+            $total,
             $perPage,
             $page,
             [

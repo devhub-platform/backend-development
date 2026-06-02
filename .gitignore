@@ -24,3 +24,4 @@ Homestead.yaml
 Thumbs.db
 bootstrap/cache/*.php
 articles_rows.csv
+.github
