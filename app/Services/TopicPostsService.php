@@ -28,13 +28,13 @@ class TopicPostsService
 
             $matchingTagIds = $matchingTagQuery->distinct()->pluck('id')->all();
 
-            $tagSelect = ['tags.id', 'tags.name'];
+            $tagSelect = ['tags.id', 'tags.name', 'tags.created_at'];
             if (Schema::hasColumn('tags', 'embedding')) {
                 $tagSelect[] = 'tags.embedding';
             }
 
             $postQuery = Post::query()
-                ->select('id', 'user_id', 'title', 'content', 'slug', 'created_at', 'views')
+                ->select('id', 'user_id', 'title', 'content', 'slug', 'created_at', 'updated_at', 'views')
                 ->with([
                     'user:id,name,username,avatar_url',
                     'tags' => fn($q) => $q->select($tagSelect),
