@@ -102,10 +102,10 @@ class PostController
 
         $topicPosts = $this->topicPostsService->forUser($user, $perPage, $page, $blockedIds);
 
-        if ($topicPosts instanceof LengthAwarePaginator) {
-            return new PostCollection($topicPosts);
-        }
-
+        // Prefer showing posts from users the current user follows first. If the
+        // user follows anyone, surface their recent posts first then fill with
+        // recommendations. This overrides the topic-first onboarding feed so the
+        // user sees posts from people they follow immediately after onboarding.
         $followingIds = $user->following()
             ->select('users.id')
             ->pluck('users.id')
@@ -116,14 +116,26 @@ class PostController
                 ->whereIn('user_id', $followingIds)
                 ->where('status', '!=', 'draft')
                 ->whereNotIn('user_id', $blockedIds)
-                ->select('id', 'user_id', 'title', 'content', 'slug', 'created_at', 'views')
+                ->select('id', 'user_id', 'title', 'content', 'slug', 'created_at', 'updated_at', 'views')
                 ->with(['user:id,name,username,avatar_url', 'tags:id,name'])
                 ->orderByDesc('created_at')
                 ->limit($perPage * 3)
                 ->get();
 
-            $total = $followingPosts->count();
-            $pageItems = $followingPosts->slice(($page - 1) * $perPage, $perPage)->values();
+            $recommendationPager = $this->homeFeedService->build(
+                $user,
+                $perPage * 3,
+                1,
+                request()->url(),
+                request()->query()
+            );
+
+            $recommendationItems = collect($recommendationPager->items());
+
+            $combined = $followingPosts->concat($recommendationItems)->unique('id')->values();
+
+            $total = $combined->count();
+            $pageItems = $combined->slice(($page - 1) * $perPage, $perPage)->values();
 
             $paginatedPosts = new LengthAwarePaginator(
                 $pageItems,
@@ -137,6 +149,10 @@ class PostController
             );
 
             return new PostCollection($paginatedPosts);
+        }
+
+        if ($topicPosts instanceof LengthAwarePaginator) {
+            return new PostCollection($topicPosts);
         }
 
         return new PostCollection(
