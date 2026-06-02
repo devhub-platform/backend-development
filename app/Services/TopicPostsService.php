@@ -28,9 +28,9 @@ class TopicPostsService
 
             $matchingTagIds = $matchingTagQuery->distinct()->pluck('id')->all();
 
-            $tagSelect = ['id', 'name'];
+            $tagSelect = ['tags.id', 'tags.name'];
             if (Schema::hasColumn('tags', 'embedding')) {
-                $tagSelect[] = 'embedding';
+                $tagSelect[] = 'tags.embedding';
             }
 
             $postQuery = Post::query()
@@ -45,11 +45,11 @@ class TopicPostsService
 
             if (!empty($matchingTagIds)) {
                 $postQuery->whereHas('tags', function ($q) use ($matchingTagIds) {
-                    $q->whereIn('id', $matchingTagIds);
+                    $q->whereIn('tags.id', $matchingTagIds);
                 });
             } else {
                 $postQuery->whereHas('tags', function ($q) use ($userTopicNames) {
-                    $q->whereIn('name', $userTopicNames);
+                    $q->whereIn('tags.name', $userTopicNames);
                 });
             }
 
