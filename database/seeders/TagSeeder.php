@@ -9,6 +9,44 @@ class TagSeeder extends Seeder
 {
     public function run(): void
     {
-        Tag::factory()->count(10)->create();
+        $tags = [
+            'laravel',
+            'php',
+            'react',
+            'vue',
+            'javascript',
+            'typescript',
+            'nodejs',
+            'python',
+            'django',
+            'docker',
+            'kubernetes',
+            'redis',
+            'mysql',
+            'postgresql',
+            'graphql',
+            'rest-api',
+            'security',
+            'xss',
+            'jwt',
+            'authentication',
+            'clean-code',
+            'architecture',
+            'testing',
+            'tdd',
+            'performance',
+            'ai',
+            'machine-learning',
+            'devops',
+            'linux',
+        ];
+
+        foreach ($tags as $tag) {
+            Tag::firstOrCreate([
+                'name' => $tag,
+            ]);
+        }
+
+        $this->command->info('Tags seeded.');
     }
 }

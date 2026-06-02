@@ -20,11 +20,46 @@ class TechTrendService
     private const MAX_PER_SOURCE = 5;
 
     private const REJECT_KEYWORDS = [
+        // Community/social noise
         'win this week', 'week recap', 'top 7 featured', 'introduce yourself',
         'what was your win', 'hiring', 'podcast', 'off topic', 'rant',
         'mental health', 'mental', 'career', 'burnout', 'productivity tips',
         'daily standup', 'good morning', 'coffee', 'life lesson', 'salary',
         'interview tips', 'motivat',
+        // Personal blogging noise
+        'monthly report', 'monthly dev', 'my journey', 'day 1 of', 'day 2 of',
+        'day 3 of', 'day 4 of', 'day 5 of', 'day 6 of', 'day 7 of',
+        'what i learned', 'build in public', 'my first app',
+        'week 1', 'week 2', 'week 3', 'challenge inspired',
+        'submit', 'submission for',
+        // Opinion/lifestyle noise
+        'i thought coding', 'lessons learned', 'thought coding',
+        'freelance', 'mindset', 'impostor', 'imposter',
+        'work life', 'work-life', 'side hustle',
+        // More DEV.to noise
+        'my experience', '100 days', 'i built', 'my app',
+        'day 10', 'day 30', 'day 100', 'learning journey',
+        'newbie', 'beginner', 'first project', 'started coding',
+    ];
+
+    private const REJECT_TAGS = [
+        'career', 'motivation', 'learning', 'freelance',
+        'mindset', 'journey', 'discuss', 'watercooler',
+        'beginners', 'codenewbie', 'devjournal',
+    ];
+
+    // HN domains that are typically low-quality for tech trends
+    private const HN_REJECT_DOMAINS = [
+        'youtube.com', 'youtu.be', 'twitter.com', 'x.com',
+        'reddit.com', 'linkedin.com', 'medium.com',
+        'substack.com', 'news.ycombinator.com',
+    ];
+
+    // NSFW keywords to filter from GitHub repos
+    private const NSFW_KEYWORDS = [
+        'porn', 'nsfw', 'xxx', 'sex', 'nude', 'naked', 'adult',
+        'masturbat', 'dick', 'cock', 'pussy', 'hentai', 'erotic',
+        'onlyfans', 'strip', 'fetish', 'escort',
     ];
 
     public function __construct(
@@ -41,47 +76,105 @@ class TechTrendService
         $userTopics = $this->getUserTopics();
         $userId     = Auth::id();
 
-        // 1. دايماً نجيب الـ shared cache الأول — fetch واحد بس لكل الناس
         $shared = $this->getSharedTrends();
 
-        // 2. مفيش topics → ارجع الـ shared على طول
         if (empty($userTopics)) {
             return $shared;
         }
 
-        // 3. في topics → re-score على الـ cached data من غير أي API calls
+        $topicsHash = md5(implode(',', $userTopics));
+        $cacheKey   = 'tech_trending:user:' . $userId . ':' . $topicsHash;
+
         return Cache::remember(
-            'tech_trending:user:' . $userId,
+            $cacheKey,
             now()->addMinutes(self::USER_CACHE_TTL),
             fn() => $this->personalizeShared($shared, $userTopics)
         );
     }
 
     /**
-     * Build or return the shared (non-personalized) feed.
+     * Build or return the shared feed — NO Gemini here.
+     * Fast, lightweight, cached for 30 minutes.
+     * Warmed by cron job every 30 minutes.
      */
     public function getSharedTrends(): array
     {
-        return Cache::remember(
-            self::BASE_CACHE_KEY,
-            now()->addMinutes(self::BASE_CACHE_TTL),
-            function () {
-                $github = $this->fetchGitHub();
-                $devto  = $this->fetchDevTo();
-                $hn     = $this->fetchHackerNews();
+        // Return cached feed instantly if available
+        $cached = Cache::get(self::BASE_CACHE_KEY);
+        if ($cached) return $cached;
 
-                return $this->buildFeed($github, $devto, $hn);
+        // Cache miss — build feed WITHOUT waiting for embeddings
+        $github = $this->fetchGitHub();
+        $devto  = $this->fetchDevTo();
+        $hn     = $this->fetchHackerNews();
+
+        $feed = $this->buildFeed($github, $devto, $hn);
+
+        Cache::put(self::BASE_CACHE_KEY, $feed, now()->addMinutes(self::BASE_CACHE_TTL));
+
+        // Compute embeddings in background after response is sent.
+        // Next request will have embeddings ready for semantic dedup + personalization.
+        defer(function () use ($feed) {
+            foreach ($feed as $item) {
+                $embKey = 'tech:emb:' . md5(($item['title'] ?? '') . ($item['description'] ?? ''));
+                if (!Cache::has($embKey)) {
+                    $text   = $this->buildDocumentText($item);
+                    $vector = $this->embedding->embed($text);
+                    if (!empty($vector)) {
+                        Cache::put($embKey, $vector, now()->addDays(7));
+                    }
+                }
             }
-        );
+        });
+
+        return $feed;
     }
 
-    // ─── Personalization (zero API calls — pure in-memory) ────────────────────
+    /**
+     * Get a single trend item with AI enrichment.
+     * Called by GET /tech-trends/{id}.
+     * Returns cached AI data instantly, or fallback + triggers background enrichment.
+     */
+    public function getTrendById(string $id): ?array
+    {
+        $trends = $this->getSharedTrends();
+        $item   = collect($trends)->firstWhere('id', $id);
+
+        if (!$item) return null;
+
+        // Direct call — waits for Gemini, cached after first generation
+        return $this->enrichment->enrichSingle($item);
+    }
+
+    // ─── Personalization ──────────────────────────────────────────────────────
 
     private function personalizeShared(array $items, array $userTopics): array
     {
-        $rescored = array_map(function ($item) use ($userTopics) {
-            $boost         = $this->keywordBoostFallback($item, $userTopics);
-            $item['score'] = ($item['score'] ?? 0) + ($boost * 0.2);
+        // Compute user embedding once (cached 7 days).
+        // Qwen3 needs "query: " prefix for retrieval queries.
+        $userEmbKey    = 'tech:user_emb:' . md5(implode(',', $userTopics));
+        $userEmbedding = Cache::remember(
+            $userEmbKey,
+            now()->addDays(7),
+            fn() => $this->embedding->embed('query: ' . implode(' ', $userTopics))
+        );
+
+        $rescored = array_map(function ($item) use ($userTopics, $userEmbedding) {
+            // buildFeed() strips embeddings from the response shape, so we
+            // reload from cache here using the same key used during ingestion.
+            $embKey        = 'tech:emb:' . md5(($item['title'] ?? '') . ($item['description'] ?? ''));
+            $itemEmbedding = Cache::get($embKey, []);
+
+            // Semantic similarity if both embeddings available
+            if (!empty($userEmbedding) && !empty($itemEmbedding)) {
+                $similarity    = $this->embedding->cosine($userEmbedding, $itemEmbedding);
+                $item['score'] = ($item['score'] * 0.6) + ($similarity * 0.4);
+            } else {
+                // Fallback to keyword boost when embeddings aren't cached yet
+                $boost         = $this->keywordBoostFallback($item, $userTopics);
+                $item['score'] = ($item['score'] ?? 0) + ($boost * 0.2);
+            }
+
             return $item;
         }, $items);
 
@@ -90,7 +183,7 @@ class TechTrendService
         return $rescored;
     }
 
-    // ─── Feed Pipeline ────────────────────────────────────────────────────────
+    // ─── Feed Pipeline (NO AI enrichment here) ────────────────────────────────
 
     private function buildFeed(array $github, array $devto, array $hn): array
     {
@@ -100,44 +193,146 @@ class TechTrendService
 
         $all = array_merge($github, $devto, $hn);
 
-        if (empty($all)) {
-            return [];
+        if (empty($all)) return [];
+
+        // 1. Load cached embeddings only (zero API calls in request).
+        //    Missing embeddings are computed in background via defer().
+        $itemsNeedingEmbedding = [];
+
+        $all = array_map(function ($item) use (&$itemsNeedingEmbedding) {
+            $embKey    = 'tech:emb:' . md5(($item['title'] ?? '') . ($item['description'] ?? ''));
+            $embedding = Cache::get($embKey);
+
+            if (empty($embedding)) {
+                $itemsNeedingEmbedding[] = [
+                    'key'  => $embKey,
+                    'text' => $this->buildDocumentText($item),
+                ];
+            }
+
+            $item['embedding'] = $embedding ?? [];
+            return $item;
+        }, $all);
+
+        // Compute missing embeddings in background after response is sent
+        if (!empty($itemsNeedingEmbedding)) {
+            defer(function () use ($itemsNeedingEmbedding) {
+                foreach ($itemsNeedingEmbedding as $entry) {
+                    $vector = $this->embedding->embed($entry['text']);
+                    if (!empty($vector)) {
+                        Cache::put($entry['key'], $vector, now()->addDays(7));
+                    }
+                }
+            });
         }
 
-        // 1. Semantic deduplication
-        $deduped = $this->embedding->deduplicate($all, 0.88);
+        // 2. Semantic deduplication — removes same story from different sources.
+        //    Falls back to title-based dedup for items without embeddings.
+        $withEmb = array_values(array_filter($all, fn($i) => !empty($i['embedding'])));
+        $without = array_values(array_filter($all, fn($i) =>  empty($i['embedding'])));
 
-        // 2. Keyword topic detection
+        $withEmb = $this->embedding->deduplicate($withEmb, 0.88);
+        $without = $this->deduplicateByTitle($without);
+
+        $deduped = array_merge($withEmb, $without);
+
+        // 3. Topic detection
         $withTopics = $this->topicDetector->detectBatch($deduped);
 
-        // 3. Score each item
+        // 4. Score
         $scored = array_map(function ($item) {
             $item['score'] = $this->calculateScore($item, []);
             return $item;
         }, $withTopics);
 
-        // 4. Batch AI enrichment
-        $enriched = $this->enrichment->enrich($scored);
+        // 5. Source diversity mixing
+        $mixed = $this->feedMixer->mixWithSourceDiversity($scored);
 
-        // 5. Diversity-aware feed mixing
-        $mixed = $this->feedMixer->mixWithSourceDiversity($enriched);
+        // 6. Topic diversity cap — prevents any single topic from flooding the feed
+        $diverse = $this->enforceTopicDiversity($mixed);
 
+        // 7. Final mapping — strip embedding, return clean response shape
         return array_map(function ($item) {
             unset($item['embedding']);
             return [
-                'source'       => $item['source']       ?? null,
-                'title'        => $item['title']        ?? null,
-                'description'  => $item['description']  ?? null,
-                'url'          => $item['url']           ?? null,
-                'stats'        => $item['stats']        ?? 0,
-                'topic'        => $item['topic']        ?? 'general',
-                'score'        => $item['score']        ?? 0,
-                'tags'         => $item['tags']         ?? [],
-                'summary'      => $item['summary']      ?? null,
-                'why_trending' => $item['why_trending'] ?? null,
-                'impact'       => $item['impact']       ?? null,
+                'id'          => md5(($item['source'] ?? '') . '|' . ($item['title'] ?? '')),
+                'source'      => $item['source']      ?? null,
+                'title'       => $item['title']       ?? null,
+                'description' => $item['description'] ?? null,
+                'url'         => $item['url']          ?? null,
+                'stats'       => $item['stats']       ?? 0,
+                'topic'       => $item['topic']       ?? 'general',
+                'score'       => $item['score']       ?? 0,
+                'tags'        => $item['tags']        ?? [],
             ];
-        }, $mixed);
+        }, $diverse);
+    }
+
+    // ─── Document Text Builder ────────────────────────────────────────────────
+
+    /**
+     * Build rich document text for embedding.
+     * Qwen3 needs "document: " prefix for documents (vs "query: " for queries).
+     * Rich context improves semantic similarity quality significantly.
+     */
+    public function buildDocumentText(array $item): string
+    {
+        $title       = $item['title']       ?? '';
+        $description = $item['description'] ?? '';
+        $source      = $item['source']      ?? '';
+        $topic       = $item['topic']       ?? '';
+        $tags        = implode(', ', $item['tags'] ?? []);
+
+        return "document: Title: {$title}\nDescription: {$description}\nTopic: {$topic}\nTags: {$tags}\nSource: {$source}";
+    }
+
+    // ─── Title-based Deduplication ───────────────────────────────────────────
+
+    private function deduplicateByTitle(array $items): array
+    {
+        $seen = [];
+
+        return array_values(array_filter($items, function ($item) use (&$seen) {
+            $key = strtolower(preg_replace('/\s+/', ' ', trim($item['title'] ?? '')));
+            $key = substr($key, 0, 50);
+
+            foreach ($seen as $s) {
+                similar_text($key, $s, $percent);
+                if ($percent >= 70) return false;
+            }
+
+            $seen[] = $key;
+            return true;
+        }));
+    }
+
+    // ─── Topic Diversity ──────────────────────────────────────────────────────
+
+    /**
+     * Cap items per topic to prevent any single topic (e.g. AI) from
+     * dominating the feed. Called after source-diversity mixing so both
+     * constraints are respected.
+     */
+    private function enforceTopicDiversity(array $items, int $maxPerTopic = 3): array
+    {
+        if (empty($items)) return [];
+
+        // Sort by score descending so the best items in each topic survive the cap
+        usort($items, fn($a, $b) => ($b['score'] ?? 0) <=> ($a['score'] ?? 0));
+
+        $counts = [];
+        $result = [];
+
+        foreach ($items as $item) {
+            $topic          = $item['topic'] ?? 'general';
+            $counts[$topic] = ($counts[$topic] ?? 0) + 1;
+
+            if ($counts[$topic] <= $maxPerTopic) {
+                $result[] = $item;
+            }
+        }
+
+        return $result;
     }
 
     // ─── Scoring ─────────────────────────────────────────────────────────────
@@ -151,15 +346,16 @@ class TechTrendService
             default      => 0.7,
         };
 
-        $logStats   = log($item['stats'] + 1);
-        $maxLog     = log(($item['stats'] + 1) * $sourceWeight + 1);
-        $normalized = $maxLog > 0 ? ($logStats / $maxLog) * $sourceWeight : 0;
+        // Source-relative normalized stats (0→1 within same source)
+        $normalized = ($item['normalized_stats'] ?? 0) * $sourceWeight;
 
+        // Recency decay — sharpened so content older than ~48h drops noticeably.
+        // exp(-0.07 * h): 24h → 0.19, 48h → 0.04, 7d → ~0
         $recency = 0.5;
         if (!empty($item['created_at'])) {
             try {
                 $hours   = max(now()->diffInHours(Carbon::parse($item['created_at'])), 1);
-                $recency = exp(-$hours / 24);
+                $recency = exp(-0.07 * $hours); // FIX: was exp(-$hours / 24) — too weak
             } catch (\Exception) {
                 $recency = 0.5;
             }
@@ -167,7 +363,10 @@ class TechTrendService
 
         $boost = empty($userTopics) ? 0.0 : $this->keywordBoostFallback($item, $userTopics);
 
-        return ($normalized * 0.5) + ($recency * 0.3) + ($boost * 0.2);
+        // Weighted: popularity 50%, recency 30%, boost 20%
+        $popularityScore = pow($normalized, 0.7) * $sourceWeight;
+
+        return ($popularityScore * 0.5) + ($recency * 0.3) + ($boost * 0.2);
     }
 
     private function keywordBoostFallback(array $item, array $userTopics): float
@@ -178,7 +377,7 @@ class TechTrendService
 
         foreach ($userTopics as $topic) {
             $topic = strtolower($topic);
-            if (in_array($topic, $itemTags)) { $boost += 0.5; continue; }
+            if (in_array($topic, $itemTags))  { $boost += 0.5; continue; }
             if (str_contains($text, $topic))  { $boost += 0.3; continue; }
             foreach (explode(' ', $topic) as $word) {
                 if (strlen($word) > 2 && preg_match('/\b' . preg_quote($word, '/') . '\b/i', $text)) {
@@ -214,8 +413,8 @@ class TechTrendService
             $response = Http::withToken(config('services.github.token'))
                 ->timeout(10)->retry(2, 500)
                 ->get('https://api.github.com/search/repositories', [
-                    'q'        => "stars:>100 pushed:>{$since} has:description",
-                    'sort'     => 'stars',
+                    'q'        => "stars:>50 pushed:>{$since} created:>2020-01-01 has:description",
+                    'sort'     => 'updated',
                     'order'    => 'desc',
                     'per_page' => 15,
                 ]);
@@ -226,8 +425,17 @@ class TechTrendService
             }
 
             return collect($response->json('items', []))
-                ->filter(fn($r) => !empty(trim($r['description'] ?? '')) && !empty($r['language']))
-                ->take(self::MAX_PER_SOURCE)
+                ->filter(function ($r) {
+                    if (empty(trim($r['description'] ?? '')) || empty($r['language'])) return false;
+
+                    // NSFW filter — check title and description
+                    $text = strtolower(($r['full_name'] ?? '') . ' ' . ($r['description'] ?? ''));
+                    foreach (self::NSFW_KEYWORDS as $kw) {
+                        if (str_contains($text, $kw)) return false;
+                    }
+
+                    return true;
+                })
                 ->map(function ($repo) {
                     $desc = strtolower($repo['description'] ?? '');
                     $tags = array_values(array_filter([
@@ -237,18 +445,30 @@ class TechTrendService
                         str_contains($desc, 'api')      ? 'api'      : null,
                     ]));
 
+                    // Velocity = stars per day since creation.
+                    // Ranks repos gaining stars fast over all-time giants.
+                    $createdAt = $repo['created_at'] ?? null;
+                    $ageInDays = $createdAt
+                        ? max(1, now()->diffInDays(Carbon::parse($createdAt)))
+                        : 365;
+                    $stars    = (int) ($repo['stargazers_count'] ?? 0);
+                    $velocity = (int) ($stars / $ageInDays);
+
                     return [
                         'source'      => 'github',
                         'title'       => $repo['full_name']      ?? '',
                         'description' => $repo['description']    ?? '',
                         'author'      => $repo['owner']['login'] ?? '',
                         'language'    => $repo['language']       ?? null,
-                        'stats'       => (int) ($repo['stargazers_count'] ?? 0),
+                        'stats'       => $velocity, // velocity instead of raw stars
                         'url'         => $repo['html_url']       ?? '',
                         'created_at'  => $repo['pushed_at']      ?? null,
                         'tags'        => $tags,
                     ];
-                })->values()->toArray();
+                })
+                ->sortByDesc('stats')
+                ->take(self::MAX_PER_SOURCE)
+                ->values()->toArray();
 
         } catch (\Exception $e) {
             Log::error('GitHub fetch failed', ['error' => $e->getMessage()]);
@@ -275,12 +495,12 @@ class TechTrendService
                 ->take(self::MAX_PER_SOURCE)
                 ->map(fn($a) => [
                     'source'      => 'devto',
-                    'title'       => $a['title']                         ?? '',
-                    'description' => $a['description']                   ?? '',
-                    'author'      => $a['user']['name']                  ?? '',
+                    'title'       => $a['title']                           ?? '',
+                    'description' => $a['description']                     ?? '',
+                    'author'      => $a['user']['name']                    ?? '',
                     'stats'       => (int) ($a['positive_reactions_count'] ?? 0),
-                    'url'         => $a['url']                           ?? '',
-                    'created_at'  => $a['published_at']                  ?? null,
+                    'url'         => $a['url']                             ?? '',
+                    'created_at'  => $a['published_at']                    ?? null,
                     'tags'        => collect($a['tag_list'] ?? [])->take(3)->toArray(),
                 ])->values()->toArray();
 
@@ -293,10 +513,20 @@ class TechTrendService
     private function isValidDevToArticle(array $article): bool
     {
         $title = $article['title'] ?? '';
+
+        // Reject by title keywords
         foreach (self::REJECT_KEYWORDS as $kw) {
             if (preg_match('/\b' . preg_quote($kw, '/') . '\b/i', $title)) return false;
         }
-        return ($article['positive_reactions_count'] ?? 0) >= 10;
+
+        // Reject if ALL tags are noise tags (allow if at least one real tech tag)
+        $tags      = array_map('strtolower', $article['tag_list'] ?? []);
+        $noisyTags = array_intersect($tags, self::REJECT_TAGS);
+        $techTags  = array_diff($tags, self::REJECT_TAGS);
+
+        if (!empty($noisyTags) && empty($techTags)) return false;
+
+        return ($article['positive_reactions_count'] ?? 0) >= 15;
     }
 
     // ─── HackerNews ───────────────────────────────────────────────────────────
@@ -317,7 +547,7 @@ class TechTrendService
             $ids->map(fn($id) =>
             $pool->as((string) $id)->timeout(5)
                 ->get("https://hacker-news.firebaseio.com/v0/item/{$id}.json")
-            )->toArray()
+            )->all()
             );
 
             return $ids->map(function ($id) use ($responses) {
@@ -354,6 +584,13 @@ class TechTrendService
         if (empty($item) || empty($item['url'])) return false;
         if (($item['score'] ?? 0) < 50) return false;
         if (empty($this->extractTechKeywords($item['title'] ?? ''))) return false;
+
+        // Reject low-quality domains
+        $host = parse_url($item['url'], PHP_URL_HOST) ?? '';
+        $host = strtolower(preg_replace('/^www\./', '', $host));
+        foreach (self::HN_REJECT_DOMAINS as $domain) {
+            if ($host === $domain || str_ends_with($host, '.' . $domain)) return false;
+        }
 
         foreach (self::REJECT_KEYWORDS as $kw) {
             if (preg_match('/\b' . preg_quote($kw, '/') . '\b/i', $item['title'] ?? '')) return false;

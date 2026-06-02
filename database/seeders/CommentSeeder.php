@@ -2,23 +2,24 @@
 
 namespace Database\Seeders;
 
-use App\Models\Comment;
 use App\Models\Post;
+use App\Models\Comment;
 use Illuminate\Database\Seeder;
 
 class CommentSeeder extends Seeder
 {
     public function run(): void
     {
-        $posts = Post::where('status', 'published')->pluck('id');
+        $posts = Post::where('status', 'published')->get();
 
-        // Each post gets 0-20 comments
-        $posts->each(function ($postId) {
-            $count = rand(0, 20);
-            if ($count > 0) {
-                Comment::factory()->count($count)->create(['post_id' => $postId]);
-            }
-        });
+        foreach ($posts as $post) {
+
+            Comment::factory()
+                ->count(rand(0, 10))
+                ->create([
+                    'post_id' => $post->id,
+                ]);
+        }
 
         $this->command->info('Comments seeded.');
     }

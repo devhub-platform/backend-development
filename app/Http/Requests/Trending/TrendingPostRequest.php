@@ -16,19 +16,9 @@ class TrendingPostRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'tag_id'   => 'nullable|integer|exists:tags,id',
-            'per_page' => 'nullable|integer|min:1|max:50',
-        ];
-    }
-
-    public function messages(): array
-    {
-        return [
-            'tag_id.exists'    => 'The specified tag does not exist.',
-            'tag_id.integer'   => 'tag_id must be an integer.',
-            'per_page.integer' => 'per_page must be an integer.',
-            'per_page.min'     => 'per_page must be at least 1.',
-            'per_page.max'     => 'per_page cannot exceed 50.',
+            'tag_id' => ['nullable', 'integer', 'exists:tags,id'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
+            'page' => ['nullable', 'integer', 'min:1'],
         ];
     }
 
@@ -38,7 +28,7 @@ class TrendingPostRequest extends FormRequest
             response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors'  => $validator->errors(),
+                'errors' => $validator->errors(),
             ], 422)
         );
     }
