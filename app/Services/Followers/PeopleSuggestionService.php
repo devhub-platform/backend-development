@@ -122,8 +122,8 @@ class PeopleSuggestionService
             ->limit($poolSize)
             ->get([
                 'id', 'name', 'username', 'avatar_url', 'bio', 'skills',
-                'currently_learning', 'created_at', 'verified', 'is_featured'
-            ]);
+                'currently_learning', 'created_at',
+            ]); // ← removed 'verified' and 'is_featured'
 
         return $query;
     }
@@ -194,15 +194,13 @@ class PeopleSuggestionService
             $mutualFollowingScore = ((int)($candidate->mutual_following_count ?? 0)) / $maxMutualFollowing;
             $activityScore = $this->activityScore($candidate->latest_post_at);
 
-            $presenceBonus = ($candidate->verified ? 0.05 : 0) + ($candidate->is_featured ? 0.03 : 0);
-
+            // ← removed $presenceBonus — verified and is_featured don't exist in the schema
             $candidate->suggestion_score = (
                 (self::SCORING_WEIGHTS['semantic'] * $semantic) +
                 (self::SCORING_WEIGHTS['shared_topics'] * $topicScore) +
                 (self::SCORING_WEIGHTS['mutual_followers'] * $mutualFollowersScore) +
                 (self::SCORING_WEIGHTS['mutual_following'] * $mutualFollowingScore) +
-                (self::SCORING_WEIGHTS['activity'] * $activityScore) +
-                $presenceBonus
+                (self::SCORING_WEIGHTS['activity'] * $activityScore)
             );
 
             return $candidate;
@@ -330,7 +328,7 @@ class PeopleSuggestionService
         return $result;
     }
 
-private function fillWithRandom(User $user, Collection $selected, int $limit): Collection
+    private function fillWithRandom(User $user, Collection $selected, int $limit): Collection
 {
     if ($selected->count() >= $limit) {
         return $selected->take($limit)->values();
@@ -341,27 +339,10 @@ private function fillWithRandom(User $user, Collection $selected, int $limit): C
 
     $fallback = User::query()
         ->whereNotIn('id', $excludeIds)
-        ->where(function ($q) {                   // ← group the OR so whereNotIn isn't bypassed
-            $q->where('is_featured', true);
-        })
-        ->orderByDesc('followers_count')
+        ->whereHas('posts')
         ->inRandomOrder()
         ->limit($remaining)
-        ->get(['id', 'name', 'username', 'avatar_url', 'bio']); // ← 'verified' removed
-
-    if ($fallback->count() < $remaining) {
-        $needMore = $remaining - $fallback->count();
-        $excludeIds = array_merge($excludeIds, $fallback->pluck('id')->all());
-
-        $more = User::query()
-            ->whereNotIn('id', $excludeIds)
-            ->whereHas('posts')
-            ->inRandomOrder()
-            ->limit($needMore)
-            ->get(['id', 'name', 'username', 'avatar_url', 'bio']);
-
-        $fallback = $fallback->concat($more);
-    }
+        ->get(['id', 'name', 'username', 'avatar_url', 'bio']);
 
     return $selected->concat($fallback)->values();
 }

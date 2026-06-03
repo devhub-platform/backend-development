@@ -48,11 +48,11 @@ class FollowersController
             ]);
 
             return response()->json([
-                'message' => "Successfully followed {$user->name}",
-                'data' => [
-                    'user_id' => $user->id,
-                    'status' => 'following',
-                ]
+                'message' => "Successfully followed {$user->name}"
+                // 'data' => [
+                //     'user_id' => $user->id,
+                //     'status' => 'following',
+                // ]
             ], Response::HTTP_OK);
 
         } catch (\Throwable $exception) {
@@ -94,11 +94,11 @@ class FollowersController
             ]);
 
             return response()->json([
-                'message' => "Successfully unfollowed {$user->name}",
-                'data' => [
-                    'user_id' => $user->id,
-                    'status' => 'not_following',
-                ]
+                'message' => "Successfully unfollowed {$user->name}"
+                // 'data' => [
+                //     'user_id' => $user->id,
+                //     'status' => 'not_following',
+                // ]
             ], Response::HTTP_OK);
 
         } catch (\Throwable $exception) {
@@ -182,19 +182,19 @@ class FollowersController
     {
         $user = Auth::user();
 
-        $limit = (int)$request->query('limit', 10);
+        $limit = (int) $request->query('limit', 10);
         $limit = max(1, min($limit, 50));
 
         $refresh = $request->query('refresh', false) === 'true';
 
         try {
-            $version = (int)Cache::get($this->suggestionVersionKey($user->id), 1);
+            $version = (int) Cache::get($this->suggestionVersionKey($user->id), 1);
             $cacheKey = "user_suggestions_{$user->id}_v{$version}_{$limit}";
 
             if ($refresh) {
                 Cache::forget($cacheKey);
                 $this->bumpSuggestionCacheVersion($user->id);
-                $version = (int)Cache::get($this->suggestionVersionKey($user->id), 1);
+                $version = (int) Cache::get($this->suggestionVersionKey($user->id), 1);
                 $cacheKey = "user_suggestions_{$user->id}_v{$version}_{$limit}";
             }
 
