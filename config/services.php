@@ -53,13 +53,30 @@ return [
         'redirect' => env('GITHUB_FRONTEND_REDIRECT_URL'),
     ],
 
-    'hackai' => [
-        'base_url' => env('HACKAI_BASE_URL', 'https://ai.hackclub.com/proxy/v1'),
-        'token' => env('HACKAI_API_KEY'),
-        'embeddings_model' => env('HACKAI_EMBEDDINGS_MODEL', 'openai/text-embedding-3-large'),
-        'embeddings_timeout' => (int)env('HACKAI_EMBEDDINGS_TIMEOUT', 20),
-        'embeddings_enabled' => env('HACKAI_EMBEDDINGS_ENABLED', true),
+'hackai' => [
+    'base_url' => env('HACKAI_BASE_URL', 'https://ai.hackclub.com/proxy/v1'),
+    'token' => env('HACKAI_API_KEY'),
+    'embeddings_enabled' => env('HACKAI_EMBEDDINGS_ENABLED', true),
+    'embeddings_model' => env('HACKAI_EMBEDDINGS_MODEL', 'openai/text-embedding-3-large'),
+    'embeddings_timeout' => (int)env('HACKAI_EMBEDDINGS_TIMEOUT', 20),
+    'embeddings_cache_minutes' => (int)env('HACKAI_EMBEDDINGS_CACHE_MINUTES', 720),
+],
+
+'suggestions' => [
+    'features' => [
+        'ai_reranking' => env('SUGGESTIONS_AI_RERANKING', true),
+        'diversity_boost' => env('SUGGESTIONS_DIVERSITY_BOOST', true),
+        'verified_priority' => env('SUGGESTIONS_VERIFIED_PRIORITY', true),
     ],
+    'cache' => [
+        'ttl' => (int)env('SUGGESTIONS_CACHE_TTL', 1800),
+    ],
+    'limits' => [
+        'min_limit' => 1,
+        'max_limit' => 50,
+        'default_limit' => 10,
+    ],
+],
 
     'hackclub_cdn' => [
         'base_url' => env('HACKCLUB_CDN_BASE_URL', 'https://cdn.hackclub.com/api/v4'),

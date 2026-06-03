@@ -6,29 +6,57 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Embeddings;
 
 class PeopleSuggestionService
 {
+    private const SCORING_WEIGHTS = [
+        'semantic' => 0.55,
+        'shared_topics' => 0.20,
+        'mutual_followers' => 0.10,
+        'mutual_following' => 0.10,
+        'activity' => 0.05,
+    ];
+
+    private const QUALITY_FILTERS = [
+        'min_posts' => 1,
+        'min_profile_completion' => 0.3,
+        'active_days' => 180,
+    ];
+
+    private const CACHE_TTL = 1800;
+
     public function suggestForUser(User $user, int $limit = 10): Collection
     {
-        $limit = max(1, min($limit, 20));
+        $limit = max(1, min($limit, 50));
 
-        $candidates = $this->baseCandidates($user, max($limit * 6, 30));
-        if ($candidates->isEmpty()) {
+        try {
+            $candidates = $this->baseCandidates($user, max($limit * 5, 50));
+
+            if ($candidates->isEmpty()) {
+                return $this->fillWithRandom($user, collect(), $limit);
+            }
+
+            $candidates = $this->applyAIReranking($user, $candidates);
+            $scored = $this->applyHybridScores($candidates);
+            $diverse = $this->boostDiversity($scored, $user);
+            $selected = $diverse->take($limit)->values();
+
+            if ($selected->count() < $limit) {
+                return $this->fillWithRandom($user, $selected, $limit);
+            }
+
+            return $selected;
+        } catch (\Throwable $exception) {
+            Log::error('Suggestion service failed', [
+                'user_id' => $user->id,
+                'error' => $exception->getMessage(),
+            ]);
+
             return $this->fillWithRandom($user, collect(), $limit);
         }
-
-        $ranked = $this->rerankWithEmbeddings($user, $candidates);
-        $ranked = $this->applyHybridScores($ranked);
-        $selected = $ranked->take($limit)->values();
-
-        if ($selected->count() < $limit) {
-            return $this->fillWithRandom($user, $selected, $limit);
-        }
-
-        return $selected;
     }
 
     private function baseCandidates(User $user, int $poolSize): Collection
@@ -38,113 +66,267 @@ class PeopleSuggestionService
         $followingIds = $user->following()->pluck('users.id');
         $followerIds = $user->followers()->pluck('users.id');
 
-        return User::query()
+        $query = User::query()
             ->whereNotIn('id', $excludeIds)
             ->whereHas('posts', function ($query) {
                 $query->where('status', '!=', 'draft')
-                    ->where('created_at', '>=', now()->subDays(180));
+                    ->where('created_at', '>=', now()->subDays(self::QUALITY_FILTERS['active_days']));
             })
-            ->with('topics:id,name')
+            ->with(['topics:id,name'])
             ->withCount([
-                'topics as shared_topics_count' => function ($query) use ($topicIds) {
-                    if ($topicIds->isEmpty()) {
-                        $query->whereRaw('1 = 0');
-                        return;
+                'topics as shared_topics_count' => function ($q) use ($topicIds) {
+                    if ($topicIds->isNotEmpty()) {
+                        $q->whereIn('topics.id', $topicIds);
+                    } else {
+                        $q->whereRaw('1 = 0');
                     }
-
-                    $query->whereIn('topics.id', $topicIds);
                 },
-                'posts as published_posts_count' => function ($query) {
-                    $query->where('status', '!=', 'draft');
+                'posts as published_posts_count' => function ($q) {
+                    $q->where('status', '!=', 'draft');
                 },
-                'followers as mutual_followers_count' => function ($query) use ($followerIds) {
-                    if ($followerIds->isEmpty()) {
-                        $query->whereRaw('1 = 0');
-                        return;
+                'followers as mutual_followers_count' => function ($q) use ($followerIds) {
+                    if ($followerIds->isNotEmpty()) {
+                        $q->whereIn('users.id', $followerIds);
+                    } else {
+                        $q->whereRaw('1 = 0');
                     }
-
-                    $query->whereIn('users.id', $followerIds);
                 },
-                'following as mutual_following_count' => function ($query) use ($followingIds) {
-                    if ($followingIds->isEmpty()) {
-                        $query->whereRaw('1 = 0');
-                        return;
+                'following as mutual_following_count' => function ($q) use ($followingIds) {
+                    if ($followingIds->isNotEmpty()) {
+                        $q->whereIn('users.id', $followingIds);
+                    } else {
+                        $q->whereRaw('1 = 0');
                     }
-
-                    $query->whereIn('users.id', $followingIds);
                 },
                 'followers as followers_count',
                 'following as following_count',
             ])
-            ->withMax([
-                'posts as latest_post_at' => function ($query) {
-                    $query->where('status', '!=', 'draft');
-                },
-            ], 'created_at')
+            ->withMax('posts as latest_post_at', 'created_at', function ($q) {
+                $q->where('status', '!=', 'draft');
+            })
+            ->selectRaw('
+                users.*,
+                CASE WHEN bio IS NOT NULL AND bio != \'\' THEN 0.25 ELSE 0 END +
+                CASE WHEN avatar_url IS NOT NULL AND avatar_url != \'\' THEN 0.25 ELSE 0 END +
+                CASE WHEN skills IS NOT NULL AND skills != \'\' THEN 0.25 ELSE 0 END +
+                CASE WHEN currently_learning IS NOT NULL THEN 0.25 ELSE 0 END
+                as profile_completeness
+            ')
+            ->having(DB::raw('profile_completeness'), '>=', self::QUALITY_FILTERS['min_profile_completion'])
             ->orderByDesc('shared_topics_count')
             ->orderByDesc('mutual_followers_count')
             ->orderByDesc('mutual_following_count')
-            ->orderByDesc('published_posts_count')
             ->orderByDesc('followers_count')
             ->orderByDesc('latest_post_at')
             ->limit($poolSize)
-            ->get(['id', 'name', 'username', 'avatar_url', 'bio', 'skills', 'currently_learning', 'created_at']);
+            ->get([
+                'id', 'name', 'username', 'avatar_url', 'bio', 'skills',
+                'currently_learning', 'created_at', 'verified', 'is_featured'
+            ]);
+
+        return $query;
     }
 
-    private function rerankWithEmbeddings(User $user, Collection $candidates): Collection
+    private function applyAIReranking(User $user, Collection $candidates): Collection
     {
         if (!config('services.hackai.embeddings_enabled', true)) {
             return $candidates;
         }
 
-        $sourceText = $this->profileText($user, $user->topics()->pluck('topics.name')->all());
-        if ($sourceText === '') {
+        try {
+            $sourceText = $this->profileText($user, $user->topics()->pluck('topics.name')->all());
+
+            if (empty($sourceText)) {
+                return $candidates;
+            }
+
+            $candidateTexts = $candidates
+                ->mapWithKeys(fn(User $c) => [
+                    'user:' . $c->id => $this->profileText($c, $c->topics->pluck('name')->all()),
+                ])
+                ->all();
+
+            $embeddings = $this->resolveEmbeddings($sourceText, $candidateTexts);
+
+            if (empty($embeddings) || !isset($embeddings['source'])) {
+                return $candidates;
+            }
+
+            $sourceVector = $embeddings['source'];
+
+            return $candidates->map(function (User $candidate) use ($sourceVector, $embeddings) {
+                $candidateVector = $embeddings['user:' . $candidate->id] ?? [];
+                $candidate->ai_similarity_score = $this->cosineSimilarity($sourceVector, $candidateVector);
+                return $candidate;
+            })->sortByDesc('ai_similarity_score')->values();
+
+        } catch (\Throwable $exception) {
+            Log::warning('AI reranking failed', [
+                'user_id' => $user->id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return $candidates;
+        }
+    }
+
+    private function applyHybridScores(Collection $candidates): Collection
+    {
+        if ($candidates->isEmpty()) {
             return $candidates;
         }
 
-        $candidateTexts = $candidates
-            ->mapWithKeys(fn(User $candidate) => [
-                'user:' . $candidate->id => $this->profileText($candidate, $candidate->topics->pluck('name')->all()),
-            ])
-            ->all();
+        $maxSharedTopics = max(1, (int)$candidates->max('shared_topics_count'));
+        $maxMutualFollowers = max(1, (int)$candidates->max('mutual_followers_count'));
+        $maxMutualFollowing = max(1, (int)$candidates->max('mutual_following_count'));
 
-        $texts = array_merge(['source' => $sourceText], $candidateTexts);
-        $embeddings = $this->resolveEmbeddings($texts);
-        if (empty($embeddings) || empty($embeddings['source'] ?? [])) {
-            return $candidates;
-        }
+        return $candidates->map(function (User $candidate) use (
+            $maxSharedTopics,
+            $maxMutualFollowers,
+            $maxMutualFollowing
+        ) {
+            $semantic = (float)($candidate->ai_similarity_score ?? 0.0);
+            $semantic = max(0.0, min(1.0, ($semantic + 1.0) / 2.0));
 
-        $sourceVector = $embeddings['source'];
+            $topicScore = ((int)($candidate->shared_topics_count ?? 0)) / $maxSharedTopics;
+            $mutualFollowersScore = ((int)($candidate->mutual_followers_count ?? 0)) / $maxMutualFollowers;
+            $mutualFollowingScore = ((int)($candidate->mutual_following_count ?? 0)) / $maxMutualFollowing;
+            $activityScore = $this->activityScore($candidate->latest_post_at);
 
-        $scored = $candidates->values()->map(function (User $candidate) use ($sourceVector, $embeddings) {
-            $candidateVector = $embeddings['user:' . $candidate->id] ?? [];
-            $candidate->ai_similarity_score = $this->cosineSimilarity($sourceVector, $candidateVector);
+            $presenceBonus = ($candidate->verified ? 0.05 : 0) + ($candidate->is_featured ? 0.03 : 0);
+
+            $candidate->suggestion_score = (
+                (self::SCORING_WEIGHTS['semantic'] * $semantic) +
+                (self::SCORING_WEIGHTS['shared_topics'] * $topicScore) +
+                (self::SCORING_WEIGHTS['mutual_followers'] * $mutualFollowersScore) +
+                (self::SCORING_WEIGHTS['mutual_following'] * $mutualFollowingScore) +
+                (self::SCORING_WEIGHTS['activity'] * $activityScore) +
+                $presenceBonus
+            );
+
             return $candidate;
-        });
-
-        return $scored->sort(function (User $left, User $right) {
-            $scoreComparison = ($right->ai_similarity_score <=> $left->ai_similarity_score);
-            if ($scoreComparison !== 0) {
-                return $scoreComparison;
+        })
+        ->sort(function (User $left, User $right) {
+            $scoreComp = ($right->suggestion_score <=> $left->suggestion_score);
+            if ($scoreComp !== 0) {
+                return $scoreComp;
             }
 
-            $topicComparison = ((int)($right->shared_topics_count ?? 0)) <=> ((int)($left->shared_topics_count ?? 0));
-            if ($topicComparison !== 0) {
-                return $topicComparison;
+            $topicComp = ((int)($right->shared_topics_count ?? 0)) <=> ((int)($left->shared_topics_count ?? 0));
+            if ($topicComp !== 0) {
+                return $topicComp;
             }
 
-            $postComparison = ((int)($right->published_posts_count ?? 0)) <=> ((int)($left->published_posts_count ?? 0));
-            if ($postComparison !== 0) {
-                return $postComparison;
+            return ($right->created_at <=> $left->created_at);
+        })
+        ->values();
+    }
+
+    private function boostDiversity(Collection $candidates, User $user): Collection
+    {
+        if ($candidates->count() <= 5) {
+            return $candidates;
+        }
+
+        $diversified = collect();
+        $selectedTopics = collect();
+        $topicThreshold = 3;
+
+        foreach ($candidates as $candidate) {
+            $candidateTopics = $candidate->topics->pluck('id')->toArray();
+
+            $topicOverlap = count(array_intersect(
+                $selectedTopics->flatten()->toArray(),
+                $candidateTopics
+            ));
+
+            if ($topicOverlap > $topicThreshold) {
+                $candidate->suggestion_score *= 0.85;
             }
 
-            $followerComparison = ((int)($right->followers_count ?? 0)) <=> ((int)($left->followers_count ?? 0));
-            if ($followerComparison !== 0) {
-                return $followerComparison;
-            }
+            $diversified->push($candidate);
+            $selectedTopics->push($candidateTopics);
+        }
 
-            return $right->created_at <=> $left->created_at;
+        return $diversified->sort(function (User $left, User $right) {
+            return ($right->suggestion_score <=> $left->suggestion_score);
         })->values();
+    }
+
+    private function activityScore(mixed $latestPostAt): float
+    {
+        if (empty($latestPostAt)) {
+            return 0.0;
+        }
+
+        try {
+            $latest = Carbon::parse((string)$latestPostAt);
+            $daysAgo = max(0, $latest->diffInDays(now()));
+
+            return max(0.0, exp(-$daysAgo / 30));
+        } catch (\Throwable) {
+            return 0.0;
+        }
+    }
+
+    private function resolveEmbeddings(string $sourceText, array $candidateTexts): array
+    {
+        $model = config('services.hackai.embeddings_model', 'openai/text-embedding-3-large');
+        $cacheMinutes = (int)config('services.hackai.embeddings_cache_minutes', 720);
+
+        $result = [];
+        $missing = [];
+
+        $sourceCacheKey = $this->embeddingCacheKey($model, $sourceText);
+        if ($cached = Cache::get($sourceCacheKey)) {
+            $result['source'] = $cached;
+        } else {
+            $missing['source'] = $sourceText;
+        }
+
+        foreach ($candidateTexts as $key => $text) {
+            if (!is_string($text) || trim($text) === '') {
+                continue;
+            }
+
+            $cacheKey = $this->embeddingCacheKey($model, $text);
+            if ($cached = Cache::get($cacheKey)) {
+                $result[$key] = $cached;
+            } else {
+                $missing[$key] = $text;
+            }
+        }
+
+        if (!empty($missing)) {
+            try {
+                $response = Embeddings::for(array_values($missing))
+                    ->timeout((int)config('services.hackai.embeddings_timeout', 20))
+                    ->generate('hackai', $model);
+
+                $generated = $response->embeddings ?? [];
+
+                if (count($generated) === count($missing)) {
+                    $missingKeys = array_keys($missing);
+                    foreach ($missingKeys as $index => $key) {
+                        $vector = $generated[$index] ?? [];
+
+                        if (is_array($vector) && !empty($vector)) {
+                            $text = $missing[$key];
+                            $cacheKey = $this->embeddingCacheKey($model, $text);
+                            Cache::put($cacheKey, $vector, now()->addMinutes($cacheMinutes));
+                            $result[$key] = $vector;
+                        }
+                    }
+                }
+            } catch (\Throwable $exception) {
+                Log::warning('Embedding generation failed', [
+                    'error' => $exception->getMessage(),
+                    'model' => $model,
+                ]);
+            }
+        }
+
+        return $result;
     }
 
     private function fillWithRandom(User $user, Collection $selected, int $limit): Collection
@@ -158,149 +340,48 @@ class PeopleSuggestionService
 
         $fallback = User::query()
             ->whereNotIn('id', $excludeIds)
+            ->where('verified', true)
+            ->orWhere('is_featured', true)
+            ->orderByDesc('followers_count')
             ->inRandomOrder()
             ->limit($remaining)
-            ->get(['id', 'name', 'username', 'avatar_url', 'bio']);
+            ->get(['id', 'name', 'username', 'avatar_url', 'bio', 'verified']);
+
+        if ($fallback->count() < $remaining) {
+            $needMore = $remaining - $fallback->count();
+            $excludeIds = array_merge($excludeIds, $fallback->pluck('id')->all());
+
+            $more = User::query()
+                ->whereNotIn('id', $excludeIds)
+                ->whereHas('posts')
+                ->inRandomOrder()
+                ->limit($needMore)
+                ->get(['id', 'name', 'username', 'avatar_url', 'bio']);
+
+            $fallback = $fallback->concat($more);
+        }
 
         return $selected->concat($fallback)->values();
     }
 
     private function excludedUserIds(User $user): array
     {
-        $followingIds = $user->following()->pluck('users.id')->all();
-        $blockedUserIds = $user->blockedUsers()->pluck('users.id')->all();
-        $blockerIds = $user->blockers()->pluck('users.id')->all();
-
-        return array_unique(array_merge($followingIds, $blockedUserIds, $blockerIds, [$user->id]));
-    }
-
-    private function applyHybridScores(Collection $candidates): Collection
-    {
-        if ($candidates->isEmpty()) {
-            return $candidates;
-        }
-
-        $maxSharedTopics = max(1, (int) $candidates->max('shared_topics_count'));
-        $maxMutualFollowers = max(1, (int) $candidates->max('mutual_followers_count'));
-        $maxMutualFollowing = max(1, (int) $candidates->max('mutual_following_count'));
-
-        return $candidates->map(function (User $candidate) use ($maxSharedTopics, $maxMutualFollowers, $maxMutualFollowing) {
-            $semantic = (float) ($candidate->ai_similarity_score ?? 0.0);
-            $semantic = max(0.0, min(1.0, ($semantic + 1.0) / 2.0));
-
-            $sharedTopicsScore = ((int) ($candidate->shared_topics_count ?? 0)) / $maxSharedTopics;
-            $mutualFollowersScore = ((int) ($candidate->mutual_followers_count ?? 0)) / $maxMutualFollowers;
-            $mutualFollowingScore = ((int) ($candidate->mutual_following_count ?? 0)) / $maxMutualFollowing;
-            $activityScore = $this->activityScore($candidate->latest_post_at);
-
-            $candidate->suggestion_score = (
-                (0.55 * $semantic) +
-                (0.20 * $sharedTopicsScore) +
-                (0.10 * $mutualFollowersScore) +
-                (0.10 * $mutualFollowingScore) +
-                (0.05 * $activityScore)
-            );
-
-            return $candidate;
-        })->sort(function (User $left, User $right) {
-            $scoreComparison = ($right->suggestion_score <=> $left->suggestion_score);
-            if ($scoreComparison !== 0) {
-                return $scoreComparison;
-            }
-
-            $topicComparison = ((int) ($right->shared_topics_count ?? 0)) <=> ((int) ($left->shared_topics_count ?? 0));
-            if ($topicComparison !== 0) {
-                return $topicComparison;
-            }
-
-            return ($right->created_at <=> $left->created_at);
-        })->values();
-    }
-
-    private function activityScore(mixed $latestPostAt): float
-    {
-        if (empty($latestPostAt)) {
-            return 0.0;
-        }
-
-        try {
-            $latest = Carbon::parse((string) $latestPostAt);
-            $daysAgo = max(0, $latest->diffInDays(now()));
-            return max(0.0, 1.0 - min(1.0, $daysAgo / 60));
-        } catch (\Throwable) {
-            return 0.0;
-        }
-    }
-
-    private function resolveEmbeddings(array $texts): array
-    {
-        $model = (string) config('services.hackai.embeddings_model', 'openai/text-embedding-3-large');
-        $cacheMinutes = (int) config('services.hackai.embeddings_cache_minutes', 720);
-
-        $result = [];
-        $missing = [];
-
-        foreach ($texts as $key => $text) {
-            if (!is_string($text) || trim($text) === '') {
-                continue;
-            }
-
-            $cacheKey = $this->embeddingCacheKey($model, $text);
-            $cached = Cache::get($cacheKey);
-
-            if (is_array($cached) && !empty($cached)) {
-                $result[$key] = $cached;
-                continue;
-            }
-
-            $missing[$key] = $text;
-        }
-
-        if (empty($missing)) {
-            return $result;
-        }
-
-        try {
-            $response = Embeddings::for(array_values($missing))
-                ->timeout((int) config('services.hackai.embeddings_timeout', 20))
-                ->generate('hackai', $model);
-
-            $generated = $response->embeddings ?? [];
-            if (count($generated) !== count($missing)) {
-                return [];
-            }
-
-            $missingKeys = array_keys($missing);
-            foreach ($missingKeys as $index => $key) {
-                $vector = $generated[$index] ?? [];
-                if (!is_array($vector) || empty($vector)) {
-                    continue;
-                }
-
-                $text = $missing[$key];
-                $cacheKey = $this->embeddingCacheKey($model, $text);
-                Cache::put($cacheKey, $vector, now()->addMinutes($cacheMinutes));
-                $result[$key] = $vector;
-            }
-        } catch (\Throwable $exception) {
-            Log::warning('AI rerank failed for people suggestions, using fallback ranking.', [
-                'error' => $exception->getMessage(),
-            ]);
-
-            return [];
-        }
-
-        return $result;
+        return array_unique(array_merge(
+            $user->following()->pluck('users.id')->all(),
+            $user->blockedUsers()->pluck('users.id')->all(),
+            $user->blockers()->pluck('users.id')->all(),
+            [$user->id]
+        ));
     }
 
     private function embeddingCacheKey(string $model, string $text): string
     {
-        return 'people_suggestion_embedding:' . md5($model . '|' . $text);
+        return 'suggestion_embedding:' . md5($model . '|' . $text);
     }
 
     private function profileText(User $user, array $topicNames): string
     {
-        $skills = is_array($user->skills ?? null) ? implode(', ', $user->skills) : '';
+        $skills = is_array($user->skills) ? implode(', ', $user->skills) : '';
 
         return trim(implode("\n", array_filter([
             $user->name,
@@ -330,7 +411,7 @@ class PeopleSuggestionService
             $rightNorm += $rightValue ** 2;
         }
 
-        if ($leftNorm == 0.0 || $rightNorm == 0.0) {
+        if ($leftNorm === 0.0 || $rightNorm === 0.0) {
             return 0.0;
         }
 
