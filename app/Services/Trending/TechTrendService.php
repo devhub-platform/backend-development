@@ -542,7 +542,7 @@ class TechTrendService
                 return [];
             }
 
-            $ids       = collect($response->json())->take(20)->values();
+            $ids       = collect($response->json())->take(50)->values();
             $responses = Http::pool(fn($pool) =>
             $ids->map(fn($id) =>
             $pool->as((string) $id)->timeout(5)
@@ -552,9 +552,25 @@ class TechTrendService
 
             return $ids->map(function ($id) use ($responses) {
                 try {
-                    $item = $responses[(string) $id]?->json();
-                    if (!$this->isValidHackerNewsItem($item)) return null;
+                    $response = $responses[(string) $id] ?? null;
 
+                    if (!$response instanceof \Illuminate\Http\Client\Response) {
+
+                        Log::warning('HN request failed', [
+                            'id'   => $id,
+                            'type' => is_object($response)
+                                ? get_class($response)
+                                : gettype($response),
+                        ]);
+
+                        return null;
+                    }
+
+                    $item = $response->json();
+
+                    if (!$this->isValidHackerNewsItem($item)) {
+                        return null;
+                    }
                     return [
                         'source'      => 'hackernews',
                         'title'       => $item['title'] ?? '',

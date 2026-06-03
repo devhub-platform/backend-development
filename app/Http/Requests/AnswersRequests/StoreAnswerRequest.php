@@ -24,8 +24,8 @@ class StoreAnswerRequest extends FormRequest
     {
         return [
             'content.required' => 'Answer content is required',
-            'content.min' => 'Content must be at least 10 characters',
-            'content.max' => 'Content cannot exceed 5000 characters',
+            'content.min'      => 'Content must be at least 10 characters',
+            'content.max'      => 'Content cannot exceed 5000 characters',
         ];
     }
 
@@ -35,9 +35,8 @@ class StoreAnswerRequest extends FormRequest
             response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $validator->errors(),
+                'errors'  => $validator->errors(),
             ], 422)
         );
     }
 }
-
