@@ -34,7 +34,21 @@ class TopicPostsService
             }
 
             $postQuery = Post::query()
-                ->select('id', 'user_id', 'title', 'content', 'slug', 'created_at', 'updated_at', 'views')
+                ->select(
+                    'id',
+                    'uuid',
+                    'user_id',
+                    'title',
+                    'content',
+                    'slug',
+                    'read_time',
+                    'created_at',
+                    'updated_at',
+                    'views',
+                    'is_edit',
+                    'image_url',
+                    'cover_image'
+                )
                 ->with([
                     'user:id,name,username,avatar_url',
                     'tags' => fn($q) => $q->select($tagSelect),

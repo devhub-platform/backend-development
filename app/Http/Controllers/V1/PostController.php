@@ -116,13 +116,31 @@ class PostController
                 ->whereIn('user_id', $followingIds)
                 ->where('status', '!=', 'draft')
                 ->whereNotIn('user_id', $blockedIds)
-                ->select('id', 'user_id', 'title', 'content', 'slug', 'created_at', 'updated_at', 'views')
-                ->with(['user:id,name,username,avatar_url', 'tags:id,name'])
+                ->select(
+                    'id',
+                    'uuid',
+                    'user_id',
+                    'title',
+                    'content',
+                    'slug',
+                    'status',
+                    'read_time',
+                    'created_at',
+                    'updated_at',
+                    'views',
+                    'is_edit',
+                    'image_url',
+                    'cover_image'
+                )
+                ->with([
+                    'user:id,name,username,avatar_url',
+                    'tags' => fn($q) => $q->select(['tags.id', 'tags.name', 'tags.created_at']),
+                ])
                 ->orderByDesc('created_at')
                 ->limit($perPage * 2)
                 ->get();
 
-                $recommendationPager = $this->homeFeedService->build(
+            $recommendationPager = $this->homeFeedService->build(
                 $user,
                 $perPage * 2,
                 1,
