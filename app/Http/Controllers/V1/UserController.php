@@ -232,13 +232,50 @@ class UserController extends Controller
             ]);
         }
 
-        $transformedUsers = $recommendedUsers->map(function (User $user) {
-            $embedding1 = app(UserEmbeddingService::class)->generateUserEmbedding(auth()->user());
-            $embedding2 = app(UserEmbeddingService::class)->generateUserEmbedding($user);
+        // Precompute auth user embeddings and small lookup sets to avoid repeated DB queries
+        $embeddingService = app(UserEmbeddingService::class);
+        $authEmbedding = $embeddingService->generateUserEmbedding($authUser);
+        $authFollowerIds = $authUser->followers()->pluck('users.id')->all();
+        $authTopicIds = $authUser->topics()->pluck('topics.id')->all();
+        $authSkills = is_array($authUser->skills) ? $authUser->skills : [];
 
-            $score = app(UserEmbeddingService::class)->calculateSimilarityScore($embedding1, $embedding2);
+        // Eager-load follower/topic relations and counts for all recommended users in one query
+        $recommendedUsers->load(['followers', 'topics'])->loadCount(['posts', 'questions']);
 
-            $reasons = $this->getRecommendationReasons(auth()->user(), $user);
+        $transformedUsers = $recommendedUsers->map(function (User $user) use ($embeddingService, $authEmbedding, $authFollowerIds, $authTopicIds, $authSkills, $authUser) {
+            $userEmbedding = $embeddingService->generateUserEmbedding($user);
+            $score = $embeddingService->calculateSimilarityScore($authEmbedding, $userEmbedding);
+
+            // Build recommendation reasons using in-memory relations (no per-user DB queries)
+            $reasons = [];
+
+            $mutualFollowers = count(array_intersect($authFollowerIds, $user->followers->pluck('id')->all()));
+            if ($mutualFollowers > 0) {
+                $reasons[] = "You have {$mutualFollowers} mutual follower(s)";
+            }
+
+            $matchingSkills = [];
+            if (!empty($authSkills) && is_array($user->skills)) {
+                $matchingSkills = array_intersect($authSkills, $user->skills);
+            }
+            if (!empty($matchingSkills)) {
+                $skillsStr = implode(', ', array_slice($matchingSkills, 0, 2));
+                $reasons[] = "Shares skills: {$skillsStr}";
+            }
+
+            $mutualTopics = count(array_intersect($authTopicIds, $user->topics->pluck('id')->all()));
+            if ($mutualTopics > 0) {
+                $reasons[] = "Interested in {$mutualTopics} same topic(s)";
+            }
+
+            if ($user->bio && $user->avatar_url) {
+                $reasons[] = "Complete profile";
+            }
+
+            $activityCount = ($user->posts_count ?? 0) + ($user->questions_count ?? 0);
+            if ($activityCount > 10) {
+                $reasons[] = "Active community member";
+            }
 
             $resource = new RecommendedUserResource($user);
             $resource->setRecommendationScore($score);
