@@ -330,40 +330,41 @@ class PeopleSuggestionService
         return $result;
     }
 
-    private function fillWithRandom(User $user, Collection $selected, int $limit): Collection
-    {
-        if ($selected->count() >= $limit) {
-            return $selected->take($limit)->values();
-        }
-
-        $remaining = $limit - $selected->count();
-        $excludeIds = array_merge($this->excludedUserIds($user), $selected->pluck('id')->all());
-
-        $fallback = User::query()
-            ->whereNotIn('id', $excludeIds)
-            ->where('verified', true)
-            ->orWhere('is_featured', true)
-            ->orderByDesc('followers_count')
-            ->inRandomOrder()
-            ->limit($remaining)
-            ->get(['id', 'name', 'username', 'avatar_url', 'bio', 'verified']);
-
-        if ($fallback->count() < $remaining) {
-            $needMore = $remaining - $fallback->count();
-            $excludeIds = array_merge($excludeIds, $fallback->pluck('id')->all());
-
-            $more = User::query()
-                ->whereNotIn('id', $excludeIds)
-                ->whereHas('posts')
-                ->inRandomOrder()
-                ->limit($needMore)
-                ->get(['id', 'name', 'username', 'avatar_url', 'bio']);
-
-            $fallback = $fallback->concat($more);
-        }
-
-        return $selected->concat($fallback)->values();
+private function fillWithRandom(User $user, Collection $selected, int $limit): Collection
+{
+    if ($selected->count() >= $limit) {
+        return $selected->take($limit)->values();
     }
+
+    $remaining = $limit - $selected->count();
+    $excludeIds = array_merge($this->excludedUserIds($user), $selected->pluck('id')->all());
+
+    $fallback = User::query()
+        ->whereNotIn('id', $excludeIds)
+        ->where(function ($q) {                   // ← group the OR so whereNotIn isn't bypassed
+            $q->where('is_featured', true);
+        })
+        ->orderByDesc('followers_count')
+        ->inRandomOrder()
+        ->limit($remaining)
+        ->get(['id', 'name', 'username', 'avatar_url', 'bio']); // ← 'verified' removed
+
+    if ($fallback->count() < $remaining) {
+        $needMore = $remaining - $fallback->count();
+        $excludeIds = array_merge($excludeIds, $fallback->pluck('id')->all());
+
+        $more = User::query()
+            ->whereNotIn('id', $excludeIds)
+            ->whereHas('posts')
+            ->inRandomOrder()
+            ->limit($needMore)
+            ->get(['id', 'name', 'username', 'avatar_url', 'bio']);
+
+        $fallback = $fallback->concat($more);
+    }
+
+    return $selected->concat($fallback)->values();
+}
 
     private function excludedUserIds(User $user): array
     {
