@@ -267,7 +267,7 @@ class CommentController
                         $parentComment->user->onesignal_player_id,
                         'deeplink://comments?id=' . $comment->id,
                         null,
-                        null,
+                        null,null,
                         'New Reply to Your Comment'
                     );
                 } catch (\Throwable $e) {
@@ -474,17 +474,16 @@ class CommentController
             ->get();
 
         foreach ($mentionedUsers as $user) {
-            // Only notify if user has mention notifications enabled
             if ($user->isNotificationEnabled('mention')) {
                 $user->notify(new MentionInCommentNotification($comment->load('post'), $mentionedBy));
-//                OneSignal::sendNotificationToUser(
-//                    "You were mentioned in a comment",
-//                    $user->onesignal_player_id,
-//                    'deeplink://comments?id=' . $comment->id,
-//                    null,
-//                    null,
-//                    'Mentioned in a Comment'
-//                );
+               OneSignal::sendNotificationToUser(
+                   $user->isNotificationEnabled('mention') ? 'You were mentioned in a comment by ' . $mentionedBy->name : 'You have a new notification',
+                   $user->onesignal_player_id,
+                   'deeplink://comments?id=' . $comment->id,
+                   null,
+                   null,null,
+                   'Mentioned in a Comment'
+               );
             }
         }
     }
