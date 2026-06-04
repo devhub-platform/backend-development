@@ -15,6 +15,7 @@ class SuggestedUsersResource extends JsonResource
             'username' => $this->username,
             'avatar' => $this->avatar_url,
             'bio' => $this->bio,
+            'score' => round((float) ($this->suggestion_score ?? 0.0), 4),
         ];
     }
 }

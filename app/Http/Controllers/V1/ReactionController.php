@@ -50,7 +50,7 @@ class ReactionController
             if ($post->user->isNotificationEnabled('new_reaction')) {
                 Notification::send($post->user, new ReactNotification($post, $validated['type'], $user));
                 OneSignal::sendNotificationToUser(
-                    'Your post received a new reaction',
+                    'new reaction on your post from ' . $user->name,
                     $post->user->onesignal_player_id,
                     'deeplink://reactions?id=' . $post->id,
                     null,

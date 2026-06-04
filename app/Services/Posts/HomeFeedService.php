@@ -308,7 +308,7 @@ class HomeFeedService
     private function baseCandidateQuery(array $blockedUserIds)
     {
         return Post::query()
-            ->select('id', 'user_id', 'title', 'content', 'slug', 'status', 'created_at', 'views')
+            ->select('id', 'user_id', 'title', 'content', 'slug', 'status', 'created_at', 'views', 'uuid', 'updated_at', 'read_time', 'is_edit', 'image_url', 'cover_image')
             ->with([
                 'user:id,name,username,avatar_url',
                 'tags:id,name'

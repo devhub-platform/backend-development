@@ -17,7 +17,7 @@ class PostResource extends JsonResource
             'uuid' => $this->uuid,
             'title' => $this->title,
             'slug' => $this->slug,
-            'content' => Str::limit($this->content, 250, '...'),
+            'content' => $this->content,
             'created_at' => $this->created_at?->diffForHumans(),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
             'image_url' => $this->image_url ?? [],
@@ -25,7 +25,7 @@ class PostResource extends JsonResource
             'status' => $this->status,
             'read_time' => $this->read_time ? $this->read_time . ' min read' : null,
             'views' => $this->views ?? 0,
-            'is_edited' => (bool)$this->is_edit,
+            'is_edited' => (bool) $this->is_edit,
 
             'user' => [
                 'name' => $this->user->name,
