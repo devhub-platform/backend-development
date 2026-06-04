@@ -137,7 +137,7 @@ class FollowersController
         $perPage = min($request->query('per_page', 20), 100);
 
         $followers = $user->followers()
-            ->paginate($perPage, ['users.id', 'users.name', 'users.username', 'users.avatar_url', 'users.verified'], 'page', $page);
+            ->paginate($perPage, ['users.id', 'users.name', 'users.username', 'users.avatar_url'], 'page', $page);
 
         if ($followers->isEmpty()) {
             return response()->json([
@@ -161,7 +161,7 @@ class FollowersController
         $perPage = min($request->query('per_page', 20), 100);
 
         $following = $user->following()
-            ->paginate($perPage, ['users.id', 'users.name', 'users.username', 'users.avatar_url', 'users.verified'], 'page', $page);
+            ->paginate($perPage, ['users.id', 'users.name', 'users.username', 'users.avatar_url'], 'page', $page);
 
         if ($following->isEmpty()) {
             return response()->json([
