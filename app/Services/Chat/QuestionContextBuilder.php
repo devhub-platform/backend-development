@@ -14,8 +14,17 @@ class QuestionContextBuilder
 
     public function build(Question $question): string
     {
+        /**
+         * FIX: Previous cache key was "question:context:{id}" — this meant edits to
+         * a question would serve stale AI context for up to 10 minutes.
+         *
+         * Now we include updated_at timestamp in the key, so any edit automatically
+         * busts the cache. Old keys expire naturally after CACHE_TTL.
+         */
+        $version = $question->updated_at?->timestamp ?? $question->created_at->timestamp;
+
         return Cache::remember(
-            "question:context:{$question->id}",
+            "question:context:{$question->id}:{$version}",
             self::CACHE_TTL,
             fn() => $this->buildPrompt($question)
         );

@@ -76,7 +76,11 @@ class QuestionChatService
     /**
      * Attempt the AI call up to $maxAttempts times with a 500ms delay between retries.
      *
-     * @throws \Exception Re-throws the last exception if all attempts fail.
+     * FIX: Previous code had a dangerous fallback — if all attempts returned empty but
+     * threw no exception, it would call the AI a final time outside the loop silently.
+     * Now we throw explicitly if all attempts fail or return empty.
+     *
+     * @throws \RuntimeException if all attempts fail or return empty
      */
     private function callWithRetry(array $context, string $model, int $maxTokens, int $maxAttempts = 2): array
     {
@@ -85,21 +89,28 @@ class QuestionChatService
         for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
             try {
                 $result = $this->ai->chat($context, $model, $maxTokens);
+
                 if (!empty($result)) {
                     return $result;
                 }
+
+                // Got an empty response — treat like a failure and retry
+                $lastException = new \RuntimeException(
+                    "AI service returned an empty response on attempt {$attempt}/{$maxAttempts}"
+                );
+
             } catch (\Exception $e) {
                 $lastException = $e;
-                if ($attempt < $maxAttempts) {
-                    usleep(500_000);
-                }
+            }
+
+            if ($attempt < $maxAttempts) {
+                usleep(500_000); // 500ms between retries
             }
         }
 
-        if ($lastException) {
-            throw $lastException;
-        }
-
-        return $this->ai->chat($context, $model, $maxTokens);
+        // All attempts exhausted — throw the last known exception
+        throw $lastException ?? new \RuntimeException(
+            'AI service failed after ' . $maxAttempts . ' attempts with no exception details'
+        );
     }
 }

@@ -14,8 +14,17 @@ class QuestionVoteSeeder extends Seeder
         $questions = Question::all();
         $users     = User::take(10)->get();
 
+        if ($questions->isEmpty() || $users->isEmpty()) {
+            $this->command->warn('No questions or users found.');
+            return;
+        }
+
         foreach ($questions as $question) {
-            foreach ($users->random(rand(2, 5)) as $user) {
+            // FIX: guard against random() crashing when collection is smaller than requested count
+            $count  = min(rand(2, 5), $users->count());
+            $voters = $users->random($count);
+
+            foreach ($voters as $user) {
                 if ($user->id === $question->user_id) continue;
 
                 QuestionVote::firstOrCreate(

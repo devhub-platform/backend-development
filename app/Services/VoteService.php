@@ -82,4 +82,52 @@ class VoteService
         $answer->increment('helpful_count');
         return $answer->fresh()->load(['user', 'votes']);
     }
+
+    /**
+     * FIX: Replaces eager-load + PHP count in QuestionController::vote
+     * Single aggregated DB query instead of loading all vote rows into memory.
+     */
+    public function getQuestionVoteScore(Question $question): array
+    {
+        $counts = DB::table('question_votes')
+            ->where('question_id', $question->id)
+            ->selectRaw("
+                SUM(CASE WHEN vote_type = 'upvote'   THEN 1 ELSE 0 END) as upvotes,
+                SUM(CASE WHEN vote_type = 'downvote' THEN 1 ELSE 0 END) as downvotes
+            ")
+            ->first();
+
+        $upvotes   = (int) ($counts->upvotes   ?? 0);
+        $downvotes = (int) ($counts->downvotes ?? 0);
+
+        return [
+            'upvotes'   => $upvotes,
+            'downvotes' => $downvotes,
+            'score'     => $upvotes - $downvotes,
+        ];
+    }
+
+    /**
+     * FIX: Replaces eager-load + PHP count in AnswerController::vote
+     * Single aggregated DB query instead of loading all vote rows into memory.
+     */
+    public function getAnswerVoteScore(Answer $answer): array
+    {
+        $counts = DB::table('answer_votes')
+            ->where('answer_id', $answer->id)
+            ->selectRaw("
+                SUM(CASE WHEN vote_type = 'upvote'   THEN 1 ELSE 0 END) as upvotes,
+                SUM(CASE WHEN vote_type = 'downvote' THEN 1 ELSE 0 END) as downvotes
+            ")
+            ->first();
+
+        $upvotes   = (int) ($counts->upvotes   ?? 0);
+        $downvotes = (int) ($counts->downvotes ?? 0);
+
+        return [
+            'upvotes'   => $upvotes,
+            'downvotes' => $downvotes,
+            'score'     => $upvotes - $downvotes,
+        ];
+    }
 }

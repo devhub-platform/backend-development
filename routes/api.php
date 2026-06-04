@@ -98,11 +98,9 @@ Route::prefix('v1')->group(function () {
         Route::get('ai-chat/models', [AIChatController::class, 'models']);
 
         Route::get('ai-topics-user/{userId}', [AITopicsUserController::class, 'showByUserId']);
-        // Public recommendations endpoint used by the front-page to fetch suggested topics/posts
         Route::get('recommendations', [RecommendationController::class, 'index']);
-        //        Route::get('ai-topics-user', [AITopicsUserController::class, 'index']);
 
-        Route::middleware(['auth:api', 'throttle:25,1','verified'])->group(function () {
+        Route::middleware(['auth:api', 'throttle:25,1', 'verified'])->group(function () {
             Route::controller(AuthController::class)->group(function () {
                 Route::post('logout', 'logout');
                 Route::post('refresh', 'refreshToken');
@@ -113,15 +111,12 @@ Route::prefix('v1')->group(function () {
             Route::controller(TopicController::class)->prefix('topics')->group(function () {
                 Route::get('my-topics', 'getUserTopics');
                 Route::get('/', 'index');
-
-                Route::post('/', 'store');           // Admin only
-                Route::delete('{topic}', 'destroy'); // Admin only
-                Route::put('{topic}', 'update');  // Admin only
-
+                Route::post('/', 'store');
+                Route::delete('{topic}', 'destroy');
+                Route::put('{topic}', 'update');
                 Route::post('add', 'addTopics');
                 Route::post('remove', 'removeTopics');
                 Route::post('clear', 'clearTopics');
-
                 Route::post('onboarding/complete', 'completeOnboarding');
                 Route::get('onboarding/status', 'getOnboardingStatus');
             });
@@ -158,24 +153,29 @@ Route::prefix('v1')->group(function () {
                 Route::delete('posts/viewed/clear', 'clearViewedPosts');
             });
 
+            // ─── Questions ────────────────────────────────────────────────────────
             Route::controller(QuestionController::class)->group(function () {
-                Route::get('questions', 'index');
-                Route::post('questions/create', 'store');
-                Route::get('questions/hot', 'trending');
-                Route::get('questions/{question}', 'show');
-                Route::put('questions/{question}', 'update');
-                Route::delete('questions/{question}', 'destroy');
-                Route::post('questions/{question}/vote', 'vote');
+                Route::get('questions',                   'index');
+                Route::post('questions/create',           'store');
+                Route::get('questions/hot',               'trending');
+                Route::get('questions/search',            'search');
+                Route::get('questions/by-tag/{tag}',      'byTag');
+                Route::get('questions/{question}/share',  'share');
+                Route::get('questions/{question}',        'show');
+                Route::put('questions/{question}',        'update');
+                Route::delete('questions/{question}',     'destroy');
+                Route::post('questions/{question}/vote',  'vote');
             });
 
+            // ─── Answers ──────────────────────────────────────────────────────────
             Route::controller(AnswerController::class)->group(function () {
-                Route::get('questions/{question}/answers', 'index');
-                Route::post('questions/{question}/answers/create', 'store');
-                Route::get('questions/{question}/answers/{answer}', 'show');
-                Route::put('questions/{question}/answers/{answer}', 'update');
-                Route::delete('questions/{question}/answers/{answer}', 'destroy');
-                Route::post('questions/{question}/answers/{answer}/vote', 'vote');
-                Route::post('questions/{question}/answers/{answer}/accept', 'accept');
+                Route::get('questions/{question}/answers',                    'index');
+                Route::post('questions/{question}/answers/create',            'store');
+                Route::get('questions/{question}/answers/{answer}',           'show');
+                Route::put('questions/{question}/answers/{answer}',           'update');
+                Route::delete('questions/{question}/answers/{answer}',        'destroy');
+                Route::post('questions/{question}/answers/{answer}/vote',     'vote');
+                Route::post('questions/{question}/answers/{answer}/accept',   'accept');
                 Route::post('questions/{question}/answers/{answer}/unaccept', 'unaccept');
             });
 
@@ -246,19 +246,15 @@ Route::prefix('v1')->group(function () {
                 Route::get('profile/user/tags', 'userTags');
                 Route::post('profile/upload/avatar', 'uploadAvatarImage');
                 Route::post('profile/upload/cover-image', 'uploadCoverImage');
-
                 Route::post('profile/upload/cv', 'uploadCv');
                 Route::delete('profile/delete/cv', 'deleteCv');
-
                 Route::get('profile/activity', 'activity');
                 Route::get('profile/details', 'details');
                 Route::get('profile/share-link', 'shareLink');
             });
-            Route::prefix('profile')->middleware('auth:api')->group(function () {
-                // My own questions
-                Route::get('questions', [ProfileQuestionController::class, 'myQuestions']);
 
-                // Any user's questions
+            Route::prefix('profile')->middleware('auth:api')->group(function () {
+                Route::get('questions', [ProfileQuestionController::class, 'myQuestions']);
                 Route::get('{userId}/questions', [ProfileQuestionController::class, 'userQuestions']);
             });
 
@@ -307,19 +303,16 @@ Route::prefix('v1')->group(function () {
                 Route::post('notifications/mark-as-read', 'makeAllRead');
                 Route::post('notifications/{notification}/mark-as-read', 'makeAsRead');
                 Route::delete('notifications/clear', 'clearAllNotifications');
-
                 Route::get('notifications/preferences', 'getNotificationPreferences');
                 Route::patch('notifications/preferences', 'updateNotificationPreferences');
                 Route::patch('notifications/preferences/{type}/toggle', 'toggleNotificationPreference');
-
                 Route::patch('notifications/add-player-id', 'storePlayerId');
                 Route::delete('notifications/remove-player-id', 'removePlayerId');
-
                 Route::get('notifications/questions', 'getQuestionsNotifications');
                 Route::get('notifications/answers', 'getAnswersNotifications');
             });
 
-            // ─── User Interaction Reporting & Analytics ──────────────────────────
+            // ─── User Interaction Reporting & Analytics ───────────────────────────
             Route::controller(\App\Http\Controllers\V1\UserInteractionReportController::class)->group(function () {
                 Route::get('user/interaction-report', 'getInteractionHistory');
                 Route::get('user/interaction-breakdown/{topicId}', 'getInteractionBreakdown');
@@ -328,7 +321,7 @@ Route::prefix('v1')->group(function () {
                 Route::get('user/interaction-analytics', 'getUserAnalytics');
             });
 
-            // ─── Tags Follow ───────────────────HH───────────────────────────────────
+            // ─── Tags Follow ──────────────────────────────────────────────────────
             Route::controller(TagFollowController::class)->group(function () {
                 Route::post('tags/{tag}/follow', 'follow');
                 Route::delete('tags/{tag}/unfollow', 'unfollow');
@@ -366,7 +359,7 @@ Route::prefix('v1')->group(function () {
                 Route::get('reading-lists/{readingList}/show-notes/{post}', 'showNotesInReadingList');
             });
 
-            // ─── Code Editor ──────────────────────────────────────────────────
+            // ─── Code Editor ──────────────────────────────────────────────────────
             Route::controller(CodeEditorController::class)->group(function () {
                 Route::get('code/runtimes', 'runtimes');
                 Route::post('code/execute', 'execute');
@@ -378,10 +371,8 @@ Route::prefix('v1')->group(function () {
                 Route::post('reports/block/{target}', 'block');
                 Route::post('reports/report/{target}', 'report');
                 Route::post('reports/unblock/{target}', 'unblock');
-
                 Route::get('reports/reported-users', 'reportedUsers');
                 Route::get('reports/blocked-users', 'blockList');
-
                 Route::get('reports/reported-users', 'reportList');
                 Route::get('reports/reasons', 'reason');
             });
@@ -467,9 +458,7 @@ Route::prefix('v1')->group(function () {
                 ->group(function () {
                     Route::get('posts', 'posts');
                     Route::get('tags', 'tags');
-                    // Tech Trends Feed — lightweight, instant
                     Route::get('/tech', 'tech');
-                    // Tech Trend Detail — with AI enrichment on-demand
                     Route::get('/tech/{id}', 'techDetail');
                 });
         });

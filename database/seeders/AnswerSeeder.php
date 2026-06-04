@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use App\Models\Answer;
 use App\Models\Question;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class AnswerSeeder extends Seeder
 {
@@ -36,19 +36,27 @@ class AnswerSeeder extends Seeder
             for ($i = 0; $i < $count; $i++) {
                 $user = $users->random();
 
-                Answer::firstOrCreate(
-                    [
-                        'question_id' => $question->id,
-                        'user_id'     => $user->id,
-                    ],
-                    [
+                // FIX: use DB::table to bypass guarded on is_accepted
+                // firstOrCreate pattern: check first then insert
+                $exists = DB::table('answers')
+                    ->where('question_id', $question->id)
+                    ->where('user_id', $user->id)
+                    ->exists();
+
+                if (!$exists) {
+                    DB::table('answers')->insert([
+                        'question_id'   => $question->id,
+                        'user_id'       => $user->id,
                         'content'       => $contents[array_rand($contents)],
                         'is_accepted'   => false,
                         'helpful_count' => rand(0, 15),
-                    ]
-                );
+                        'created_at'    => now(),
+                        'updated_at'    => now(),
+                    ]);
+                }
             }
 
+            // FIX: always recalculate from DB so it's accurate on re-runs
             $question->update([
                 'answers_count' => $question->answers()->count(),
             ]);

@@ -27,9 +27,13 @@ class AnswerService
         return $answer->fresh()->load(['user', 'votes']);
     }
 
+    /**
+     * FIX: Use null-safe operator — if question was soft-deleted before
+     * the answer, decrement would throw "Call on null". Using ?-> is safe.
+     */
     public function deleteAnswer(Answer $answer): bool
     {
-        $answer->question->decrement('answers_count');
+        $answer->question?->decrement('answers_count');
         return $answer->delete();
     }
 

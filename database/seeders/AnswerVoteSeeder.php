@@ -14,8 +14,17 @@ class AnswerVoteSeeder extends Seeder
         $answers = Answer::all();
         $users   = User::take(10)->get();
 
+        if ($answers->isEmpty() || $users->isEmpty()) {
+            $this->command->warn('No answers or users found.');
+            return;
+        }
+
         foreach ($answers as $answer) {
-            foreach ($users->random(rand(2, 4)) as $user) {
+            // FIX: guard against random() crashing when collection is smaller than requested count
+            $count   = min(rand(2, 4), $users->count());
+            $voters  = $users->random($count);
+
+            foreach ($voters as $user) {
                 if ($user->id === $answer->user_id) continue;
 
                 AnswerVote::firstOrCreate(

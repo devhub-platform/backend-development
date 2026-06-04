@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\QuestionService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -18,3 +19,5 @@ Schedule::command('trending:warm')
     ->name('warm-trending-cache')
     ->withoutOverlapping()
     ->onFailure(fn() => \Illuminate\Support\Facades\Log::error('[Cron] warm-trending-cache failed'));
+Schedule::call(fn() => app(QuestionService::class)->warmCache())
+    ->hourly();

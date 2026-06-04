@@ -2,19 +2,24 @@
 
 namespace App\Services;
 
-use App\Models\Answer;
 use App\Models\Question;
 use App\Models\QuestionView;
 use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class QuestionService
 {
+    private const CACHE_TTL     = 60;      // list pages — 1 minute
+    private const CACHE_TTL_HOT = 300;     // trending — 5 minutes
+
     public function __construct(private HackClubCdnService $cdn) {}
+
+    // ─── Create ───────────────────────────────────────────────────────────────
 
     public function createQuestion(User $user, array $data): Question
     {
@@ -23,96 +28,76 @@ class QuestionService
 
         $tags   = $data['tags']   ?? [];
         $images = $data['images'] ?? [];
-
         unset($data['tags'], $data['images']);
 
         $question = Question::create($data);
 
         if (!empty($tags)) {
-            $tagIds = collect($tags)->map(fn($name) =>
-            Tag::firstOrCreate(
-                ['name' => strtolower(trim($name))],
-                ['slug' => Str::slug($name)]
-            )->id
-            );
-            $question->tags()->sync($tagIds);
+            $question->tags()->sync($this->resolveTagIds($tags));
         }
 
         if (!empty($images)) {
-            foreach ($images as $image) {
-                try {
-                    $url    = $this->cdn->uploadFileUrl($image);
-                    $fileId = $this->extractFileId($url);
-                    $question->images()->create(['url' => $url, 'file_id' => $fileId]);
-                } catch (\Exception $e) {
-                    Log::warning('Question image upload failed', [
-                        'question_id' => $question->id,
-                        'error'       => $e->getMessage(),
-                    ]);
-                }
-            }
+            $this->uploadImages($question, $images, 'create');
         }
 
-        return $question->fresh(['user', 'tags', 'images']);
+        $this->invalidateListCache();
+
+        return $question->load(['user', 'tags', 'images']);
     }
 
+    // ─── Update ───────────────────────────────────────────────────────────────
+
     /**
-     * Update title, content, and optionally tags.
-     * Tags are synced — sending an empty array removes all tags.
-     * Not sending 'tags' at all leaves existing tags untouched.
+     * SIMPLIFIED: extracted image + tag logic into private helpers.
+     * Removed Tag slug (not in DB). Removed fresh() — we load directly.
      */
     public function updateQuestion(Question $question, array $data): Question
     {
+        // 1. slug — only if title changed
         if (isset($data['title'])) {
             $data['slug'] = Str::slug($data['title']) . '-' . uniqid();
         }
 
-        // Sync tags only if explicitly included in the request
+        // 2. tags — only if key exists in request (empty array = clear all)
         if (array_key_exists('tags', $data)) {
-            $tagIds = collect($data['tags'] ?? [])->map(fn($name) =>
-            Tag::firstOrCreate(
-                ['name' => strtolower(trim($name))],
-                ['slug' => Str::slug($name)]
-            )->id
-            );
-            $question->tags()->sync($tagIds);
+            $question->tags()->sync($this->resolveTagIds($data['tags'] ?? []));
             unset($data['tags']);
         }
 
-        // Remove specific images if requested
+        // 3. remove specific images
         if (!empty($data['remove_images'])) {
-            $question->images()
-                ->whereIn('id', $data['remove_images'])
-                ->delete();
+            $question->images()->whereIn('id', $data['remove_images'])->delete();
             unset($data['remove_images']);
         }
 
-        // Add new images if provided
+        // 4. add new images
         if (!empty($data['images'])) {
-            foreach ($data['images'] as $imageUrl) {
-                try {
-                    $url    = $this->cdn->uploadFileUrl($imageUrl);
-                    $fileId = $this->extractFileId($url);
-                    $question->images()->create(['url' => $url, 'file_id' => $fileId]);
-                } catch (\Exception $e) {
-                    Log::warning('Question image update upload failed', [
-                        'question_id' => $question->id,
-                        'error'       => $e->getMessage(),
-                    ]);
-                }
-            }
+            $this->uploadImages($question, $data['images'], 'update');
             unset($data['images']);
         }
 
+        // 5. update remaining fields (title, content, slug)
         $question->update($data);
 
-        return $question->fresh(['user', 'tags', 'images', 'votes', 'answers']);
+        // 6. invalidate caches
+        $this->invalidateListCache();
+        Cache::forget("question:context:{$question->id}");
+
+        // PERF FIX: load relations directly instead of fresh() which re-fetches the model too
+        return $question->load(['user', 'tags', 'images', 'votes', 'answers']);
     }
+
+    // ─── Delete ───────────────────────────────────────────────────────────────
 
     public function deleteQuestion(Question $question): bool
     {
-        return $question->delete();
+        $result = $question->delete();
+        $this->invalidateListCache();
+        Cache::forget("question:context:{$question->id}");
+        return $result;
     }
+
+    // ─── Read ─────────────────────────────────────────────────────────────────
 
     public function getQuestions(
         int     $perPage    = 14,
@@ -121,29 +106,50 @@ class QuestionService
         ?int    $postId     = null,
         ?string $tag        = null
     ): LengthAwarePaginator {
-        $query = Question::query()->with(['user', 'post', 'votes', 'answers', 'tags', 'images']);
+        $page     = request()->integer('page', 1);
+        $resolved = $isResolved === null ? 'all' : (int) $isResolved;
+        $version  = (int) Cache::get('questions:cache_version', 1);
+        $cacheKey = "questions:list:v{$version}:{$sortBy}:{$perPage}:{$resolved}:{$postId}:{$tag}:{$page}";
 
-        if ($isResolved !== null) {
-            $query->where('is_resolved', $isResolved);
-        }
+        return Cache::remember($cacheKey, self::CACHE_TTL, function () use (
+            $perPage, $sortBy, $isResolved, $postId, $tag
+        ) {
+            // PERF FIX: removed 'answers' from eager load in list view
+            // answers are heavy and only needed in show() — not in index/list
+            $query = Question::query()->with(['user', 'votes', 'tags', 'images']);
 
-        if ($postId) {
-            $query->where('post_id', $postId);
-        }
+            if ($isResolved !== null) {
+                $query->where('is_resolved', $isResolved);
+            }
 
-        if ($tag) {
-            $query->whereHas('tags', fn($q) => $q->where('name', $tag));
-        }
+            if ($postId) {
+                $query->where('post_id', $postId);
+            }
 
-        match ($sortBy) {
-            'votes'      => $query->orderByRaw('(SELECT COUNT(*) FROM question_votes WHERE question_votes.question_id = questions.id AND vote_type = "upvote") - (SELECT COUNT(*) FROM question_votes WHERE question_votes.question_id = questions.id AND vote_type = "downvote") DESC'),
-            'views'      => $query->popular(),
-            'unanswered' => $query->unanswered()->recent(),
-            'hot'        => $query->hot(),
-            default      => $query->recent(),
-        };
+            if ($tag) {
+                $query->whereHas('tags', fn($q) => $q->where('name', strtolower(trim($tag))));
+            }
 
-        return $query->paginate($perPage);
+            match ($sortBy) {
+                // PERF FIX: use a JOIN instead of two correlated subqueries for vote sort
+                'votes' => $query
+                    ->leftJoin(DB::raw('(
+                        SELECT question_id,
+                            SUM(CASE WHEN vote_type = "upvote"   THEN 1 ELSE 0 END) -
+                            SUM(CASE WHEN vote_type = "downvote" THEN 1 ELSE 0 END) AS score
+                        FROM question_votes
+                        GROUP BY question_id
+                    ) AS vs'), 'questions.id', '=', 'vs.question_id')
+                    ->orderByRaw('COALESCE(vs.score, 0) DESC')
+                    ->select('questions.*'),
+                'views'      => $query->popular(),
+                'unanswered' => $query->unanswered()->recent(),
+                'hot'        => $query->hot(),
+                default      => $query->recent(),
+            };
+
+            return $query->paginate($perPage);
+        });
     }
 
     public function getQuestionWithAnswers(Question $question, ?int $userId = null): Question
@@ -151,11 +157,7 @@ class QuestionService
         $this->trackView($question, $userId);
 
         return $question->load([
-            'user',
-            'post',
-            'votes',
-            'tags',
-            'images',
+            'user', 'post', 'votes', 'tags', 'images',
             'answers' => fn($q) => $q
                 ->orderByRaw('is_accepted DESC')
                 ->orderByRaw('helpful_count DESC')
@@ -171,27 +173,27 @@ class QuestionService
         if (!$question->is_resolved) {
             $question->update(['is_resolved' => true]);
         }
+        $this->invalidateListCache();
         return $question->fresh();
     }
 
     public function unacceptAnswer(Question $question, int $answerId): Question
     {
         $question->answers()->where('id', $answerId)->update(['is_accepted' => false]);
-        $hasAccepted = $question->answers()->where('is_accepted', true)->exists();
-        if (!$hasAccepted) {
+        if (!$question->answers()->where('is_accepted', true)->exists()) {
             $question->update(['is_resolved' => false]);
         }
+        $this->invalidateListCache();
         return $question->fresh();
     }
 
     public function searchQuestions(string $query, int $perPage = 14): LengthAwarePaginator
     {
-        return Question::where(function ($q) use ($query) {
-            $q->whereRaw("MATCH(title, content) AGAINST(? IN BOOLEAN MODE)", [$query])
-                ->orWhere('title', 'like', "%{$query}%")
-                ->orWhere('content', 'like', "%{$query}%");
-        })
-            ->with(['user', 'post', 'votes', 'answers', 'tags', 'images'])
+        return Question::whereRaw(
+            "MATCH(title, content) AGAINST(? IN BOOLEAN MODE)",
+            [$query . '*']
+        )
+            ->with(['user', 'votes', 'tags', 'images'])
             ->recent()
             ->paginate($perPage);
     }
@@ -199,7 +201,7 @@ class QuestionService
     public function getUserQuestions(User $user, int $perPage = 14): LengthAwarePaginator
     {
         return $user->questions()
-            ->with(['user', 'votes', 'answers', 'tags', 'images'])
+            ->with(['user', 'votes', 'tags', 'images'])
             ->recent()
             ->paginate($perPage);
     }
@@ -209,17 +211,70 @@ class QuestionService
         return Question::whereIn('id', function ($query) use ($user) {
             $query->select('question_id')->from('answers')->where('user_id', $user->id);
         })
-            ->with(['user', 'post', 'votes', 'answers', 'tags', 'images'])
+            ->with(['user', 'votes', 'tags', 'images'])
             ->recent()
             ->paginate($perPage);
     }
 
     public function getTrendingQuestions(int $limit = 4): \Illuminate\Database\Eloquent\Collection
     {
-        return Question::with(['user', 'votes', 'answers', 'tags', 'images'])
-            ->hot()
-            ->limit($limit)
-            ->get();
+        $version = (int) Cache::get('questions:cache_version', 1);
+
+        return Cache::remember("questions:trending:v{$version}:{$limit}", self::CACHE_TTL_HOT, function () use ($limit) {
+            return Question::with(['user', 'votes', 'tags', 'images'])
+                ->hot()
+                ->limit($limit)
+                ->get();
+        });
+    }
+
+    /**
+     * Warm up the cache for the most common list requests.
+     * Call this from a scheduled job or after seeding.
+     * e.g. in AppServiceProvider or a console command.
+     */
+    public function warmCache(): void
+    {
+        foreach (['recent', 'hot', 'votes', 'views', 'unanswered'] as $sort) {
+            $this->getQuestions(perPage: 15, sortBy: $sort);
+        }
+        $this->getTrendingQuestions(limit: 5);
+    }
+
+    // ─── Private helpers ──────────────────────────────────────────────────────
+
+    /**
+     * SIMPLIFIED: resolve tag names to IDs in bulk.
+     * One query per unique tag (firstOrCreate) — no slug, matches DB schema.
+     */
+    private function resolveTagIds(array $names): array
+    {
+        return collect($names)
+            ->map(fn($name) => strtolower(trim($name)))
+            ->filter()
+            ->unique()
+            ->map(fn($name) => Tag::firstOrCreate(['name' => $name])->id)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Upload images to CDN and attach to question.
+     */
+    private function uploadImages(Question $question, array $images, string $context): void
+    {
+        foreach ($images as $image) {
+            try {
+                $url    = $this->cdn->uploadFileUrl($image);
+                $fileId = $this->extractFileId($url);
+                $question->images()->create(['url' => $url, 'file_id' => $fileId]);
+            } catch (\Exception $e) {
+                Log::warning("Question image {$context} upload failed", [
+                    'question_id' => $question->id,
+                    'error'       => $e->getMessage(),
+                ]);
+            }
+        }
     }
 
     private function trackView(Question $question, ?int $userId): void
@@ -242,6 +297,11 @@ class QuestionService
         if ($created) {
             $question->increment('views');
         }
+    }
+
+    private function invalidateListCache(): void
+    {
+        Cache::increment('questions:cache_version');
     }
 
     private function extractFileId(string $url): ?string
