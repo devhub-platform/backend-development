@@ -1,0 +1,36 @@
+<?php
+
+namespace App\Http\Controllers\V1;
+
+use Illuminate\Http\Request;
+use OneSignal;
+
+class TestNotificationController extends Controller
+{
+    public function __invoke(Request $request)
+    {
+        $validated = $request->merge([
+            'title' => $request->input('title', $request->input('heading')),
+        ])->validate([
+            'title' => 'required|string',
+            'message' => 'required|string',
+            'url' => 'nullable|url',
+            'user_id' => 'nullable',
+        ]);
+
+        try {
+            OneSignal::sendNotificationToAll(
+                $validated['message'],
+                $validated['user_id'] ?? null,
+                null,
+                null,
+                null,
+                $validated['title']
+            );
+
+            return response()->json(['success' => true, 'message' => 'Notification sent successfully']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+}

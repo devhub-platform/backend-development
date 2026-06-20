@@ -1,0 +1,424 @@
+<?php
+
+namespace App\Http\Controllers\V1;
+
+use App\Http\Resources\CommentResource;
+use App\Http\Resources\MutualRusersResource;
+use App\Http\Resources\MutualUsersResource;
+use App\Http\Resources\PostResource;
+use App\Http\Resources\RecommendedUserResource;
+use App\Http\Resources\TrendingPostResource;
+use App\Http\Resources\UserResource;
+use App\Http\Resources\UsersCollection;
+use App\Models\User;
+use App\Services\ImprovedRecommendationService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use App\Services\UserEmbeddingService;
+
+//use App\Services\UserEmbeddingService;
+
+class UserController extends Controller
+{
+    use AuthorizesRequests;
+
+    public function index(): JsonResponse
+    {
+        $this->authorize('viewAny', User::class);
+        $users = User::paginate(15);
+
+        return response()->json([
+            'users' => new UsersCollection($users),
+        ]);
+    }
+
+    public function showUserProfile(int $userId): JsonResponse
+    {
+        $user = Cache::remember("user_profile_{$userId}", now()->addHours(24), function () use ($userId) {
+            return User::findOrFail($userId);
+        });
+
+        return response()->json([
+            'data' => new UserResource($user),
+        ]);
+    }
+
+//    public function userPosts(Request $request, int $userId): JsonResponse
+//    {
+//        $user = User::findOrFail($userId);
+//        $perPage = $request->query('per_page', 15);
+//        $status = $request->query('status');
+//
+//        $query = $user->posts()
+//            ->with('tags', 'user')
+//            ->latest();
+//
+//        if ($status) {
+//            $query->where('status', $status);
+//        }
+//
+//        $posts = $query->paginate($perPage);
+//
+//        return response()->json([
+//            'data' => PostResource::collection($posts),
+//            'pagination' => $this->getPaginationData($posts),
+//        ]);
+//    }
+    public function userPosts(Request $request, int $userId): JsonResponse
+    {
+        $user = User::findOrFail($userId);
+        $perPage = $request->query('per_page', 15);
+
+        $query = $user->posts()
+            ->with('tags', 'user')
+            ->where('status', 'published')
+            ->latest();
+
+        $posts = $query->paginate($perPage);
+
+        return response()->json([
+            'data' => PostResource::collection($posts),
+            'pagination' => $this->getPaginationData($posts),
+        ]);
+    }
+
+    public function userComments(Request $request, int $userId): JsonResponse
+    {
+        $user = User::findOrFail($userId);
+        $perPage = $request->query('per_page', 15);
+
+        $comments = $user->comments()
+            ->with('post', 'user')
+            ->latest()
+            ->paginate($perPage);
+
+        return response()->json([
+            'data' => CommentResource::collection($comments),
+            'pagination' => $this->getPaginationData($comments),
+        ]);
+    }
+
+    /**
+     * Get followed tags by user
+     */
+    public function userTags(Request $request, User $user): JsonResponse
+    {
+        $perPage = $request->query('per_page', 15);
+
+        $tags = $user->followedTags()->paginate($perPage);
+
+        return response()->json([
+            'data' => $tags->items(),
+            'pagination' => $this->getPaginationData($tags),
+        ]);
+    }
+
+    public function usersFollowing(User $user): JsonResponse
+    {
+        $following = $user->following()->with('followers')->get();
+
+        if ($following->isEmpty()) {
+            return response()->json([
+                'message' => 'This user is not following anyone yet.',
+            ]);
+        }
+
+        return response()->json([
+            'following' => UserResource::collection($following),
+        ]);
+    }
+
+    public function usersFollowers(User $user): JsonResponse
+    {
+        $followers = $user->followers()->with('following')->get();
+
+        if ($followers->isEmpty()) {
+            return response()->json([
+                'message' => 'This user has no followers yet.',
+            ]);
+        }
+
+        return response()->json([
+            'followers' => UserResource::collection($followers),
+        ]);
+    }
+
+    public function usersFollowersCount(User $user): JsonResponse
+    {
+        $count = $user->followers()->count();
+
+        if ($count === 0) {
+            return response()->json([
+                'message' => 'This user has no followers yet.',
+            ]);
+        }
+
+        return response()->json([
+            'followers_count' => $count,
+        ]);
+    }
+
+    public function getMutualFollowers(int $userId): JsonResponse
+    {
+        $authUser = auth()->user();
+
+        if (!$authUser) {
+            return response()->json([
+                'error' => 'Unauthorized',
+            ], 401);
+        }
+
+        $targetUser = User::findOrFail($userId);
+
+        $mutualFollowerIds = $authUser->followers()
+            ->pluck('users.id')
+            ->intersect($targetUser->followers()->pluck('users.id'));
+
+        $mutualFollowers = User::whereIn('id', $mutualFollowerIds)->get();
+
+        return response()->json([
+            'count' => $mutualFollowers->count(),
+            'data' => UserResource::collection($mutualFollowers),
+        ]);
+    }
+
+    public function getMutualFollowing(int $userId): JsonResponse
+    {
+        $authUser = auth()->user();
+
+        if (!$authUser) {
+            return response()->json([
+                'error' => 'Unauthorized',
+            ], 401);
+        }
+
+        $targetUser = User::findOrFail($userId);
+
+        // Get users that auth user is following
+        $authFollowingIds = $authUser->following()->pluck('users.id')->toArray();
+
+        // Get users that target user is following
+        $targetFollowingIds = $targetUser->following()->pluck('users.id')->toArray();
+
+        // Find intersection (users both are following)
+        $mutualFollowingIds = array_intersect($authFollowingIds, $targetFollowingIds);
+
+        $mutualFollowing = User::whereIn('id', $mutualFollowingIds)
+            ->with(['followers', 'following'])
+            ->get();
+
+        return response()->json([
+//            'auth_user_id' => $authUser->id,
+//            'target_user_id' => $userId,
+            'count' => $mutualFollowing->count(),
+            'data' => MutualUsersResource::collection($mutualFollowing),
+        ]);
+    }
+
+    public function getRecommendedUsers(Request $request): JsonResponse
+    {
+        $authUser = auth()->user();
+
+        if (!$authUser) {
+            return response()->json([
+                'error' => 'Unauthorized',
+            ], 401);
+        }
+
+        $limit = $request->query('limit', 10);
+        $forceRefresh = $request->query('force_refresh', false);
+
+        $recommendationService = new ImprovedRecommendationService(
+            app(UserEmbeddingService::class)
+        );
+
+        $recommendedUsers = $recommendationService->getRecommendedUsers(
+            $authUser,
+            $limit,
+            ['force_refresh' => $forceRefresh]
+        );
+
+        if ($recommendedUsers->isEmpty()) {
+            return response()->json([
+                'count' => 0,
+                'data' => [],
+                'message' => 'No recommendations available at this time',
+            ]);
+        }
+
+        // Precompute auth user embeddings and small lookup sets to avoid repeated DB queries
+        $embeddingService = app(UserEmbeddingService::class);
+        $authEmbedding = $embeddingService->generateUserEmbedding($authUser);
+        $authFollowerIds = $authUser->followers()->pluck('users.id')->all();
+        $authTopicIds = $authUser->topics()->pluck('topics.id')->all();
+        $authSkills = is_array($authUser->skills) ? $authUser->skills : [];
+
+        // Eager-load follower/topic relations and counts for all recommended users in one query
+        $recommendedUsers->load(['followers', 'topics'])->loadCount(['posts', 'questions']);
+
+        $transformedUsers = $recommendedUsers->map(function (User $user) use ($embeddingService, $authEmbedding, $authFollowerIds, $authTopicIds, $authSkills, $authUser) {
+            $userEmbedding = $embeddingService->generateUserEmbedding($user);
+            $score = $embeddingService->calculateSimilarityScore($authEmbedding, $userEmbedding);
+
+            // Build recommendation reasons using in-memory relations (no per-user DB queries)
+            $reasons = [];
+
+            $mutualFollowers = count(array_intersect($authFollowerIds, $user->followers->pluck('id')->all()));
+            if ($mutualFollowers > 0) {
+                $reasons[] = "You have {$mutualFollowers} mutual follower(s)";
+            }
+
+            $matchingSkills = [];
+            if (!empty($authSkills) && is_array($user->skills)) {
+                $matchingSkills = array_intersect($authSkills, $user->skills);
+            }
+            if (!empty($matchingSkills)) {
+                $skillsStr = implode(', ', array_slice($matchingSkills, 0, 2));
+                $reasons[] = "Shares skills: {$skillsStr}";
+            }
+
+            $mutualTopics = count(array_intersect($authTopicIds, $user->topics->pluck('id')->all()));
+            if ($mutualTopics > 0) {
+                $reasons[] = "Interested in {$mutualTopics} same topic(s)";
+            }
+
+            if ($user->bio && $user->avatar_url) {
+                $reasons[] = "Complete profile";
+            }
+
+            $activityCount = ($user->posts_count ?? 0) + ($user->questions_count ?? 0);
+            if ($activityCount > 10) {
+                $reasons[] = "Active community member";
+            }
+
+            $resource = new RecommendedUserResource($user);
+            $resource->setRecommendationScore($score);
+            $resource->setRecommendationReasons($reasons);
+
+            return $resource;
+        });
+
+        return response()->json([
+            'count' => $transformedUsers->count(),
+            'data' => $transformedUsers,
+        ]);
+    }
+
+    /**
+     * Get human-readable reasons for recommendation
+     */
+    private function getRecommendationReasons(User $authUser, User $recommendedUser): array
+    {
+        $reasons = [];
+
+        // Check for mutual connections
+        $mutualFollowers = $authUser->followers()
+            ->whereIn('users.id', $recommendedUser->followers()->pluck('users.id'))
+            ->count();
+
+        if ($mutualFollowers > 0) {
+            $reasons[] = "You have {$mutualFollowers} mutual follower(s)";
+        }
+
+        // Check for skill match
+        $authSkills = is_array($authUser->skills) ? $authUser->skills : [];
+        $recSkills = is_array($recommendedUser->skills) ? $recommendedUser->skills : [];
+        $matchingSkills = array_intersect($authSkills, $recSkills);
+
+        if (!empty($matchingSkills)) {
+            $skillsStr = implode(', ', array_slice($matchingSkills, 0, 2));
+            $reasons[] = "Shares skills: {$skillsStr}";
+        }
+
+        // Check for similar interests
+        $mutualTopics = $authUser->topics()
+            ->whereIn('topics.id', $recommendedUser->topics()->pluck('topics.id'))
+            ->count();
+
+        if ($mutualTopics > 0) {
+            $reasons[] = "Interested in {$mutualTopics} same topic(s)";
+        }
+
+        // Profile completeness
+        if ($recommendedUser->bio && $recommendedUser->avatar_url) {
+            $reasons[] = "Complete profile";
+        }
+
+        // Activity level
+        $activityCount = $recommendedUser->posts()->count() + $recommendedUser->questions()->count();
+        if ($activityCount > 10) {
+            $reasons[] = "Active community member";
+        }
+
+        return array_slice($reasons, 0, 3); // Return top 3 reasons
+    }
+
+    public function getUsersWithSimilarSkills(int $userId, Request $request): JsonResponse
+    {
+        $user = User::findOrFail($userId);
+        $limit = $request->query('limit', 10);
+
+        if (!$user->skills) {
+            return response()->json([
+                'message' => 'This user has not specified any skills.',
+                'data' => [],
+            ]);
+        }
+
+        // Find users with overlapping skills
+        $similarUsers = User::where('id', '!=', $user->id)
+            ->whereNotNull('skills')
+            ->limit($limit)
+            ->get()
+            ->filter(function ($u) use ($user) {
+                $userSkills = is_array($user->skills) ? $user->skills : [];
+                $otherSkills = is_array($u->skills) ? $u->skills : [];
+                return count(array_intersect($userSkills, $otherSkills)) > 0;
+            });
+
+        return response()->json([
+            'user_id' => $userId,
+            'user_skills' => $user->skills ?? [],
+            'count' => $similarUsers->count(),
+            'data' => UserResource::collection($similarUsers),
+        ]);
+    }
+
+    public function checkMutualFollowing(int $userId): JsonResponse
+    {
+        $authUser = auth()->user();
+
+        if (!$authUser) {
+            return response()->json([
+                'error' => 'Unauthorized',
+            ], 401);
+        }
+
+        $targetUser = User::findOrFail($userId);
+
+        $authFollowingTarget = $authUser->following()->where('following_id', $userId)->exists();
+        $targetFollowingAuth = $targetUser->following()->where('following_id', $authUser->id)->exists();
+
+        return response()->json([
+            'user_id' => $authUser->id,
+            'target_user_id' => $userId,
+            'auth_following_target' => $authFollowingTarget,
+            'target_following_auth' => $targetFollowingAuth,
+            'mutual_following' => $authFollowingTarget && $targetFollowingAuth,
+        ]);
+    }
+
+    private function getPaginationData(LengthAwarePaginator $paginator): array
+    {
+        return [
+            'total' => $paginator->total(),
+            'per_page' => $paginator->perPage(),
+            'current_page' => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+        ];
+    }
+}

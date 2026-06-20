@@ -1,0 +1,21 @@
+<?php
+
+namespace App\Http\Resources;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class SuggestedUsersResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'username' => $this->username,
+            'avatar' => $this->avatar_url,
+            'bio' => $this->bio,
+            'score' => round((float) ($this->suggestion_score ?? 0.0), 4),
+        ];
+    }
+}

@@ -1,0 +1,75 @@
+@host = devhub.test
+@token = Bearer YOUR_AUTH_TOKEN
+
+### Get Recommended Users (Basic)
+GET https://{{host}}/api/v1/users/recommended
+Authorization: {{token}}
+
+### Get Recommended Users with Limit
+GET https://{{host}}/api/v1/users/recommended?limit=5
+Authorization: {{token}}
+
+### Get Recommended Users - Force Refresh Cache
+GET https://{{host}}/api/v1/users/recommended?limit=10&force_refresh=true
+Authorization: {{token}}
+
+### Get Recommended Users - Large Batch
+GET https://{{host}}/api/v1/users/recommended?limit=20
+Authorization: {{token}}
+
+### Get Recommended Users - Single Recommendation
+GET https://{{host}}/api/v1/users/recommended?limit=1
+Authorization: {{token}}
+
+###
+# Response Structure Example:
+# {
+#   "count": 10,
+#   "data": [
+#     {
+#       "id": 467,
+#       "name": "Jadon Steuber",
+#       "username": "uquitzon",
+#       "role": "user",
+#       "pronouns": null,
+#       "bio": "Maxime voluptate praesentium libero.",
+#       "avatar_url": "https://via.placeholder.com/200x200.png/001122?text=people+maiores",
+#       "cover_image": null,
+#       "education": null,
+#       "work_at": null,
+#       "skills": ["PHP", "Laravel", "React"],
+#       "currently_learning": "Fugiat quisquam esse eaque autem necessitatibus.",
+#       "location": "Juvenalborough",
+#       "website_url": "http://streich.com/dolor-itaque-iste-suscipit-quia-laborum-corporis-dolore",
+#       "social_links": {
+#         "linkedin": {
+#           "username": "sanford.cletus",
+#           "url": "https://www.linkedin.com/in/sanford.cletus"
+#         },
+#         "github": {
+#           "username": "zulauf.lionel",
+#           "url": "https://github.com/zulauf.lionel"
+#         }
+#       },
+#       "stats": {
+#         "followers": 15,
+#         "following": 20,
+#         "posts": 8,
+#         "questions": 3
+#       },
+#       "is_verified": true,
+#       "email_verified_at": "2026-04-12 21:47:46",
+#       "joined": "1 month ago",
+#       "joined_at": "2026-04-12",
+#       "recommendation": {
+#         "score": 85.5,
+#         "reasons": [
+#           "You have 2 mutual follower(s)",
+#           "Shares skills: PHP, Laravel",
+#           "Complete profile"
+#         ]
+#       }
+#     }
+#   ]
+# }
+

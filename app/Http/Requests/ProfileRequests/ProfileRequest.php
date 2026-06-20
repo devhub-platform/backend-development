@@ -1,0 +1,43 @@
+<?php
+
+namespace App\Http\Requests\ProfileRequests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class ProfileRequest extends FormRequest
+{
+    public function rules(): array
+    {
+        return [
+            'avatar_url' => 'prohibited',
+            'cover_image' => 'prohibited',
+
+            'name' => 'sometimes|string|max:255',
+            'username' => 'sometimes|string|max:255|alpha_dash|unique:users,username,' . auth()->id(),
+            'bio' => 'sometimes|nullable|string|max:1000',
+            'email' => 'sometimes|email|max:255|unique:users,email,' . auth()->id(),
+            'education' => 'sometimes|nullable|string|max:500',
+            'work_at' => 'sometimes|nullable|string|max:500',
+            'skills' => 'sometimes|nullable|array|max:1000',
+            'location' => 'sometimes|nullable|string|max:300',
+            'website_url' => 'sometimes|nullable|url|max:255',
+            'pronouns' => 'sometimes|nullable|string|max:50|in:he/him,she/her|min:6',
+            'linkedin_username' => 'sometimes|nullable|string|max:255',
+            'github_username' => 'sometimes|nullable|string|max:255',
+            'orcid_username' => 'sometimes|nullable|string|max:255',
+        ];
+    }
+
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function messages(): array
+    {
+        return [
+            'avatar_url.prohibited' => 'Use POST /profile/upload/avatar to update your avatar.',
+            'cover_image.prohibited' => 'Use POST /profile/upload/cover-image to update your cover image.',
+        ];
+    }
+}
