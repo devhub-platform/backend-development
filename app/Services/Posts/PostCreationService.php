@@ -19,29 +19,30 @@ use OneSignal;
 class PostCreationService
 {
     public function __construct(
-        private ModerationService $moderationService,
+        private ModerationService            $moderationService,
         private ImageUploadCloudinaryService $cloudinaryService,
-        private HackClubCdnService $hackClubCdnService,
-        private PostAIImageService $aiImageService,
-        private OneSignalService $oneSignalService,
-    ) {
+        private HackClubCdnService           $hackClubCdnService,
+        private PostAIImageService           $aiImageService,
+        private OneSignalService             $oneSignalService,
+    )
+    {
     }
 
     public function create(
-        int $userId,
-        string $authorName,
-        string $authorPlayerId,
-        array $validated,
-        ?UploadedFile $coverImage = null,
+        int                     $userId,
+        string                  $authorName,
+        string                  $authorPlayerId,
+        array                   $validated,
+        ?UploadedFile           $coverImage = null,
         array|UploadedFile|null $images = null,
-        ?array $requestedTags = null,
-    ): array {
+        ?array                  $requestedTags = null,
+    ): array
+    {
         $requestedTags = $requestedTags ?? ($validated['tags'] ?? []);
         unset($validated['tags']);
 
         $validated['user_id'] = $userId;
-        $validated['slug'] = Str::slug($validated['title']);
-
+        $validated['slug'] = Str::slug($validated['title']) . '-' . random_int(1000, 999999);
         if ($coverImage) {
             $validated['cover_image'] = $this->cloudinaryService->uploadPostCoverImage(
                 $coverImage,
@@ -83,7 +84,7 @@ class PostCreationService
         $post = Post::create($validated);
 
         $tagIds = collect($requestedTags)
-            ->map(fn($tagName) => trim((string) $tagName))
+            ->map(fn($tagName) => trim((string)$tagName))
             ->filter()
             ->unique()
             ->map(fn($tagName) => Tag::firstOrCreate(['name' => $tagName])->id)
@@ -120,7 +121,7 @@ class PostCreationService
 
                 if (!empty($playerIds)) {
                     $this->oneSignalService->sendToUsers(
-                        message: Str::limit((string) $post->content, 100, '...'),
+                        message: Str::limit((string)$post->content, 100, '...'),
                         playerIds: $playerIds,
                         heading: 'New post from ' . $authorName,
                     );

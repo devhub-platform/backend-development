@@ -54,14 +54,14 @@ Route::prefix('v1')->group(function () {
     Route::get('/', function () {
         return response()->json([
             'message' => 'Devhub Community API v2.0.0',
-            'status' => 'OK - Server on nest-server (Ubuntu) is running',
+            'status' => 'OK - Server (Debian) is running',
             'base_url' => 'https://dev-hubs.tech/api/v1',
             'api_docs' => 'https://devhub.apidog.io/',
             'admin_panel' => 'https://dev-hubs.tech/admin',
             'mentoring' => 'https://dev-hubs.tech/pulse'
         ]);
     });
-    
+
     Route::middleware('throttle:30,1')->group(function () {
         Route::controller(SocialiteMediaFrontController::class)->group(function () {
             Route::get('auth/', 'loginGoogle');
@@ -84,13 +84,13 @@ Route::prefix('v1')->group(function () {
             Route::post('register', 'register');
         });
 
-        Route::controller(VerifyEmailController::class)->group(function () {
+        Route::controller(VerifyEmailController::class)->middleware('throttle:5,1')->group(function () {
             Route::post('email/verify-otp', 'verifyEmailOtp');
             Route::post('email/send-otp', 'sendEmailOTP');
             Route::get('email/is-verified', 'isVerified');
         });
 
-        Route::controller(ForgetPasswordController::class)->group(function () {
+        Route::controller(ForgetPasswordController::class)->middleware('throttle:5,1')->group(function () {
             Route::post('password/forgot', 'forgetPassword');
             Route::post('password/verify-otp', 'verifyOtp');
             Route::post('password/reset', 'resetPassword');
@@ -156,27 +156,27 @@ Route::prefix('v1')->group(function () {
 
             // ─── Questions ────────────────────────────────────────────────────────
             Route::controller(QuestionController::class)->group(function () {
-                Route::get('questions',                   'index');
-                Route::post('questions/create',           'store');
-                Route::get('questions/hot',               'trending');
-                Route::get('questions/search',            'search');
-                Route::get('questions/by-tag/{tag}',      'byTag');
-                Route::get('questions/{question}/share',  'share');
-                Route::get('questions/{question}',        'show');
-                Route::put('questions/{question}',        'update');
-                Route::delete('questions/{question}',     'destroy');
-                Route::post('questions/{question}/vote',  'vote');
+                Route::get('questions', 'index');
+                Route::post('questions/create', 'store');
+                Route::get('questions/hot', 'trending');
+                Route::get('questions/search', 'search');
+                Route::get('questions/by-tag/{tag}', 'byTag');
+                Route::get('questions/{question}/share', 'share');
+                Route::get('questions/{question}', 'show');
+                Route::put('questions/{question}', 'update');
+                Route::delete('questions/{question}', 'destroy');
+                Route::post('questions/{question}/vote', 'vote');
             });
 
             // ─── Answers ──────────────────────────────────────────────────────────
             Route::controller(AnswerController::class)->group(function () {
-                Route::get('questions/{question}/answers',                    'index');
-                Route::post('questions/{question}/answers/create',            'store');
-                Route::get('questions/{question}/answers/{answer}',           'show');
-                Route::put('questions/{question}/answers/{answer}',           'update');
-                Route::delete('questions/{question}/answers/{answer}',        'destroy');
-                Route::post('questions/{question}/answers/{answer}/vote',     'vote');
-                Route::post('questions/{question}/answers/{answer}/accept',   'accept');
+                Route::get('questions/{question}/answers', 'index');
+                Route::post('questions/{question}/answers/create', 'store');
+                Route::get('questions/{question}/answers/{answer}', 'show');
+                Route::put('questions/{question}/answers/{answer}', 'update');
+                Route::delete('questions/{question}/answers/{answer}', 'destroy');
+                Route::post('questions/{question}/answers/{answer}/vote', 'vote');
+                Route::post('questions/{question}/answers/{answer}/accept', 'accept');
                 Route::post('questions/{question}/answers/{answer}/unaccept', 'unaccept');
             });
 
@@ -482,12 +482,12 @@ Route::prefix('v1')->group(function () {
 Route::fallback(function () {
     return response()->json([
         'message' => 'Resource not found, the API endpoint does not exist , can visit the documentation for more details',
+        'documentation' => 'https://devhub.apidog.io'
     ], 404);
 });
 
 Route::post('/test/send-message', [MessageController::class, 'broadcastTest']);
 Route::post('/send-message_notification', TestNotificationController::class);
-
 Route::get('/test-redis', function () {
     Redis::set('test_key', 'I Love Devhub!');
     Log::info('Set test_key in Redis: Hello Redis Cloud!');
@@ -497,7 +497,6 @@ Route::get('/test-redis', function () {
         'test_key_value' => $key,
     ]);
 });
-
 Route::post('upload-on-azure', function (\App\Services\AzureBlobStorageService $azureService) {
     $file = request()->file('file');
 
