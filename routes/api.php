@@ -5,8 +5,9 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
     Route::get('/', function () {
         return response()->json([
-            'message' => 'Devhub Community API v2.0.0',
-            'status' => 'OK - Server (Debian) is running',
+            'message' => 'Devhub Community API v3.0.0',
+            'info' => 'https://dev-hubs.tech/info',
+            'status' => 'OK - Server(Debian) is running',
             'base_url' => 'https://dev-hubs.tech/api/v1',
             'api_docs' => 'https://devhub.apidog.io/',
             'admin_panel' => 'https://dev-hubs.tech/admin',
