@@ -149,7 +149,7 @@ class CodeEditorService
             ], 400);
         }
 
-        if (Str::length($searchTerm) < 2) {
+        if (Str::length($searchTerm) < 1) {
             return response()->json([
                 'success' => false,
                 'message' => 'Search term must be at least 2 characters.',
@@ -317,6 +317,7 @@ class CodeEditorService
             'golang' => 'go', 'clojure' => 'clj', 'elixir' => 'exs',
             'lua' => 'lua', 'groovy' => 'groovy', 'dart' => 'dart',
             'bash' => 'sh', 'shell' => 'sh', 'python2' => 'py', 'python3' => 'py',
+            'dash' => 'dash', 'racket' => 'rkt', 'f#' => 'fs', 'fsharp' => 'fs',
         ];
 
         return $extensions[$lang] ?? 'txt';

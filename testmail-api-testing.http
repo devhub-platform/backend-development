@@ -1,10 +1,10 @@
 POST https://api.testmail.app/api/graphql
 Accept: application/json
 Origin: https://api.testmail.app
-Authorization: Bearer 383a008d-4fc8-4c15-a7f9-f23d981089de
+Authorization: Bearer bd8bb9d4-ff58-4626-a141-0259b8ec444c
 Content-Type: application/json
 
 {
-    "query": "query { inbox(namespace: \"s5sys\") { emails { subject from to text } } }"
+    "query": "query { inbox(namespace: \"9gwbk\") { emails { subject from to text } } }"
 }
 
